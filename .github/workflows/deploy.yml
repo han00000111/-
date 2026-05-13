@@ -39,9 +39,39 @@ jobs:
 
       - name: Stamp debug page
         run: |
-          if [ -f dist/debug.html ]; then
-            sed -i "s|__DEPLOY_TIME__|$(date -u +'%Y-%m-%dT%H:%M:%SZ')|" dist/debug.html
-          fi
+          node <<'NODE'
+          const fs = require('fs')
+
+          const index = fs.readFileSync('dist/index.html', 'utf8')
+          const debugPath = 'dist/debug.html'
+
+          if (fs.existsSync(debugPath)) {
+            const scriptTag = index.match(/<script[^>]+src="[^"]+\.js"[^>]*><\/script>/)?.[0] || '未找到 JS 引用'
+            const linkTag = index.match(/<link[^>]+href="[^"]+\.css"[^>]*>/)?.[0] || '未找到 CSS 引用'
+            const jsPath = scriptTag.match(/src="([^"]+)"/)?.[1] || '未找到 JS 路径'
+            const cssPath = linkTag.match(/href="([^"]+)"/)?.[1] || '未找到 CSS 路径'
+            const escapeHtml = (value) => value
+              .replaceAll('&', '&amp;')
+              .replaceAll('<', '&lt;')
+              .replaceAll('>', '&gt;')
+              .replaceAll('"', '&quot;')
+
+            const debug = fs.readFileSync(debugPath, 'utf8')
+              .replaceAll('__DEPLOY_TIME__', new Date().toISOString())
+              .replaceAll('__JS_PATH__', escapeHtml(jsPath))
+              .replaceAll('__CSS_PATH__', escapeHtml(cssPath))
+              .replaceAll('__SCRIPT_TAG__', escapeHtml(scriptTag))
+              .replaceAll('__LINK_TAG__', escapeHtml(linkTag))
+
+            fs.writeFileSync(debugPath, debug)
+          }
+          NODE
+
+      - name: Print built index
+        run: sed -n '1,40p' dist/index.html
+
+      - name: List dist
+        run: find dist -maxdepth 2 -type f
 
       - name: Inspect dist artifact
         run: |

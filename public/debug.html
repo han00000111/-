@@ -31,6 +31,21 @@
         font-size: 18px;
       }
 
+      dl {
+        display: grid;
+        grid-template-columns: 180px 1fr;
+        gap: 10px 16px;
+      }
+
+      dt {
+        color: #5d6875;
+      }
+
+      dd {
+        margin: 0;
+        font-weight: 700;
+      }
+
       code {
         display: block;
         padding: 10px 12px;
@@ -38,6 +53,7 @@
         overflow-x: auto;
         background: #eef1f4;
         border-radius: 6px;
+        font-weight: 400;
       }
 
       a {
@@ -47,19 +63,36 @@
   </head>
   <body>
     <main>
-      <h1>GitHub Pages 部署调试</h1>
-      <p>当前部署时间：__DEPLOY_TIME__</p>
-      <p>构建模式：Vite + React production build，发布目录为 dist，Pages Source 为 GitHub Actions。</p>
+      <h1>部署调试</h1>
 
-      <h2>首页预期资源路径</h2>
-      <code>&lt;script type="module" crossorigin src="/-/assets/index-xxxx.js"&gt;&lt;/script&gt;</code>
-      <code>&lt;link rel="stylesheet" crossorigin href="/-/assets/index-xxxx.css"&gt;</code>
-      <p>首页不应引用 /src/main.jsx，也不应引用 /assets/index-xxxx.js。</p>
+      <dl>
+        <dt>当前项目名</dt>
+        <dd>工业智能体数据平台 · 现场执行端</dd>
+        <dt>部署方式</dt>
+        <dd>GitHub Pages + Vite build</dd>
+        <dt>base 配置</dt>
+        <dd>/-/</dd>
+        <dt>构建或部署时间</dt>
+        <dd>__DEPLOY_TIME__</dd>
+      </dl>
 
-      <h2>辅助检查链接</h2>
-      <p><a href="/-/health.json">health.json</a></p>
-      <p><a href="/-/snapshot.html">snapshot.html</a></p>
-      <p><a href="/-/">首页</a></p>
+      <h2>访问地址</h2>
+      <p>首页地址：<a href="https://han00000111.github.io/-/">https://han00000111.github.io/-/</a></p>
+      <p>health.json 地址：<a href="https://han00000111.github.io/-/health.json">https://han00000111.github.io/-/health.json</a></p>
+      <p>snapshot.html 地址：<a href="https://han00000111.github.io/-/snapshot.html">https://han00000111.github.io/-/snapshot.html</a></p>
+
+      <h2>dist/index.html 实际资源路径</h2>
+      <p>JS 路径</p>
+      <code>__JS_PATH__</code>
+      <p>CSS 路径</p>
+      <code>__CSS_PATH__</code>
+
+      <h2>dist/index.html 实际引用片段</h2>
+      <code>__SCRIPT_TAG__</code>
+      <code>__LINK_TAG__</code>
+
+      <h2>构建模式说明</h2>
+      <p>首页由 Vite production build 生成，部署目录是 dist。首页不应引用 /src/main.jsx，也不应引用 /assets/index-xxxx.js。</p>
     </main>
   </body>
 </html>
