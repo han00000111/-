@@ -37,6 +37,27 @@ jobs:
       - name: Copy index to 404
         run: cp dist/index.html dist/404.html
 
+      - name: Stamp debug page
+        run: |
+          if [ -f dist/debug.html ]; then
+            sed -i "s|__DEPLOY_TIME__|$(date -u +'%Y-%m-%dT%H:%M:%SZ')|" dist/debug.html
+          fi
+
+      - name: Inspect dist artifact
+        run: |
+          test -f dist/index.html
+          test -f dist/404.html
+          test -f dist/health.json
+          test -f dist/snapshot.html
+          test -d dist/assets
+          find dist -maxdepth 2 -type f | sort
+          grep -E '<script|<link' dist/index.html
+          grep -q 'src="/-/assets/' dist/index.html
+          grep -q 'href="/-/assets/' dist/index.html
+          ! grep -q '/src/main.jsx' dist/index.html
+          ! grep -q 'src="/assets/' dist/index.html
+          ! grep -q 'href="/assets/' dist/index.html
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:

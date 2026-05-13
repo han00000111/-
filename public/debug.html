@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>部署调试 · 工业智能体数据平台</title>
+    <style>
+      body {
+        margin: 0;
+        font-family: Arial, "Microsoft YaHei", sans-serif;
+        color: #17202a;
+        background: #f2f4f6;
+      }
+
+      main {
+        max-width: 920px;
+        margin: 32px auto;
+        padding: 24px;
+        background: #fff;
+        border: 1px solid #d8dde3;
+        border-radius: 8px;
+      }
+
+      h1 {
+        margin: 0 0 16px;
+        font-size: 24px;
+      }
+
+      h2 {
+        margin: 24px 0 8px;
+        font-size: 18px;
+      }
+
+      code {
+        display: block;
+        padding: 10px 12px;
+        margin: 8px 0;
+        overflow-x: auto;
+        background: #eef1f4;
+        border-radius: 6px;
+      }
+
+      a {
+        color: #1f5f99;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>GitHub Pages 部署调试</h1>
+      <p>当前部署时间：__DEPLOY_TIME__</p>
+      <p>构建模式：Vite + React production build，发布目录为 dist，Pages Source 为 GitHub Actions。</p>
+
+      <h2>首页预期资源路径</h2>
+      <code>&lt;script type="module" crossorigin src="/-/assets/index-xxxx.js"&gt;&lt;/script&gt;</code>
+      <code>&lt;link rel="stylesheet" crossorigin href="/-/assets/index-xxxx.css"&gt;</code>
+      <p>首页不应引用 /src/main.jsx，也不应引用 /assets/index-xxxx.js。</p>
+
+      <h2>辅助检查链接</h2>
+      <p><a href="/-/health.json">health.json</a></p>
+      <p><a href="/-/snapshot.html">snapshot.html</a></p>
+      <p><a href="/-/">首页</a></p>
+    </main>
+  </body>
+</html>
