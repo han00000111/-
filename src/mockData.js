@@ -9,7 +9,7 @@ export const navItems = [
 ];
 
 export const devices = [
-  { id: 'CNC-001', type: '数控机床', online: '在线', runStatus: '运行中', alarmCount: 0, updatedAt: '09:11:18' },
+  { id: 'CNC-001', type: '数控机床', online: '在线', runStatus: '运行中', alarmCount: 1, updatedAt: '09:11:18' },
   { id: 'CNC-002', type: '数控机床', online: '在线', runStatus: '待机', alarmCount: 0, updatedAt: '09:11:18' },
   { id: 'CNC-003', type: '数控机床', online: '离线', runStatus: '停止', alarmCount: 1, updatedAt: '09:08:20' },
   { id: 'ROBOT-001', type: '工业机器人', online: '在线', runStatus: '运行中', alarmCount: 0, updatedAt: '09:11:18' },
@@ -20,28 +20,33 @@ export const devices = [
 export const tasks = [
   { id: 'TASK-001', status: '运行中', step: '3/8', currentStep: 'STEP-003', devices: 'CNC-001, PLC-001', alarmCount: 1, updatedAt: '09:11:18', command: '启动加工', startedAt: '09:08:15' },
   { id: 'TASK-002', status: '运行中', step: '1/6', currentStep: 'STEP-001', devices: 'CNC-002, ROBOT-001', alarmCount: 0, updatedAt: '09:11:10', command: '等待上料', startedAt: '09:10:02' },
-  { id: 'TASK-003', status: '排队中', step: '0/5', currentStep: 'STEP-000', devices: 'CNC-004', alarmCount: 0, updatedAt: '09:10:58', command: '等待执行', startedAt: '-' },
+  { id: 'TASK-003', status: '排队中', step: '0/5', currentStep: 'STEP-000', devices: 'CNC-002', alarmCount: 0, updatedAt: '09:10:58', command: '等待执行', startedAt: '-' },
   { id: 'TASK-004', status: '暂停', step: '2/5', currentStep: 'STEP-002', devices: 'CNC-003', alarmCount: 1, updatedAt: '09:10:30', command: '等待人工确认', startedAt: '09:04:26' },
   { id: 'TASK-005', status: '失败', step: '2/7', currentStep: 'STEP-002', devices: 'CNC-003', alarmCount: 2, updatedAt: '09:07:18', command: '回执确认', startedAt: '09:01:14' },
 ];
 
-const basePoints = [
+const cnc001Points = [
   { device: 'CNC-001', name: '主轴转速', code: 'spindle_speed', value: '3200 rpm', status: '正常', quality: '良好', updatedAt: '09:11:18' },
   { device: 'CNC-001', name: '进给速度', code: 'feed_rate', value: '1250 mm/min', status: '正常', quality: '良好', updatedAt: '09:11:18' },
   { device: 'CNC-001', name: '主轴负载', code: 'spindle_load', value: '68%', status: '偏高', quality: '良好', updatedAt: '09:11:18' },
+];
+
+const plc001Points = [
   { device: 'PLC-001', name: '防护门', code: 'door_closed', value: '已关闭', status: '正常', quality: '良好', updatedAt: '09:11:18' },
   { device: 'PLC-001', name: '夹具状态', code: 'fixture_locked', value: '已锁紧', status: '正常', quality: '良好', updatedAt: '09:11:18' },
   { device: 'PLC-001', name: '急停状态', code: 'estop', value: '未触发', status: '正常', quality: '良好', updatedAt: '09:11:18' },
 ];
 
 export const taskPoints = {
-  'TASK-001': basePoints,
+  'TASK-001': [...cnc001Points, ...plc001Points],
   'TASK-002': [
     { device: 'CNC-002', name: '主轴转速', code: 'spindle_speed', value: '0 rpm', status: '正常', quality: '良好', updatedAt: '09:11:10' },
     { device: 'ROBOT-001', name: '机器人状态', code: 'robot_state', value: '等待上料', status: '正常', quality: '良好', updatedAt: '09:11:10' },
-    { device: 'ROBOT-001', name: '机器人是否进入机床加工区', code: 'in_cnc_work_area', value: '不在区域', status: '正常', quality: '良好', updatedAt: '09:11:10' },
+    { device: 'ROBOT-001', name: '机器人加工区', code: 'in_cnc_work_area', value: '不在加工区', status: '正常', quality: '良好', updatedAt: '09:11:10' },
   ],
-  'TASK-003': [],
+  'TASK-003': [
+    { device: 'CNC-002', name: '程序状态', code: 'program_status', value: '待装载', status: '正常', quality: '良好', updatedAt: '09:10:58' },
+  ],
   'TASK-004': [
     { device: 'CNC-003', name: '报警码', code: 'alarm_code', value: '1007', status: '异常', quality: '良好', updatedAt: '09:10:30' },
   ],
@@ -51,7 +56,7 @@ export const taskPoints = {
 };
 
 export const devicePoints = {
-  'CNC-001': basePoints.filter((point) => point.device === 'CNC-001'),
+  'CNC-001': cnc001Points,
   'CNC-002': [
     { device: 'CNC-002', name: '主轴转速', code: 'spindle_speed', value: '0 rpm', status: '正常', quality: '良好', updatedAt: '09:11:18' },
     { device: 'CNC-002', name: '进给速度', code: 'feed_rate', value: '0 mm/min', status: '正常', quality: '良好', updatedAt: '09:11:18' },
@@ -62,18 +67,18 @@ export const devicePoints = {
   ],
   'ROBOT-001': [
     { device: 'ROBOT-001', name: '机器人状态', code: 'robot_state', value: '运行中', status: '正常', quality: '良好', updatedAt: '09:11:18' },
-    { device: 'ROBOT-001', name: '机器人是否进入机床加工区', code: 'in_cnc_work_area', value: '不在区域', status: '正常', quality: '良好', updatedAt: '09:11:18' },
+    { device: 'ROBOT-001', name: '机器人加工区', code: 'in_cnc_work_area', value: '不在加工区', status: '正常', quality: '良好', updatedAt: '09:11:18' },
   ],
-  'PLC-001': basePoints.filter((point) => point.device === 'PLC-001'),
+  'PLC-001': plc001Points,
   'PLC-002': [
     { device: 'PLC-002', name: '日志上传链路', code: 'log_upload', value: '恢复中', status: '偏高', quality: '不确定', updatedAt: '09:10:42' },
   ],
 };
 
 export const alarms = [
-  { name: '主轴负载过高', device: 'CNC-001', type: '设备报警', level: '高危', status: '未处理', time: '09:09:45' },
-  { name: '设备连接异常', device: 'CNC-003', type: '设备报警', level: '中危', status: '处理中', time: '09:08:20' },
-  { name: '日志上传失败', device: 'IPC-001', type: '系统报警', level: '低危', status: '已恢复', time: '09:06:12' },
+  { name: '主轴负载过高', device: 'CNC-001', type: '设备报警', level: '高危', status: '未处理', time: '09:09:45', jumpTarget: 'alarms' },
+  { name: '设备连接异常', device: 'CNC-003', type: '设备报警', level: '中危', status: '处理中', time: '09:08:20', jumpTarget: 'devices' },
+  { name: '日志上传失败', device: 'IPC-001', type: '系统报警', level: '低危', status: '已恢复', time: '09:06:12', jumpTarget: 'logs' },
 ];
 
 export const interlocks = [
@@ -84,27 +89,27 @@ export const interlocks = [
 ];
 
 export const commandLogs = [
-  { time: '09:11:02', device: 'CNC-001', name: '启动加工', params: 'O1001', result: '已下发', ack: '已确认' },
-  { time: '09:10:58', device: 'CNC-001', name: '调整进给', params: '80%', result: '已下发', ack: '已确认' },
-  { time: '09:10:20', device: 'PLC-001', name: '夹具锁紧', params: 'true', result: '已下发', ack: '已确认' },
+  { time: '09:11:02', objectType: 'task', objectId: 'TASK-001', deviceId: 'CNC-001', taskId: 'TASK-001', logType: '指令', content: '启动加工', params: 'O1001', status: '已确认', result: '已下发' },
+  { time: '09:10:58', objectType: 'task', objectId: 'TASK-001', deviceId: 'CNC-001', taskId: 'TASK-001', logType: '指令', content: '调整进给', params: '80%', status: '已确认', result: '已下发' },
+  { time: '09:10:20', objectType: 'device', objectId: 'PLC-001', deviceId: 'PLC-001', taskId: 'TASK-001', logType: '指令', content: '夹具锁紧', params: 'true', status: '已确认', result: '已下发' },
 ];
 
 export const telemetryLogs = [
-  { time: '09:11:18', device: 'CNC-001', type: '遥测日志', content: '主轴负载写入成功', status: '正常' },
-  { time: '09:10:42', device: 'PLC-002', type: '系统日志', content: '日志上传恢复', status: '正常' },
-  { time: '09:08:20', device: 'CNC-003', type: '遥测日志', content: '设备通信异常', status: '异常' },
+  { time: '09:11:18', objectType: 'device', objectId: 'CNC-001', deviceId: 'CNC-001', taskId: 'TASK-001', logType: '设备', content: '主轴负载写入成功', params: '-', status: '正常' },
+  { time: '09:10:42', objectType: 'device', objectId: 'PLC-002', deviceId: 'PLC-002', taskId: '', logType: '设备', content: '日志上传恢复', params: '-', status: '正常' },
+  { time: '09:08:20', objectType: 'device', objectId: 'CNC-003', deviceId: 'CNC-003', taskId: 'TASK-004', logType: '报警', content: '设备通信异常', params: '-', status: '异常' },
 ];
 
 export const auditLogs = [
-  { time: '09:09:45', target: 'TASK-001', type: '报警日志', content: '主轴负载过高', operator: 'system', status: '未处理' },
-  { time: '09:08:28', target: 'TASK-004', type: '任务日志', content: '任务暂停，等待人工确认', operator: 'admin', status: '暂停' },
-  { time: '09:07:18', target: 'TASK-005', type: '审计日志', content: '回执超时，任务失败', operator: 'system', status: '失败' },
+  { time: '09:09:45', objectType: 'task', objectId: 'TASK-001', deviceId: 'CNC-001', taskId: 'TASK-001', logType: '报警', content: '主轴负载过高', params: 'alarm_code=1007', status: '未处理', operator: 'system' },
+  { time: '09:08:28', objectType: 'task', objectId: 'TASK-004', deviceId: 'CNC-003', taskId: 'TASK-004', logType: '任务', content: '任务暂停，等待人工确认', params: 'admin', status: '暂停', operator: 'admin' },
+  { time: '09:07:18', objectType: 'task', objectId: 'TASK-005', deviceId: 'CNC-003', taskId: 'TASK-005', logType: '审计', content: '回执超时，任务失败', params: 'system', status: '失败', operator: 'system' },
 ];
 
 export const stepLogs = [
-  { time: '09:11:02', target: 'TASK-001', type: '操作记录', content: '下发启动加工', status: '已确认' },
-  { time: '09:10:58', target: 'TASK-001', type: '操作记录', content: '调整进给到 80%', status: '已确认' },
-  { time: '09:09:45', target: 'TASK-001', type: '操作记录', content: '生成主轴负载过高报警', status: '未处理' },
+  { time: '09:11:02', objectType: 'task', objectId: 'TASK-001', deviceId: 'CNC-001', taskId: 'TASK-001', logType: '任务', content: '下发启动加工', params: '-', status: '已确认' },
+  { time: '09:10:58', objectType: 'task', objectId: 'TASK-001', deviceId: 'CNC-001', taskId: 'TASK-001', logType: '任务', content: '调整进给到 80%', params: '80%', status: '已确认' },
+  { time: '09:09:45', objectType: 'task', objectId: 'TASK-001', deviceId: 'CNC-001', taskId: 'TASK-001', logType: '报警', content: '生成主轴负载过高报警', params: 'alarm_code=1007', status: '未处理' },
 ];
 
 export const stepsByTask = {

@@ -1400,3 +1400,135 @@ tr.selected {
     grid-template-columns: 1fr;
   }
 }
+
+.overview-grid {
+  grid-template-columns: minmax(420px, 1fr) minmax(520px, 1.25fr);
+  align-items: start;
+}
+
+.alarm-strip-panel {
+  grid-column: 1 / -1;
+  padding: 8px 12px;
+  border-color: #aeb7c2;
+  background: #f5f7f9;
+}
+
+.alarm-strip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 34px;
+}
+
+.alarm-strip strong {
+  flex: 1;
+  font-size: 14px;
+}
+
+.alarm-strip button,
+.segmented-filter button,
+.log-scope-note button {
+  min-height: 28px;
+  padding: 5px 10px;
+  border: 1px solid #cfd6df;
+  border-radius: 6px;
+  background: #fff;
+  color: #182433;
+  font-size: 12px;
+}
+
+.alarm-strip button:hover,
+.segmented-filter button:hover,
+.segmented-filter button.active,
+.log-scope-note button:hover {
+  background: #dde3e8;
+}
+
+.overview-grid .logs-panel,
+.overview-grid .alarm-detail-panel {
+  grid-column: span 1;
+}
+
+.module-content {
+  display: grid;
+  gap: 8px;
+  min-height: 0;
+}
+
+.segmented-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.segmented-filter button.active {
+  border-color: #9aa4af;
+  font-weight: 700;
+}
+
+.task-current-summary {
+  padding: 8px 10px;
+  border: 1px solid #d7dde3;
+  border-radius: 6px;
+  background: #f3f5f7;
+  color: #4b5563;
+  font-size: 13px;
+}
+
+.task-current-summary strong {
+  color: #182433;
+}
+
+.overview-grid .task-overview-layout {
+  grid-template-columns: 1fr;
+  align-items: start;
+}
+
+.alarm-detail-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 10px;
+}
+
+.alarm-detail-grid h3 {
+  margin: 0 0 8px;
+  font-size: 13px;
+}
+
+.button-row button:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+
+.action-disabled-reason {
+  margin-top: 6px;
+  color: #854d0e;
+  font-size: 12px;
+}
+
+.log-scope-note {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+  color: #5d6875;
+  font-size: 12px;
+}
+
+.compact-table table {
+  min-width: 560px;
+}
+
+@media (max-width: 1180px) {
+  .overview-grid,
+  .alarm-detail-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .overview-grid .logs-panel,
+  .overview-grid .alarm-detail-panel {
+    grid-column: 1 / -1;
+  }
+}
