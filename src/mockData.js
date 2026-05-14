@@ -12,66 +12,84 @@ export const devices = [
   { id: 'CNC-001', type: '数控机床', online: '在线', runStatus: '运行中', alarmCount: 1, updatedAt: '09:11:18' },
   { id: 'CNC-002', type: '数控机床', online: '在线', runStatus: '待机', alarmCount: 0, updatedAt: '09:11:18' },
   { id: 'CNC-003', type: '数控机床', online: '离线', runStatus: '停止', alarmCount: 1, updatedAt: '09:08:20' },
+  { id: 'CNC-004', type: '数控机床', online: '在线', runStatus: '运行中', alarmCount: 0, updatedAt: '09:11:06' },
+  { id: 'CNC-005', type: '数控机床', online: '在线', runStatus: '维护中', alarmCount: 1, updatedAt: '09:10:36' },
+  { id: 'CNC-006', type: '数控机床', online: '在线', runStatus: '待机', alarmCount: 0, updatedAt: '09:09:58' },
   { id: 'ROBOT-001', type: '工业机器人', online: '在线', runStatus: '运行中', alarmCount: 0, updatedAt: '09:11:18' },
+  { id: 'ROBOT-002', type: '工业机器人', online: '在线', runStatus: '待机', alarmCount: 0, updatedAt: '09:10:50' },
   { id: 'PLC-001', type: '控制器', online: '在线', runStatus: '正常', alarmCount: 0, updatedAt: '09:11:18' },
   { id: 'PLC-002', type: '控制器', online: '在线', runStatus: '维护中', alarmCount: 1, updatedAt: '09:10:42' },
+  { id: 'PLC-003', type: '控制器', online: '在线', runStatus: '正常', alarmCount: 0, updatedAt: '09:11:02' },
+  { id: 'IPC-001', type: '公共机', online: '在线', runStatus: '正常', alarmCount: 0, updatedAt: '09:11:18' },
 ];
 
 export const tasks = [
   { id: 'TASK-001', status: '运行中', step: '3/8', currentStep: 'STEP-003', devices: 'CNC-001, PLC-001', alarmCount: 1, updatedAt: '09:11:18', command: '启动加工', startedAt: '09:08:15' },
   { id: 'TASK-002', status: '运行中', step: '1/6', currentStep: 'STEP-001', devices: 'CNC-002, ROBOT-001', alarmCount: 0, updatedAt: '09:11:10', command: '等待上料', startedAt: '09:10:02' },
-  { id: 'TASK-003', status: '排队中', step: '0/5', currentStep: 'STEP-000', devices: 'CNC-002', alarmCount: 0, updatedAt: '09:10:58', command: '等待执行', startedAt: '-' },
+  { id: 'TASK-003', status: '排队中', step: '0/5', currentStep: 'STEP-000', devices: 'CNC-002, PLC-002', alarmCount: 0, updatedAt: '09:10:58', command: '等待执行', startedAt: '-' },
   { id: 'TASK-004', status: '暂停', step: '2/5', currentStep: 'STEP-002', devices: 'CNC-003', alarmCount: 1, updatedAt: '09:10:30', command: '等待人工确认', startedAt: '09:04:26' },
   { id: 'TASK-005', status: '失败', step: '2/7', currentStep: 'STEP-002', devices: 'CNC-003', alarmCount: 2, updatedAt: '09:07:18', command: '回执确认', startedAt: '09:01:14' },
 ];
 
 const cnc001Points = [
-  { device: 'CNC-001', name: '主轴转速', code: 'spindle_speed', value: '3200 rpm', status: '正常', quality: '良好', updatedAt: '09:11:18' },
-  { device: 'CNC-001', name: '进给速度', code: 'feed_rate', value: '1250 mm/min', status: '正常', quality: '良好', updatedAt: '09:11:18' },
-  { device: 'CNC-001', name: '主轴负载', code: 'spindle_load', value: '68%', status: '偏高', quality: '良好', updatedAt: '09:11:18' },
+  { device: 'CNC-001', name: '主轴转速', code: 'spindle_speed', pointType: 'numeric', value: '3200 rpm', status: '正常', quality: '良好', updatedAt: '09:11:18' },
+  { device: 'CNC-001', name: '进给速度', code: 'feed_rate', pointType: 'numeric', value: '1250 mm/min', status: '正常', quality: '良好', updatedAt: '09:11:18' },
+  { device: 'CNC-001', name: '主轴负载', code: 'spindle_load', pointType: 'numeric', value: '68%', status: '偏高', quality: '良好', updatedAt: '09:11:18' },
 ];
 
 const plc001Points = [
-  { device: 'PLC-001', name: '防护门', code: 'door_closed', value: '已关闭', status: '正常', quality: '良好', updatedAt: '09:11:18' },
-  { device: 'PLC-001', name: '夹具状态', code: 'fixture_locked', value: '已锁紧', status: '正常', quality: '良好', updatedAt: '09:11:18' },
-  { device: 'PLC-001', name: '急停状态', code: 'estop', value: '未触发', status: '正常', quality: '良好', updatedAt: '09:11:18' },
+  { device: 'PLC-001', name: '防护门', code: 'door_closed', pointType: 'status', value: '已关闭', status: '正常', quality: '良好', updatedAt: '09:11:18' },
+  { device: 'PLC-001', name: '夹具状态', code: 'fixture_locked', pointType: 'status', value: '已锁紧', status: '正常', quality: '良好', updatedAt: '09:11:18' },
+  { device: 'PLC-001', name: '急停状态', code: 'estop', pointType: 'status', value: '未触发', status: '正常', quality: '良好', updatedAt: '09:11:18' },
 ];
 
 export const taskPoints = {
   'TASK-001': [...cnc001Points, ...plc001Points],
   'TASK-002': [
-    { device: 'CNC-002', name: '主轴转速', code: 'spindle_speed', value: '0 rpm', status: '正常', quality: '良好', updatedAt: '09:11:10' },
-    { device: 'ROBOT-001', name: '机器人状态', code: 'robot_state', value: '等待上料', status: '正常', quality: '良好', updatedAt: '09:11:10' },
-    { device: 'ROBOT-001', name: '机器人加工区', code: 'in_cnc_work_area', value: '不在加工区', status: '正常', quality: '良好', updatedAt: '09:11:10' },
+    { device: 'CNC-002', name: '主轴转速', code: 'spindle_speed', pointType: 'numeric', value: '0 rpm', status: '正常', quality: '良好', updatedAt: '09:11:10' },
+    { device: 'ROBOT-001', name: '机器人状态', code: 'robot_state', pointType: 'status', value: '等待上料', status: '正常', quality: '良好', updatedAt: '09:11:10' },
+    { device: 'ROBOT-001', name: '机器人加工区', code: 'in_cnc_work_area', pointType: 'status', value: '不在加工区', status: '正常', quality: '良好', updatedAt: '09:11:10' },
   ],
   'TASK-003': [
-    { device: 'CNC-002', name: '程序状态', code: 'program_status', value: '待装载', status: '正常', quality: '良好', updatedAt: '09:10:58' },
+    { device: 'CNC-002', name: '程序状态', code: 'program_status', pointType: 'status', value: '待装载', status: '正常', quality: '良好', updatedAt: '09:10:58' },
   ],
   'TASK-004': [
-    { device: 'CNC-003', name: '报警码', code: 'alarm_code', value: '1007', status: '异常', quality: '良好', updatedAt: '09:10:30' },
+    { device: 'CNC-003', name: '报警码', code: 'alarm_code', pointType: 'alarm', value: '1007', status: '异常', quality: '良好', updatedAt: '09:10:30' },
   ],
   'TASK-005': [
-    { device: 'CNC-003', name: '程序状态', code: 'program_status', value: '回执超时', status: '异常', quality: '异常', updatedAt: '09:07:18' },
+    { device: 'CNC-003', name: '程序状态', code: 'program_status', pointType: 'status', value: '回执超时', status: '异常', quality: '异常', updatedAt: '09:07:18' },
   ],
 };
 
 export const devicePoints = {
   'CNC-001': cnc001Points,
   'CNC-002': [
-    { device: 'CNC-002', name: '主轴转速', code: 'spindle_speed', value: '0 rpm', status: '正常', quality: '良好', updatedAt: '09:11:18' },
-    { device: 'CNC-002', name: '进给速度', code: 'feed_rate', value: '0 mm/min', status: '正常', quality: '良好', updatedAt: '09:11:18' },
+    { device: 'CNC-002', name: '主轴转速', code: 'spindle_speed', pointType: 'numeric', value: '0 rpm', status: '正常', quality: '良好', updatedAt: '09:11:18' },
+    { device: 'CNC-002', name: '进给速度', code: 'feed_rate', pointType: 'numeric', value: '0 mm/min', status: '正常', quality: '良好', updatedAt: '09:11:18' },
   ],
   'CNC-003': [
-    { device: 'CNC-003', name: '报警码', code: 'alarm_code', value: '1007', status: '异常', quality: '良好', updatedAt: '09:08:20' },
-    { device: 'CNC-003', name: '程序状态', code: 'program_status', value: '停止', status: '异常', quality: '异常', updatedAt: '09:08:20' },
+    { device: 'CNC-003', name: '报警码', code: 'alarm_code', pointType: 'alarm', value: '1007', status: '异常', quality: '良好', updatedAt: '09:08:20' },
+    { device: 'CNC-003', name: '程序状态', code: 'program_status', pointType: 'status', value: '停止', status: '异常', quality: '异常', updatedAt: '09:08:20' },
   ],
   'ROBOT-001': [
-    { device: 'ROBOT-001', name: '机器人状态', code: 'robot_state', value: '运行中', status: '正常', quality: '良好', updatedAt: '09:11:18' },
-    { device: 'ROBOT-001', name: '机器人加工区', code: 'in_cnc_work_area', value: '不在加工区', status: '正常', quality: '良好', updatedAt: '09:11:18' },
+    { device: 'ROBOT-001', name: '机器人状态', code: 'robot_state', pointType: 'status', value: '运行中', status: '正常', quality: '良好', updatedAt: '09:11:18' },
+    { device: 'ROBOT-001', name: '机器人加工区', code: 'in_cnc_work_area', pointType: 'status', value: '不在加工区', status: '正常', quality: '良好', updatedAt: '09:11:18' },
   ],
   'PLC-001': plc001Points,
   'PLC-002': [
-    { device: 'PLC-002', name: '日志上传链路', code: 'log_upload', value: '恢复中', status: '偏高', quality: '不确定', updatedAt: '09:10:42' },
+    { device: 'PLC-002', name: '防护门', code: 'door_closed', pointType: 'status', value: '已打开', status: '异常', quality: '良好', updatedAt: '09:10:42' },
+    { device: 'PLC-002', name: '夹具状态', code: 'fixture_locked', pointType: 'status', value: '已锁紧', status: '正常', quality: '良好', updatedAt: '09:10:42' },
+    { device: 'PLC-002', name: '急停状态', code: 'estop', pointType: 'status', value: '未触发', status: '正常', quality: '良好', updatedAt: '09:10:42' },
+    { device: 'PLC-002', name: '日志上传链路', code: 'log_upload', pointType: 'status', value: '恢复中', status: '偏高', quality: '不确定', updatedAt: '09:10:42' },
+  ],
+  'PLC-003': [
+    { device: 'PLC-003', name: '防护门', code: 'door_closed', pointType: 'status', value: '已关闭', status: '正常', quality: '良好', updatedAt: '09:11:02' },
+    { device: 'PLC-003', name: '夹具状态', code: 'fixture_locked', pointType: 'status', value: '未锁紧', status: '异常', quality: '良好', updatedAt: '09:11:02' },
+    { device: 'PLC-003', name: '急停状态', code: 'estop', pointType: 'status', value: '未触发', status: '正常', quality: '良好', updatedAt: '09:11:02' },
+  ],
+  'ROBOT-002': [
+    { device: 'ROBOT-002', name: '机器人状态', code: 'robot_state', pointType: 'status', value: '待机', status: '正常', quality: '良好', updatedAt: '09:10:50' },
+    { device: 'ROBOT-002', name: '机器人加工区', code: 'in_cnc_work_area', pointType: 'status', value: '在加工区', status: '异常', quality: '良好', updatedAt: '09:10:50' },
   ],
 };
 

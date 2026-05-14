@@ -100,6 +100,7 @@ function App() {
       恢复: '运行中',
       中止: '已中止',
       重试: '排队中',
+      重新运行: '排队中',
     }[action];
 
     if (nextStatus) {
@@ -146,7 +147,15 @@ function App() {
           />
         )}
         {page === 'commands' && <CommandsPage />}
-        {page === 'alarms' && <AlarmsPage />}
+        {page === 'alarms' && (
+          <AlarmsPage
+            setPage={setPage}
+            setSelectedTaskId={setSelectedTaskId}
+            setSelectedDeviceId={setSelectedDeviceId}
+            setLogFilter={setLogFilter}
+            setLogTypeFilter={setLogTypeFilter}
+          />
+        )}
         {page === 'logs' && (
           <LogsPage
             filter={logFilter}
@@ -316,8 +325,11 @@ function AlarmPriorityBar({ selectedTask, setPage }) {
 
 function DeviceOverviewModule({ onSelect }) {
   const [filter, setFilter] = useState('全部');
+  const [query, setQuery] = useState('');
+  const [scope, setScope] = useState('全部');
   const stats = useMemo(() => getDeviceStats(devices), []);
-  const filteredDevices = useMemo(() => filterDevices(devices, filter), [filter]);
+  const filteredDevices = useMemo(() => filterDeviceRows(filterDevices(devices, filter), query, scope), [filter, query, scope]);
+  const scopeOptions = ['全部', '数控机床', '工业机器人', '控制器', '公共机', '在线', '离线', '运行中', '维护中', '异常'];
 
   return (
     <div className="module-content">
@@ -335,6 +347,7 @@ function DeviceOverviewModule({ onSelect }) {
         value={filter}
         onChange={setFilter}
       />
+      <SearchSelect value={query} onChange={setQuery} selectValue={scope} onSelectChange={setScope} options={scopeOptions} placeholder="搜索设备编号/类型/状态" />
       <DeviceTable devicesForTable={filteredDevices} compact onSelect={onSelect} />
     </div>
   );
@@ -349,7 +362,11 @@ function TaskOverviewModule({
   onDetail,
   onLogs,
 }) {
+  const [query, setQuery] = useState('');
+  const [scope, setScope] = useState('全部');
   const stats = useMemo(() => getTaskStats(taskList), [taskList]);
+  const filteredTasks = useMemo(() => filterTasks(taskList, query, scope), [taskList, query, scope]);
+  const visibleSelectedTask = filteredTasks.some((task) => task.id === selectedTaskId) ? selectedTaskId : undefined;
 
   return (
     <div className="module-content">
@@ -365,8 +382,16 @@ function TaskOverviewModule({
       <div className="task-current-summary">
         当前任务：<strong>{selectedTask.id}</strong>｜{selectedTask.status}｜Step {selectedTask.step}｜关联设备 {selectedTask.devices}
       </div>
+      <SearchSelect
+        value={query}
+        onChange={setQuery}
+        selectValue={scope}
+        onSelectChange={setScope}
+        options={['全部', '运行中', '排队中', '暂停', '失败', '已中止', '有报警']}
+        placeholder="搜索任务编号/设备/状态"
+      />
       <div className="task-overview-layout">
-        <TaskQueue taskList={taskList} selectedTaskId={selectedTaskId} setSelectedTaskId={setSelectedTaskId} />
+        <TaskQueue taskList={filteredTasks} selectedTaskId={visibleSelectedTask} setSelectedTaskId={setSelectedTaskId} />
         <CurrentTaskCard task={selectedTask} onTaskAction={onTaskAction} onDetail={onDetail} onLogs={onLogs} />
         <PointTable points={taskPoints[selectedTask.id] ?? []} title="当前任务关联点位" />
       </div>
@@ -404,9 +429,25 @@ function AlarmInterlockDetail({ onAlarmJump }) {
 }
 
 function DevicesPage({ selectedDevice, selectedDeviceId, setSelectedDeviceId }) {
-  const points = devicePoints[selectedDeviceId] ?? [];
+  const [deviceSearch, setDeviceSearch] = useState('');
+  const [deviceFilter, setDeviceFilter] = useState('全部');
+  const points = useMemo(() => getDevicePointsFor(selectedDevice), [selectedDevice]);
   const [selectedPointCode, setSelectedPointCode] = useState('');
   const [previewAttachment, setPreviewAttachment] = useState(null);
+  const deviceFilterOptions = ['全部', '数控机床', '工业机器人', '控制器', '在线', '离线', '运行中', '维护中', '异常'];
+  const filteredDevices = devices.filter((device) => {
+    const keyword = deviceSearch.trim().toLowerCase();
+    const matchesKeyword =
+      !keyword ||
+      [device.id, device.type, device.online, device.runStatus].some((value) => value.toLowerCase().includes(keyword));
+    const matchesFilter =
+      deviceFilter === '全部' ||
+      device.type === deviceFilter ||
+      device.online === deviceFilter ||
+      device.runStatus === deviceFilter ||
+      (deviceFilter === '异常' && device.alarmCount > 0);
+    return matchesKeyword && matchesFilter;
+  });
 
   useEffect(() => {
     setSelectedPointCode(points[0]?.code ?? '');
@@ -418,8 +459,29 @@ function DevicesPage({ selectedDevice, selectedDeviceId, setSelectedDeviceId }) 
     <div className="page-grid devices-grid">
       <section className="panel device-list-panel">
         <SectionTitle icon={Cpu} title="设备列表" />
+        <div className="device-search-row">
+          <Search size={16} />
+          <input
+            list="device-search-options"
+            onChange={(event) => setDeviceSearch(event.target.value)}
+            placeholder="搜索设备编号/类型/状态"
+            value={deviceSearch}
+          />
+          <datalist id="device-search-options">
+            {devices.map((device) => (
+              <option key={device.id} value={device.id} />
+            ))}
+          </datalist>
+          <select value={deviceFilter} onChange={(event) => setDeviceFilter(event.target.value)}>
+            {deviceFilterOptions.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </select>
+        </div>
         <div className="compact-device-list">
-          {devices.map((device) => (
+          {filteredDevices.map((device) => (
             <button
               className={`compact-device-row ${selectedDeviceId === device.id ? 'selected' : ''}`}
               key={device.id}
@@ -437,6 +499,7 @@ function DevicesPage({ selectedDevice, selectedDeviceId, setSelectedDeviceId }) 
               </div>
             </button>
           ))}
+          {!filteredDevices.length && <div className="attachment-empty">无匹配设备</div>}
         </div>
       </section>
       <section className="panel trend-panel">
@@ -448,16 +511,8 @@ function DevicesPage({ selectedDevice, selectedDeviceId, setSelectedDeviceId }) 
         <PointTable points={points} selectedPointCode={selectedPoint?.code} onSelectPoint={setSelectedPointCode} />
       </section>
       <section className="panel detail-panel">
-        <SectionTitle icon={Search} title="点位详情" action={selectedPoint?.name ?? '-'} />
-        <div className="detail-list">
-          <Info label="当前值" value={selectedPoint?.value ?? '-'} />
-          <Info label="状态" value={selectedPoint?.status ?? '-'} />
-          <Info label="正常范围" value={selectedPoint?.code === 'spindle_load' ? '0% - 70%' : '按设备工艺参数'} />
-          <Info label="报警阈值" value={selectedPoint?.code === 'spindle_load' ? '> 85%' : '按点位配置'} />
-          <Info label="Topic" value={`factory/ws001/${selectedDevice.id}/telemetry`} />
-          <Info label="最近异常" value={selectedPoint?.status === '异常' ? `${selectedPoint.name}异常` : `${selectedPoint?.name ?? '点位'}无未处理异常`} />
-          <Info label="数据来源" value="MQTT" />
-        </div>
+        <SectionTitle icon={Search} title={getPointDetailTitle(selectedPoint)} action={selectedPoint?.name ?? '-'} />
+        <PointDetail point={selectedPoint} device={selectedDevice} />
       </section>
       <section className="panel attachment-panel">
         <SectionTitle icon={FileClock} title="设备附件" action={selectedDevice.id} />
@@ -474,11 +529,24 @@ function DevicesPage({ selectedDevice, selectedDeviceId, setSelectedDeviceId }) 
 
 function TasksPage({ selectedTask, taskList, selectedTaskId, setSelectedTaskId, onTaskAction, openTaskLogs }) {
   const [previewAttachment, setPreviewAttachment] = useState(null);
+  const [query, setQuery] = useState('');
+  const [scope, setScope] = useState('全部');
+  const filteredTasks = useMemo(() => filterTasks(taskList, query, scope), [taskList, query, scope]);
+  const visibleSelectedTask = filteredTasks.some((task) => task.id === selectedTaskId) ? selectedTaskId : undefined;
+
   return (
     <div className="page-grid tasks-grid">
       <section className="panel">
         <SectionTitle icon={ClipboardList} title="任务队列" />
-        <TaskQueue taskList={taskList} selectedTaskId={selectedTaskId} setSelectedTaskId={setSelectedTaskId} />
+        <SearchSelect
+          value={query}
+          onChange={setQuery}
+          selectValue={scope}
+          onSelectChange={setScope}
+          options={['全部', '运行中', '排队中', '暂停', '失败', '已中止', '有报警']}
+          placeholder="搜索任务编号/设备/状态"
+        />
+        <TaskQueue taskList={filteredTasks} selectedTaskId={visibleSelectedTask} setSelectedTaskId={setSelectedTaskId} />
       </section>
       <section className="panel task-step-panel">
         <SectionTitle icon={MonitorCog} title="步骤执行" />
@@ -508,34 +576,100 @@ function TasksPage({ selectedTask, taskList, selectedTaskId, setSelectedTaskId, 
 }
 
 function CommandsPage() {
+  const [keyword, setKeyword] = useState('');
+  const [deviceFilter, setDeviceFilter] = useState('全部');
+  const deviceOptions = ['全部', ...Array.from(new Set(commandLogs.map((row) => row.deviceId)))];
+  const filteredRows = commandLogs.filter((row) => {
+    const text = keyword.trim().toLowerCase();
+    const matchesDevice = deviceFilter === '全部' || row.deviceId === deviceFilter;
+    const matchesKeyword =
+      !text || [row.time, row.deviceId, row.content, row.params, row.result, row.status].some((value) => value.toLowerCase().includes(text));
+    return matchesDevice && matchesKeyword;
+  });
+
   return (
     <section className="panel page-full">
       <SectionTitle icon={TerminalSquare} title="指令下发与回执" />
+      <div className="filterbar command-filterbar">
+        <Search size={17} />
+        <input value={keyword} onChange={(event) => setKeyword(event.target.value)} placeholder="搜索指令名称、参数、状态" />
+        <select value={deviceFilter} onChange={(event) => setDeviceFilter(event.target.value)}>
+          {deviceOptions.map((option) => (
+            <option key={option} value={option}>
+              {option}
+            </option>
+          ))}
+        </select>
+        {(keyword || deviceFilter !== '全部') && (
+          <button
+            type="button"
+            onClick={() => {
+              setKeyword('');
+              setDeviceFilter('全部');
+            }}
+          >
+            清除
+          </button>
+        )}
+      </div>
       <DataTable
         columns={['时间', '设备', '指令名称', '参数', '下发结果', '回执状态']}
-        rows={commandLogs.map((row) => [row.time, row.deviceId, row.content, row.params, row.result, row.status])}
+        rows={filteredRows.map((row) => [row.time, row.deviceId, row.content, row.params, row.result, row.status])}
       />
     </section>
   );
 }
 
-function AlarmsPage() {
+function AlarmsPage({ setPage, setSelectedTaskId, setSelectedDeviceId, setLogFilter, setLogTypeFilter }) {
+  const [selectedAlarmName, setSelectedAlarmName] = useState(alarms[0]?.name ?? '');
+  const [alarmFilter, setAlarmFilter] = useState('全部');
+  const filteredAlarms = useMemo(() => filterAlarms(alarms, alarmFilter), [alarmFilter]);
+  const selectedAlarm = alarms.find((alarm) => alarm.name === selectedAlarmName) ?? alarms[0];
+  const relatedLogs = getAlarmRelatedLogs(selectedAlarm);
+
+  useEffect(() => {
+    if (filteredAlarms[0] && !filteredAlarms.some((alarm) => alarm.name === selectedAlarmName)) {
+      setSelectedAlarmName(filteredAlarms[0].name);
+    }
+  }, [alarmFilter, filteredAlarms, selectedAlarmName]);
+
   return (
-    <div className="page-grid alarms-grid">
-      <section className="panel">
-        <SectionTitle icon={AlertTriangle} title="报警列表" />
-        <DataTable
-          columns={['报警名称', '设备', '类型', '等级', '状态', '更新时间']}
-          rows={alarms.map((row) => [row.name, row.device, row.type, row.level, <StatusText value={row.status} />, row.time])}
+    <div className="page-grid alarms-grid alarms-layout">
+      <section className="panel alarm-overview-panel">
+        <AlarmOverviewBar alarms={alarms} filter={alarmFilter} onFilterChange={setAlarmFilter} />
+      </section>
+      <section className="panel alarm-card-panel">
+        <SectionTitle icon={AlertTriangle} title="报警卡片列表" action={`${filteredAlarms.length} 条`} />
+        <AlarmCardList alarms={filteredAlarms} selectedAlarmName={selectedAlarmName} onSelect={setSelectedAlarmName} />
+      </section>
+      <section className="panel alarm-current-panel">
+        <SectionTitle icon={MonitorCog} title="当前报警详情与处理" />
+        <AlarmActionPanel
+          alarm={selectedAlarm}
+          onNavigate={(target, payload) => {
+            if (target === 'tasks' && payload) {
+              setSelectedTaskId(payload);
+              setPage('tasks');
+            }
+            if (target === 'devices' && payload) {
+              setSelectedDeviceId(payload);
+              setPage('devices');
+            }
+            if (target === 'logs') {
+              setLogFilter(payload);
+              setLogTypeFilter('全部');
+              setPage('logs');
+            }
+          }}
         />
       </section>
-      <section className="panel">
-        <SectionTitle icon={ShieldCheck} title="互锁条件" />
+      <section className="panel interlock-matrix-panel">
+        <SectionTitle icon={ShieldCheck} title="互锁状态总览" />
         <InterlockTable />
       </section>
-      <section className="panel wide">
-        <SectionTitle icon={History} title="处理记录" />
-        <SimpleLogTable rows={allLogs.filter((row) => row.logType === '报警' || row.logType === '审计')} />
+      <section className="panel alarm-record-panel">
+        <SectionTitle icon={History} title="处理记录" action={selectedAlarm?.name ?? '-'} />
+        <SimpleLogTable rows={relatedLogs} />
       </section>
     </div>
   );
@@ -722,6 +856,33 @@ function SegmentedFilter({ options, value, onChange }) {
   );
 }
 
+function SearchSelect({ value, onChange, selectValue, onSelectChange, options, placeholder }) {
+  return (
+    <div className="filterbar compact-filterbar">
+      <Search size={16} />
+      <input value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} />
+      <select value={selectValue} onChange={(event) => onSelectChange(event.target.value)}>
+        {options.map((option) => (
+          <option key={option} value={option}>
+            {option}
+          </option>
+        ))}
+      </select>
+      {(value || selectValue !== '全部') && (
+        <button
+          type="button"
+          onClick={() => {
+            onChange('');
+            onSelectChange('全部');
+          }}
+        >
+          清除
+        </button>
+      )}
+    </div>
+  );
+}
+
 function DeviceTable({ compact = false, onSelect, devicesForTable = devices }) {
   return (
     <DataTable
@@ -855,14 +1016,71 @@ function TaskActions({ task, onTaskAction, onDetail, onLogs }) {
 }
 
 function AttachmentList({ items, onPreview, title, compact = false }) {
-  if (!items.length) {
-    return <div className="attachment-empty">暂无附件</div>;
+  const [selectedType, setSelectedType] = useState('全部');
+  const [addedItems, setAddedItems] = useState([]);
+  const [adding, setAdding] = useState(false);
+  const [newAttachment, setNewAttachment] = useState({ type: '图纸', name: '', version: 'v1.0' });
+  const allItems = [...items, ...addedItems];
+
+  const submitAttachment = () => {
+    const name = newAttachment.name.trim();
+    if (!name) return;
+    setAddedItems((current) => [
+      ...current,
+      {
+        type: newAttachment.type,
+        name,
+        version: newAttachment.version || 'v1.0',
+        target: title ?? '当前对象',
+        updatedAt: '当前时间',
+        remark: '现场手动添加的附件记录。',
+      },
+    ]);
+    setNewAttachment({ type: '图纸', name: '', version: 'v1.0' });
+    setAdding(false);
+  };
+
+  if (!allItems.length) {
+    return (
+      <div className="attachment-empty with-action">
+        <span>暂无附件</span>
+        {adding ? (
+          <div className="attachment-add-form">
+            <select value={newAttachment.type} onChange={(event) => setNewAttachment((current) => ({ ...current, type: event.target.value }))}>
+              {['图纸', '刀具', '夹具', '程序文件'].map((type) => (
+                <option key={type} value={type}>
+                  {type}
+                </option>
+              ))}
+            </select>
+            <input value={newAttachment.name} onChange={(event) => setNewAttachment((current) => ({ ...current, name: event.target.value }))} placeholder="附件名称" />
+            <button type="button" onClick={submitAttachment}>
+              添加
+            </button>
+          </div>
+        ) : (
+          <button type="button" onClick={() => setAdding(true)}>
+            添加附件
+          </button>
+        )}
+      </div>
+    );
   }
+
+  const typeOptions = ['全部', ...Array.from(new Set(allItems.map((item) => item.type)))];
+  const visibleItems = selectedType === '全部' ? allItems : allItems.filter((item) => item.type === selectedType);
 
   return (
     <div className={`attachment-list ${compact ? 'compact' : ''}`}>
       {title && <h3>{title}</h3>}
-      {items.map((item) => (
+      <div className="attachment-type-filter">
+        {typeOptions.map((type) => (
+          <button className={selectedType === type ? 'active' : ''} key={type} type="button" onClick={() => setSelectedType(type)}>
+            {type}
+          </button>
+        ))}
+      </div>
+      {visibleItems.map((item) => (
         <button className="attachment-row" key={`${item.type}-${item.name}`} type="button" onClick={() => onPreview(item)}>
           <span>{item.type}</span>
           <strong>{item.name}</strong>
@@ -875,6 +1093,7 @@ function AttachmentList({ items, onPreview, title, compact = false }) {
 }
 
 function AttachmentPreview({ attachment, onClose }) {
+  const [actionText, setActionText] = useState('');
   return (
     <div className="modal-backdrop" role="presentation">
       <div className="confirm-modal attachment-modal" role="dialog" aria-modal="true" aria-labelledby="attachment-title">
@@ -889,7 +1108,14 @@ function AttachmentPreview({ attachment, onClose }) {
           <Info label="更新时间" value={attachment.updatedAt} />
           <Info label="备注" value={attachment.remark} />
         </div>
+        {actionText && <div className="attachment-action-note">{actionText}</div>}
         <div className="confirm-modal-actions">
+          <button type="button" onClick={() => setActionText(`已打开预览：${attachment.name}`)}>
+            预览
+          </button>
+          <button type="button" onClick={() => setActionText(`已定位到附件类型：${attachment.type}`)}>
+            定位附件
+          </button>
           <button type="button" onClick={onClose}>
             关闭
           </button>
@@ -899,12 +1125,188 @@ function AttachmentPreview({ attachment, onClose }) {
   );
 }
 
+function AlarmOverviewBar({ alarms: alarmRows, filter, onFilterChange }) {
+  const stats = getAlarmOverviewStats(alarmRows);
+  return (
+    <div className="alarm-overview-strip">
+      <div className="alarm-overview-stats">
+        <span>高危 <strong>{stats.high}</strong></span>
+        <span>未处理 <strong>{stats.unhandled}</strong></span>
+        <span>处理中 <strong>{stats.processing}</strong></span>
+        <span>已恢复 <strong>{stats.recovered}</strong></span>
+        <span>阻塞任务 <strong>{stats.blockedTasks}</strong></span>
+      </div>
+      <SegmentedFilter options={['全部', '未处理', '处理中', '已恢复', '高危', '阻塞任务']} value={filter} onChange={onFilterChange} />
+    </div>
+  );
+}
+
+function AlarmCardList({ alarms: alarmRows, selectedAlarmName, onSelect }) {
+  if (!alarmRows.length) {
+    return <div className="attachment-empty">无匹配报警</div>;
+  }
+
+  return (
+    <div className="alarm-card-list">
+      {alarmRows.map((alarm) => {
+        const context = getAlarmHandlingContext(alarm);
+        return (
+          <button
+            className={`alarm-card ${selectedAlarmName === alarm.name ? 'selected' : ''}`}
+            key={alarm.name}
+            type="button"
+            onClick={() => onSelect(alarm.name)}
+          >
+            <div className="alarm-card-title">
+              <StatusText value={alarm.level} />
+              <strong>{alarm.name}</strong>
+            </div>
+            <div className="alarm-card-meta">
+              {alarm.device}｜{alarm.type}｜{alarm.status}｜{alarm.time}
+            </div>
+            {context.task !== '无' && <div className="alarm-card-task">关联任务：{context.task}</div>}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function AlarmActionPanel({ alarm, onNavigate }) {
+  const [action, setAction] = useState('');
+  useEffect(() => {
+    setAction('');
+  }, [alarm?.name]);
+
+  if (!alarm) {
+    return <div className="attachment-empty">请选择报警</div>;
+  }
+
+  const context = getAlarmHandlingContext(alarm);
+  const actions = getAlarmActionsByStatus(alarm.status);
+  const runAction = (label) => {
+    if (label === '查看任务') {
+      if (context.task === '无') {
+        setAction('当前报警无关联任务');
+        return;
+      }
+      onNavigate?.('tasks', context.task);
+      return;
+    }
+    if (label === '查看日志') {
+      onNavigate?.('logs', alarm.name === '日志上传失败' ? '日志上传' : alarm.name);
+      return;
+    }
+    setAction(`${label}：${alarm.name} / ${alarm.device}`);
+  };
+
+  return (
+    <div className="alarm-action-panel">
+      <div className="alarm-process-summary">
+        <span>当前报警处理｜{alarm.level}｜{alarm.status}</span>
+        <strong>{alarm.name}</strong>
+        <p>
+          {alarm.device}
+          {context.task !== '无' ? `｜关联任务 ${context.task}` : ''}
+          ｜{alarm.time}
+        </p>
+      </div>
+      <div className="alarm-process-body">
+        <div className="alarm-handling-context">
+          <Info label="影响判断" value={context.impact} />
+          <Info label="处理建议" value={context.suggestion} />
+          <Info label="最近记录" value={context.latestRecord} />
+        </div>
+        <div className="alarm-action-buttons">
+          <h3>处理操作</h3>
+          {actions.map((label) => (
+            <button key={label} type="button" onClick={() => runAction(label)}>
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+      {action && <div className="alarm-action-result">{action}</div>}
+    </div>
+  );
+}
+
+function PointDetail({ point, device }) {
+  if (!point) {
+    return <div className="attachment-empty">请选择点位</div>;
+  }
+
+  const pointType = getPointType(point);
+  if (pointType === 'alarm') return <AlarmPointDetail point={point} device={device} />;
+  if (pointType === 'status') return <StatusPointDetail point={point} device={device} />;
+  return <NumericPointDetail point={point} device={device} />;
+}
+
+function NumericPointDetail({ point, device }) {
+  return (
+    <div className="detail-list">
+      <Info label="当前值" value={point.value} />
+      <Info label="正常范围" value={getNumericNormalRange(point)} />
+      <Info label="报警阈值" value={getNumericThreshold(point)} />
+      <Info label="单位" value={getPointUnit(point)} />
+      <Info label="采样频率" value="1 Hz" />
+      <Info label="数据来源" value="MQTT" />
+      <Info label="趋势入口" value={`${device.id} 趋势图`} />
+    </div>
+  );
+}
+
+function StatusPointDetail({ point }) {
+  const interlockOk = isInterlockSatisfied(point);
+  return (
+    <div className="detail-list">
+      <Info label="当前状态" value={point.value} />
+      <Info label="是否满足互锁" value={interlockOk ? '满足' : '不满足'} />
+      <Info label="影响动作" value={interlockOk ? '允许任务执行' : '禁止开始/恢复任务'} />
+      <Info label="关联任务" value={getRelatedTaskForDevice(point.device)} />
+      <Info label="更新时间" value={point.updatedAt} />
+      <Info label="数据来源" value="MQTT" />
+    </div>
+  );
+}
+
+function AlarmPointDetail({ point, device }) {
+  const alarm = getAlarmPointDetail(point, device);
+  if (alarm.code === '0') {
+    return (
+      <div className="detail-list">
+        <Info label="报警码" value="0" />
+        <Info label="报警状态" value="无报警" />
+        <Info label="所属设备" value={device.id} />
+        <Info label="更新时间" value={point.updatedAt} />
+        <Info label="数据来源" value="MQTT" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="detail-list">
+      <Info label="报警码" value={alarm.code} />
+      <Info label="报警名称" value={alarm.name} />
+      <Info label="报警等级" value={alarm.level} />
+      <Info label="所属设备" value={alarm.device} />
+      <Info label="当前状态" value={alarm.status} />
+      <Info label="发生时间" value={alarm.time} />
+      <Info label="关联任务" value={alarm.task} />
+      <Info label="影响说明" value={alarm.impact} />
+      <Info label="建议处理" value={alarm.suggestion} />
+      <Info label="数据来源" value="MQTT" />
+      <Info label="处理入口" value="报警互锁页" />
+    </div>
+  );
+}
+
 function PointTable({ points, title, selectedPointCode, onSelectPoint }) {
   return (
     <div className="point-block">
       {title && <h3>{title}</h3>}
       <DataTable
-        columns={['设备', '点位名称', '点位编码', '当前值', '状态', '质量', '更新时间']}
+        columns={['设备', '点位名称', '点位编码', '当前值', '业务状态', '采集质量', '更新时间']}
         rows={points.map((point) => [
           point.device,
           point.name,
@@ -961,11 +1363,72 @@ function StepList({ taskId }) {
 }
 
 function InterlockTable() {
+  const [filter, setFilter] = useState('全部');
+  const [selectedDeviceId, setSelectedDeviceId] = useState('');
+  const [actionResult, setActionResult] = useState('');
+  const rows = useMemo(() => getInterlockMatrixRows(), []);
+  const stats = useMemo(() => getInterlockStats(rows), [rows]);
+  const visibleRows = useMemo(() => filterInterlockRows(rows, filter), [rows, filter]);
+  const selectedRow = visibleRows.find((row) => row.id === selectedDeviceId) ?? visibleRows[0] ?? rows[0];
+
+  useEffect(() => {
+    if (visibleRows[0] && !visibleRows.some((row) => row.id === selectedDeviceId)) {
+      setSelectedDeviceId(visibleRows[0].id);
+    }
+  }, [selectedDeviceId, visibleRows]);
+
+  const runAction = (label) => {
+    setActionResult(`${label}：${selectedRow?.id ?? '-'}，互锁真实状态未被人工改写`);
+  };
+
   return (
-    <DataTable
-      columns={['互锁条件', '关联设备', '状态', '更新时间']}
-      rows={interlocks.map((item) => [item.name, item.device, <StatusText value={item.status} />, item.time])}
-    />
+    <div className="interlock-overview">
+      <div className="interlock-summary">
+        <span>涉及设备 <strong>{stats.total}</strong></span>
+        <span>满足 <strong>{stats.satisfied}</strong></span>
+        <span>不满足 <strong>{stats.unsatisfied}</strong></span>
+        <span>阻塞任务 <strong>{stats.blockedTasks}</strong></span>
+      </div>
+      <SegmentedFilter options={['全部', '不满足', '阻塞任务', '已满足']} value={filter} onChange={setFilter} />
+      <DataTable
+        columns={['设备', '防护门', '夹具', '急停', '机器人安全区', '总体状态', '影响任务', '更新时间']}
+        rows={visibleRows.map((row) => [
+          row.id,
+          renderInterlockValue(row.door),
+          renderInterlockValue(row.fixture),
+          renderInterlockValue(row.estop),
+          renderInterlockValue(row.robotArea),
+          <StatusText value={row.overall} />,
+          row.overall === '不满足' ? row.affectedTask : '-',
+          row.updatedAt,
+        ])}
+        rowKeys={visibleRows.map((row) => row.id)}
+        selectedKey={selectedRow?.id}
+        onRowClick={(id) => {
+          setSelectedDeviceId(id);
+          setActionResult('');
+        }}
+      />
+      {selectedRow && (
+        <div className="interlock-detail-panel">
+          <div className="detail-list dense">
+            <Info label="当前选中设备" value={`${selectedRow.id} / ${selectedRow.type}`} />
+            <Info label="阻塞原因" value={selectedRow.blockReason} />
+            <Info label="影响任务" value={selectedRow.affectedTask} />
+            <Info label="建议处理" value={selectedRow.suggestion} />
+            <Info label="最近更新时间" value={selectedRow.updatedAt} />
+          </div>
+          <div className="button-row interlock-actions">
+            {['刷新状态', '查看关联任务', '记录处理结果'].map((label) => (
+              <button key={label} type="button" onClick={() => runAction(label)}>
+                {label}
+              </button>
+            ))}
+          </div>
+          {actionResult && <div className="alarm-action-result">{actionResult}</div>}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -981,13 +1444,286 @@ function getTrendSeriesForDevice(device) {
     return [
       { name: '机器人负载', values: [20, 24, 28, 32, 31, 36, 40, 43, 46, 45, 48, 50, 49], unit: '%' },
       { name: '加工区状态', values: [0, 0, 1, 1, 1, 0, 0, 0, 1, 1, 0, 0, 0], unit: '' },
-      { name: '任务节拍', values: [42, 41, 40, 39, 38, 38, 37, 37, 36, 36, 35, 35, 34], unit: 's' },
+      { name: '单件用时', values: [42, 41, 40, 39, 38, 38, 37, 37, 36, 36, 35, 35, 34], unit: 's' },
     ];
   }
   return trendSeries.map((series) => ({
     ...series,
     unit: series.name.includes('转速') ? 'rpm' : series.name.includes('进给') ? 'mm/min' : '%',
   }));
+}
+
+function getDevicePointsFor(device) {
+  if (!device) return [];
+  const configured = devicePoints[device.id];
+  if (configured) return configured;
+  if (device.type === '工业机器人') {
+    return [
+      { device: device.id, name: '机器人状态', code: 'robot_state', pointType: 'status', value: device.runStatus, status: '正常', quality: '良好', updatedAt: device.updatedAt },
+      { device: device.id, name: '加工区状态', code: 'in_cnc_work_area', pointType: 'status', value: '不在加工区', status: '正常', quality: '良好', updatedAt: device.updatedAt },
+    ];
+  }
+  if (device.type === '控制器') {
+    return [
+      { device: device.id, name: '通信状态', code: 'comm_status', pointType: 'status', value: device.online, status: device.online === '在线' ? '正常' : '异常', quality: '良好', updatedAt: device.updatedAt },
+      { device: device.id, name: '互锁状态', code: 'interlock_state', pointType: 'status', value: device.runStatus, status: '正常', quality: '良好', updatedAt: device.updatedAt },
+    ];
+  }
+  return [
+    { device: device.id, name: '主轴转速', code: 'spindle_speed', pointType: 'numeric', value: device.runStatus === '运行中' ? '3000 rpm' : '0 rpm', status: '正常', quality: '良好', updatedAt: device.updatedAt },
+    { device: device.id, name: '进给速度', code: 'feed_rate', pointType: 'numeric', value: device.runStatus === '运行中' ? '1180 mm/min' : '0 mm/min', status: '正常', quality: '良好', updatedAt: device.updatedAt },
+    { device: device.id, name: '主轴负载', code: 'spindle_load', pointType: 'numeric', value: device.alarmCount > 0 ? '72%' : '41%', status: device.alarmCount > 0 ? '偏高' : '正常', quality: '良好', updatedAt: device.updatedAt },
+  ];
+}
+
+function getPointType(point) {
+  if (!point) return 'numeric';
+  if (point.pointType) return point.pointType;
+  if (point.code === 'alarm_code') return 'alarm';
+  if (['spindle_speed', 'feed_rate', 'spindle_load', 'air_pressure'].includes(point.code)) return 'numeric';
+  return 'status';
+}
+
+function getPointDetailTitle(point) {
+  const pointType = getPointType(point);
+  if (pointType === 'alarm') return '报警码详情';
+  if (pointType === 'status') return '状态点位详情';
+  return '数值点位详情';
+}
+
+function getAlarmPointDetail(point, device) {
+  const code = String(point.value ?? '0');
+  if (code === '1007') {
+    return {
+      code,
+      name: '设备通信异常',
+      level: '中危',
+      device: 'CNC-003',
+      status: '处理中',
+      time: '09:08:20',
+      task: 'TASK-004',
+      impact: '设备通信异常，当前任务暂停',
+      suggestion: '检查设备连接，确认恢复后复位报警',
+    };
+  }
+
+  return {
+    code,
+    name: code === '0' ? '无报警' : '未知报警',
+    level: code === '0' ? '-' : '待确认',
+    device: device.id,
+    status: code === '0' ? '无报警' : point.status,
+    time: point.updatedAt,
+    task: code === '0' ? '-' : getRelatedTaskForDevice(device.id),
+    impact: code === '0' ? '无影响' : '需人工确认报警影响',
+    suggestion: code === '0' ? '无需处理' : '按报警互锁页流程处理',
+  };
+}
+
+function getNumericNormalRange(point) {
+  if (point.code === 'spindle_load') return '0% - 70%';
+  if (point.code === 'spindle_speed') return '0 - 5000 rpm';
+  if (point.code === 'feed_rate') return '0 - 2000 mm/min';
+  return '按设备工艺参数';
+}
+
+function getNumericThreshold(point) {
+  if (point.code === 'spindle_load') return '> 85%';
+  if (point.code === 'spindle_speed') return '> 4800 rpm';
+  if (point.code === 'feed_rate') return '> 1800 mm/min';
+  return '按点位配置';
+}
+
+function getPointUnit(point) {
+  const value = String(point.value ?? '');
+  if (value.includes('mm/min')) return 'mm/min';
+  if (value.includes('rpm')) return 'rpm';
+  if (value.includes('%')) return '%';
+  return '无';
+}
+
+function isInterlockSatisfied(point) {
+  if (point.code === 'door_closed') return point.value === '已关闭';
+  if (point.code === 'fixture_locked') return point.value === '已锁紧';
+  if (point.code === 'estop') return point.value === '未触发';
+  if (point.code === 'in_cnc_work_area') return point.value === '不在加工区' || point.value === '正常';
+  return point.status === '正常';
+}
+
+function getRelatedTaskForDevice(deviceId) {
+  return tasks.find((task) => task.devices.includes(deviceId))?.id ?? '无';
+}
+
+function getAlarmOverviewStats(alarmRows) {
+  return {
+    high: alarmRows.filter((alarm) => alarm.level === '高危').length,
+    unhandled: alarmRows.filter((alarm) => alarm.status === '未处理').length,
+    processing: alarmRows.filter((alarm) => alarm.status === '处理中').length,
+    recovered: alarmRows.filter((alarm) => alarm.status === '已恢复').length,
+    blockedTasks: new Set(alarmRows.map((alarm) => getAlarmHandlingContext(alarm).task).filter((task) => task !== '无')).size,
+  };
+}
+
+function filterAlarms(alarmRows, filter) {
+  if (filter === '高危') return alarmRows.filter((alarm) => alarm.level === '高危');
+  if (filter === '阻塞任务') return alarmRows.filter((alarm) => getAlarmHandlingContext(alarm).task !== '无');
+  if (filter === '全部') return alarmRows;
+  return alarmRows.filter((alarm) => alarm.status === filter);
+}
+
+function getAlarmRelatedLogs(alarm) {
+  if (!alarm) return [];
+  if (alarm.name === '日志上传失败') {
+    return [{ time: '09:06:12', objectId: 'IPC-001', logType: '系统报警', content: '日志上传恢复', status: '已恢复' }];
+  }
+
+  const context = getAlarmHandlingContext(alarm);
+  const rows = allLogs.filter((row) => {
+    const matchesName = row.content === alarm.name || row.content.includes(alarm.name);
+    const matchesDevice = row.deviceId === alarm.device || row.objectId === alarm.device;
+    const matchesTask = context.task !== '无' && row.taskId === context.task;
+    const matchesLogType = row.logType === '报警' || row.logType === '审计' || row.logType === '任务';
+    return matchesLogType && (matchesName || matchesDevice || matchesTask);
+  });
+  return rows.length ? rows : [{ time: alarm.time, objectId: alarm.device, logType: alarm.type, content: alarm.name, status: alarm.status }];
+}
+
+function getAlarmHandlingContext(alarm) {
+  const relatedLog = allLogs.find((log) => log.content === alarm.name || log.deviceId === alarm.device || log.objectId === alarm.device);
+  const relatedTask = alarm.name === '日志上传失败' ? '无' : (relatedLog?.taskId || getRelatedTaskForDevice(alarm.device));
+  const latestRecord = relatedLog ? `${relatedLog.time} ${relatedLog.content}` : `${alarm.time} ${alarm.status}`;
+
+  if (alarm.name === '日志上传失败') {
+    return {
+      impact: '日志上传曾失败，当前已恢复，需确认是否存在待补传日志',
+      task: '无',
+      suggestion: '检查待上传队列，确认补传完成后标记恢复',
+      latestRecord: '09:06:12 日志上传恢复',
+    };
+  }
+
+  if (alarm.name === '设备连接异常') {
+    return {
+      impact: '设备通信异常，相关任务可能暂停或等待人工确认',
+      task: relatedTask === '无' ? 'TASK-004' : relatedTask,
+      suggestion: '检查设备连接，通信恢复后记录处理结果',
+      latestRecord,
+    };
+  }
+
+  if (alarm.name === '主轴负载过高') {
+    return {
+      impact: '主轴负载超过阈值，可能影响当前加工稳定性',
+      task: relatedTask === '无' ? 'TASK-001' : relatedTask,
+      suggestion: '确认切削参数和设备负载，必要时降低进给或暂停任务',
+      latestRecord: '09:11:18 主轴负载写入成功',
+    };
+  }
+
+  return {
+    impact: '需确认报警对设备和任务的影响范围',
+    task: relatedTask,
+    suggestion: '按现场报警处理流程确认并记录处理结果',
+    latestRecord,
+  };
+}
+
+function getAlarmActionsByStatus(status) {
+  const actionMap = {
+    未处理: ['确认处理', '派发维修', '查看任务', '查看日志'],
+    处理中: ['标记恢复', '派发维修', '查看任务', '查看日志'],
+    已恢复: ['确认归档', '查看日志', '查看任务'],
+    已关闭: ['查看日志', '查看处理记录'],
+  };
+  return actionMap[status] ?? ['查看日志', '查看任务'];
+}
+
+function getInterlockMatrixRows() {
+  return devices
+    .map((device) => {
+      const points = getDevicePointsFor(device);
+      const door = getInterlockPoint(points, 'door_closed');
+      const fixture = getInterlockPoint(points, 'fixture_locked');
+      const estop = getInterlockPoint(points, 'estop');
+      const robotArea = getInterlockPoint(points, 'in_cnc_work_area');
+      const interlockPoints = [door, fixture, estop, robotArea].filter((point) => point.value !== '-');
+      if (!interlockPoints.length) return null;
+
+      const failed = interlockPoints.filter((point) => !point.ok);
+      const overall = failed.length ? '不满足' : '满足';
+      const relatedTask = getRelatedTaskForDevice(device.id);
+      const affectedTask = overall === '不满足' ? (relatedTask === '无' ? '无当前任务' : relatedTask) : '-';
+      const updatedAt = getLatestInterlockTime(interlockPoints, device.updatedAt);
+
+      return {
+        id: device.id,
+        type: device.type,
+        door,
+        fixture,
+        estop,
+        robotArea,
+        overall,
+        affectedTask,
+        updatedAt,
+        blockReason: failed.length ? failed.map((point) => `${point.label}为${point.value}`).join('；') : '无阻塞',
+        suggestion: failed.length ? getInterlockSuggestion(failed) : '当前互锁满足，无需处理',
+      };
+    })
+    .filter(Boolean);
+}
+
+function getInterlockPoint(points, code) {
+  const labelMap = {
+    door_closed: '防护门',
+    fixture_locked: '夹具状态',
+    estop: '急停状态',
+    in_cnc_work_area: '机器人安全区',
+  };
+  const point = points.find((item) => item.code === code);
+  if (!point) return { label: labelMap[code], value: '-', ok: true, time: '-' };
+  return {
+    label: labelMap[code],
+    value: point.value,
+    ok: isInterlockSatisfied(point),
+    time: point.updatedAt,
+  };
+}
+
+function getLatestInterlockTime(points, fallback) {
+  const times = points.map((point) => point.time).filter((time) => time && time !== '-');
+  return times.sort((a, b) => b.localeCompare(a))[0] ?? fallback;
+}
+
+function getInterlockSuggestion(failedPoints) {
+  const actions = failedPoints.map((point) => {
+    if (point.label === '防护门') return '关闭防护门';
+    if (point.label === '夹具状态') return '锁紧夹具';
+    if (point.label === '急停状态') return '检查急停回路';
+    if (point.label === '机器人安全区') return '确认机器人退出加工区';
+    return `检查${point.label}`;
+  });
+  return `${Array.from(new Set(actions)).join('，')}，刷新点位后再执行任务`;
+}
+
+function getInterlockStats(rows) {
+  return {
+    total: rows.length,
+    satisfied: rows.filter((row) => row.overall === '满足').length,
+    unsatisfied: rows.filter((row) => row.overall === '不满足').length,
+    blockedTasks: new Set(rows.filter((row) => row.affectedTask !== '-' && row.affectedTask !== '无当前任务').map((row) => row.affectedTask)).size,
+  };
+}
+
+function filterInterlockRows(rows, filter) {
+  if (filter === '不满足') return rows.filter((row) => row.overall === '不满足');
+  if (filter === '阻塞任务') return rows.filter((row) => row.affectedTask !== '-' && row.affectedTask !== '无当前任务');
+  if (filter === '已满足') return rows.filter((row) => row.overall === '满足');
+  return rows;
+}
+
+function renderInterlockValue(point) {
+  if (!point || point.value === '-') return '-';
+  return <span className={`interlock-mini ${point.ok ? 'ok' : 'bad'}`}>{point.value}</span>;
 }
 
 function formatTrendValue(series) {
@@ -1110,8 +1846,16 @@ function LogTable({ rows, simple = false }) {
 }
 
 function DataTable({ columns, rows, rowKeys = [], selectedKey, onRowClick, className = '', compact = false }) {
+  const handleWheel = (event) => {
+    const target = event.currentTarget;
+    const canScrollX = target.scrollWidth > target.clientWidth;
+    if (!canScrollX || Math.abs(event.deltaY) <= Math.abs(event.deltaX)) return;
+    event.preventDefault();
+    target.scrollLeft += event.deltaY;
+  };
+
   return (
-    <div className={`table-wrap ${className} ${compact ? 'compact-table' : ''}`}>
+    <div className={`table-wrap ${className} ${compact ? 'compact-table' : ''}`} onWheel={handleWheel}>
       <table>
         <thead>
           <tr>
@@ -1143,11 +1887,11 @@ function DataTable({ columns, rows, rowKeys = [], selectedKey, onRowClick, class
 
 function StatusText({ value }) {
   const tone =
-    ['正常', '在线', '运行中', '已确认', '已下发', '已关闭', '已锁紧', '未触发', '良好', '完成', '已恢复'].includes(value)
+    ['正常', '在线', '运行中', '已确认', '已下发', '已关闭', '已锁紧', '未触发', '良好', '完成', '已恢复', '满足', '低危'].includes(value)
       ? 'ok'
-      : ['偏高', '暂停', '排队中', '处理中', '维护中', '等待前置条件', '检测中'].includes(value)
+      : ['偏高', '暂停', '排队中', '处理中', '维护中', '等待前置条件', '检测中', '中危'].includes(value)
         ? 'warn'
-        : ['失败', '离线', '停止', '报警', '未处理', '异常', '已中止'].includes(value)
+        : ['失败', '离线', '停止', '报警', '未处理', '异常', '已中止', '不满足', '高危'].includes(value)
           ? 'bad'
           : 'neutral';
   return <span className={`status-text ${tone}`}>{value}</span>;
@@ -1178,6 +1922,31 @@ function filterDevices(list, filter) {
   if (filter === '运行中') return list.filter((device) => device.runStatus === '运行中');
   if (filter === '维护') return list.filter((device) => device.runStatus === '维护中');
   return list;
+}
+
+function filterDeviceRows(list, query, scope) {
+  const text = query.trim().toLowerCase();
+  return list.filter((device) => {
+    const matchesQuery =
+      !text || [device.id, device.type, device.online, device.runStatus].some((value) => value.toLowerCase().includes(text));
+    const matchesScope =
+      scope === '全部' ||
+      device.type === scope ||
+      device.online === scope ||
+      device.runStatus === scope ||
+      (scope === '异常' && device.alarmCount > 0);
+    return matchesQuery && matchesScope;
+  });
+}
+
+function filterTasks(list, query, scope) {
+  const text = query.trim().toLowerCase();
+  return list.filter((task) => {
+    const matchesQuery =
+      !text || [task.id, task.status, task.step, task.devices, task.command].some((value) => value.toLowerCase().includes(text));
+    const matchesScope = scope === '全部' || task.status === scope || (scope === '有报警' && task.alarmCount > 0);
+    return matchesQuery && matchesScope;
+  });
 }
 
 function getTaskStats(list) {
@@ -1217,7 +1986,7 @@ function getTaskActionConfig(status) {
     暂停: ['恢复', '中止'],
     失败: ['重试'],
     已完成: [],
-    已中止: [],
+    已中止: ['重新运行'],
   };
   return { actions: config[status] ?? [] };
 }
@@ -1225,7 +1994,7 @@ function getTaskActionConfig(status) {
 function getActionIcon(action) {
   if (action === '开始') return <Play size={15} />;
   if (action === '暂停') return <Pause size={15} />;
-  if (action === '恢复' || action === '重试') return <RotateCcw size={15} />;
+  if (action === '恢复' || action === '重试' || action === '重新运行') return <RotateCcw size={15} />;
   if (action === '中止') return <Square size={15} />;
   return null;
 }

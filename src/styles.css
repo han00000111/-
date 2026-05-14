@@ -223,6 +223,28 @@ button {
   grid-template-columns: minmax(420px, 1fr) minmax(420px, 1fr);
 }
 
+.alarms-layout {
+  grid-template-columns: minmax(360px, 0.9fr) minmax(520px, 1.1fr);
+  align-items: start;
+}
+
+.alarm-overview-panel {
+  grid-column: 1 / -1;
+}
+
+.alarm-card-panel {
+  align-self: stretch;
+}
+
+.alarm-current-panel {
+  align-self: stretch;
+}
+
+.interlock-matrix-panel,
+.alarm-record-panel {
+  grid-column: span 1;
+}
+
 .task-step-panel {
   grid-column: span 1;
 }
@@ -396,6 +418,7 @@ button {
   overflow: auto;
   border: 1px solid #e1e1e1;
   border-radius: 6px;
+  overscroll-behavior: contain;
 }
 
 table {
@@ -553,6 +576,22 @@ tr.selected {
   text-align: right;
 }
 
+.inline-action {
+  min-height: 24px;
+  padding: 2px 7px;
+  border: 1px solid #cfd6df;
+  border-radius: 5px;
+  background: #fff;
+  color: #182433;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.inline-action:hover {
+  background: #e2e7ec;
+}
+
 .action-area {
   margin-top: 12px;
   padding-top: 10px;
@@ -683,6 +722,27 @@ tr.selected {
   font-size: 13px;
 }
 
+.attachment-type-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.attachment-type-filter button {
+  min-height: 26px;
+  padding: 4px 8px;
+  border: 1px solid #cfd6df;
+  border-radius: 5px;
+  background: #fff;
+  color: #1f2933;
+  font-size: 12px;
+}
+
+.attachment-type-filter button:hover,
+.attachment-type-filter button.active {
+  background: #dde3e8;
+}
+
 .attachment-row {
   display: grid;
   grid-template-columns: 64px minmax(0, 1fr) 52px 42px;
@@ -749,12 +809,64 @@ tr.selected {
   text-align: center;
 }
 
+.attachment-empty.with-action {
+  display: grid;
+  gap: 8px;
+}
+
+.attachment-empty.with-action > button,
+.attachment-add-form button,
+.alarm-action-buttons button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 32px;
+  padding: 6px 9px;
+  border: 1px solid #cfcfcf;
+  border-radius: 6px;
+  background: #fff;
+  color: #111;
+  font-size: 13px;
+}
+
+.attachment-empty.with-action > button:hover,
+.attachment-add-form button:hover,
+.alarm-action-buttons button:hover {
+  background: #f0f0f0;
+}
+
+.attachment-add-form {
+  display: grid;
+  grid-template-columns: 88px minmax(0, 1fr) 58px;
+  gap: 6px;
+}
+
+.attachment-add-form input,
+.attachment-add-form select {
+  min-width: 0;
+  padding: 6px;
+  border: 1px solid #cfd6df;
+  border-radius: 5px;
+  background: #fff;
+}
+
 .attachment-modal {
   width: min(520px, calc(100vw - 32px));
 }
 
 .attachment-detail {
   margin-top: 12px;
+}
+
+.attachment-action-note,
+.alarm-action-result {
+  margin-top: 10px;
+  padding: 8px 10px;
+  border: 1px solid #d7dde3;
+  border-radius: 6px;
+  background: #f3f5f7;
+  color: #364152;
+  font-size: 13px;
 }
 
 .point-block {
@@ -934,6 +1046,72 @@ tr.selected {
   color: #991b1b;
 }
 
+.interlock-overview {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+
+.interlock-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.interlock-summary span {
+  display: flex;
+  min-height: 32px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 8px;
+  border: 1px solid #d7dde3;
+  border-radius: 6px;
+  background: #f4f6f8;
+  color: #5d6875;
+  font-size: 12px;
+}
+
+.interlock-summary strong {
+  color: #182433;
+  font-size: 16px;
+}
+
+.interlock-mini {
+  display: inline-flex;
+  align-items: center;
+  min-height: 22px;
+  padding: 2px 7px;
+  border-radius: 5px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.interlock-mini.ok {
+  border: 1px solid #b7c9bc;
+  background: #f2f6f3;
+  color: #14532d;
+}
+
+.interlock-mini.bad {
+  border: 1px solid #d7b5b5;
+  background: #f7eeee;
+  color: #991b1b;
+}
+
+.interlock-detail-panel {
+  display: grid;
+  grid-template-columns: minmax(260px, 1fr) minmax(180px, auto);
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid #d7dde3;
+  border-radius: 6px;
+  background: #f7f8fa;
+}
+
+.interlock-actions {
+  align-content: start;
+}
+
 .alarm-selection-detail {
   display: grid;
   grid-template-columns: auto 1fr auto;
@@ -964,6 +1142,43 @@ tr.selected {
 .compact-device-list {
   display: grid;
   gap: 4px;
+  max-height: 530px;
+  overflow: auto;
+  padding-right: 2px;
+}
+
+.device-search-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) 86px;
+  gap: 6px;
+  align-items: center;
+  margin-bottom: 8px;
+  padding: 7px;
+  border: 1px solid #d7dde3;
+  border-radius: 6px;
+  background: #f3f5f7;
+}
+
+.device-search-row input,
+.device-search-row select,
+.command-filterbar select,
+.compact-filterbar select {
+  min-width: 0;
+  border: 1px solid #cfd6df;
+  border-radius: 5px;
+  background: #fff;
+  color: #1f2933;
+  font-size: 12px;
+}
+
+.device-search-row input {
+  padding: 6px;
+}
+
+.device-search-row select,
+.command-filterbar select,
+.compact-filterbar select {
+  padding: 6px 4px;
 }
 
 .compact-device-row {
@@ -1240,6 +1455,8 @@ tr.selected {
 
 .step-detail-compact {
   align-self: stretch;
+  min-width: 0;
+  overflow: hidden;
   padding: 8px 10px;
   border: 1px solid #d7dde3;
   border-radius: 6px;
@@ -1273,6 +1490,24 @@ tr.selected {
   outline: 0;
   background: transparent;
   font-size: 14px;
+}
+
+.compact-filterbar {
+  margin-bottom: 8px;
+  padding: 6px 8px;
+}
+
+.compact-filterbar input {
+  min-width: 120px;
+  font-size: 13px;
+}
+
+.compact-filterbar select {
+  width: 96px;
+}
+
+.command-filterbar input {
+  min-width: 260px;
 }
 
 .settings-grid {
@@ -1413,6 +1648,14 @@ tr.selected {
   min-width: 0;
 }
 
+.tasks-grid {
+  grid-template-columns: minmax(420px, 1.05fr) minmax(400px, 0.95fr);
+}
+
+.tasks-grid .task-step-layout {
+  grid-template-columns: minmax(280px, 340px) minmax(340px, 1fr);
+}
+
 .current-task-body {
   display: grid;
   grid-template-columns: 112px minmax(0, 1fr);
@@ -1550,6 +1793,151 @@ tr.selected {
   font-size: 13px;
 }
 
+.alarm-action-panel {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+
+.alarm-process-summary,
+.alarm-detail-hero {
+  display: grid;
+  gap: 6px;
+  padding: 10px;
+  border: 1px solid #d7dde3;
+  border-radius: 6px;
+  background: #f4f6f8;
+}
+
+.alarm-process-summary span,
+.alarm-detail-hero span {
+  color: #5d6875;
+  font-size: 12px;
+}
+
+.alarm-process-summary strong,
+.alarm-detail-hero strong {
+  font-size: 20px;
+}
+
+.alarm-process-summary p {
+  margin: 0;
+  color: #4b5563;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.alarm-detail-hero div {
+  display: flex;
+  gap: 6px;
+}
+
+.alarm-process-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 170px;
+  gap: 12px;
+  align-items: start;
+}
+
+.alarm-handling-context {
+  display: grid;
+  gap: 8px;
+}
+
+.alarm-action-buttons {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+
+.alarm-action-buttons h3 {
+  margin: 0;
+  color: #4b5563;
+  font-size: 13px;
+}
+
+.alarm-action-buttons button {
+  width: 100%;
+}
+
+.alarm-action-panel .alarm-action-result {
+  grid-column: 1 / -1;
+  margin-top: 0;
+}
+
+.alarm-overview-strip {
+  display: grid;
+  gap: 8px;
+}
+
+.alarm-overview-stats {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.alarm-overview-stats span {
+  display: flex;
+  min-height: 34px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 9px;
+  border: 1px solid #d7dde3;
+  border-radius: 6px;
+  background: #f4f6f8;
+  color: #5d6875;
+  font-size: 12px;
+}
+
+.alarm-overview-stats strong {
+  color: #182433;
+  font-size: 16px;
+}
+
+.alarm-card-list {
+  display: grid;
+  gap: 8px;
+}
+
+.alarm-card {
+  display: grid;
+  width: 100%;
+  gap: 6px;
+  padding: 10px;
+  border: 1px solid #d7dde3;
+  border-radius: 6px;
+  background: #fff;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.alarm-card:hover {
+  border-color: #aeb7c2;
+  background: #f3f5f7;
+}
+
+.alarm-card.selected {
+  border-color: #8c98a6;
+  background: #dfe4ea;
+}
+
+.alarm-card-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.alarm-card-title strong {
+  font-size: 16px;
+}
+
+.alarm-card-meta,
+.alarm-card-task {
+  color: #4b5563;
+  font-size: 13px;
+}
+
 .button-row button:disabled {
   cursor: not-allowed;
   opacity: 0.48;
@@ -1578,6 +1966,12 @@ tr.selected {
 @media (max-width: 1180px) {
   .overview-grid,
   .alarm-detail-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .alarm-action-panel,
+  .alarm-process-body,
+  .alarm-overview-stats {
     grid-template-columns: 1fr;
   }
 
