@@ -253,33 +253,37 @@ function OverviewPage({
     <div className="page-grid overview-grid">
       <AlarmPriorityBar selectedTask={selectedTask} setPage={setPage} />
 
-      <section className="panel device-panel">
-        <SectionTitle icon={Cpu} title="设备状态总览" />
-        <DeviceOverviewModule onSelect={openDevice} />
-      </section>
+      <div className="overview-column">
+        <section className="panel device-panel">
+          <SectionTitle icon={Cpu} title="设备状态总览" />
+          <DeviceOverviewModule onSelect={openDevice} />
+        </section>
 
-      <section className="panel task-panel">
-        <SectionTitle icon={ClipboardList} title="任务执行总览" />
-        <TaskOverviewModule
-          taskList={taskList}
-          selectedTask={selectedTask}
-          selectedTaskId={selectedTaskId}
-          setSelectedTaskId={setSelectedTaskId}
-          onTaskAction={onTaskAction}
-          onDetail={openTaskDetail}
-          onLogs={openTaskLogs}
-        />
-      </section>
+        <section className="panel alarm-detail-panel">
+          <SectionTitle icon={AlertTriangle} title="报警与互锁" />
+          <AlarmInterlockDetail onAlarmJump={jumpFromAlarm} />
+        </section>
+      </div>
 
-      <section className="panel alarm-detail-panel">
-        <SectionTitle icon={AlertTriangle} title="报警与互锁" />
-        <AlarmInterlockDetail onAlarmJump={jumpFromAlarm} />
-      </section>
+      <div className="overview-column">
+        <section className="panel task-panel">
+          <SectionTitle icon={ClipboardList} title="任务执行总览" />
+          <TaskOverviewModule
+            taskList={taskList}
+            selectedTask={selectedTask}
+            selectedTaskId={selectedTaskId}
+            setSelectedTaskId={setSelectedTaskId}
+            onTaskAction={onTaskAction}
+            onDetail={openTaskDetail}
+            onLogs={openTaskLogs}
+          />
+        </section>
 
-      <section className="panel logs-panel">
-        <SectionTitle icon={FileClock} title="最近日志" />
-        <RecentLogs selectedTaskId={selectedTaskId} setLogFilter={setLogFilter} setLogTypeFilter={setLogTypeFilter} />
-      </section>
+        <section className="panel logs-panel">
+          <SectionTitle icon={FileClock} title="最近日志" />
+          <RecentLogs selectedTaskId={selectedTaskId} setLogFilter={setLogFilter} setLogTypeFilter={setLogTypeFilter} />
+        </section>
+      </div>
     </div>
   );
 }
@@ -764,16 +768,18 @@ function CurrentTaskCard({ task, onTaskAction, onDetail, onLogs }) {
         <span>当前任务</span>
         <strong>{task.id}</strong>
       </div>
-      <div className="detail-list dense">
-        <Info label="状态" value={task.status} />
-        <Info label="当前步骤" value={toChineseStep(task.currentStep)} />
-        <Info label="关联设备" value={task.devices} />
-        <Info label="当前指令" value={task.command} />
-        <Info label="下发状态" value="已下发" />
-        <Info label="回执状态" value="已确认" />
-        <Info label="开始时间" value={task.startedAt} />
+      <div className="current-task-body">
+        <TaskActions task={task} onTaskAction={onTaskAction} onDetail={onDetail} onLogs={onLogs} />
+        <div className="detail-list dense current-task-detail">
+          <Info label="状态" value={task.status} />
+          <Info label="当前步骤" value={toChineseStep(task.currentStep)} />
+          <Info label="关联设备" value={task.devices} />
+          <Info label="当前指令" value={task.command} />
+          <Info label="下发状态" value="已下发" />
+          <Info label="回执状态" value="已确认" />
+          <Info label="开始时间" value={task.startedAt} />
+        </div>
       </div>
-      <TaskActions task={task} onTaskAction={onTaskAction} onDetail={onDetail} onLogs={onLogs} />
     </div>
   );
 }
