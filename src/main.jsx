@@ -260,7 +260,7 @@ function OverviewPage({
 
   return (
     <div className="page-grid overview-grid">
-      <AlarmPriorityBar selectedTask={selectedTask} setPage={setPage} />
+      <AlarmPriorityBar setPage={setPage} />
 
       <div className="overview-column">
         <section className="panel device-panel">
@@ -297,18 +297,13 @@ function OverviewPage({
   );
 }
 
-function AlarmPriorityBar({ selectedTask, setPage }) {
+function AlarmPriorityBar({ setPage }) {
   const highRiskCount = alarms.filter((alarm) => alarm.level === '高危' && alarm.status !== '已恢复').length;
   const untreatedCount = alarms.filter((alarm) => alarm.status === '未处理').length;
-  const highRiskAlarm = alarms.find((alarm) => alarm.level === '高危');
-  const affectedDevice = highRiskAlarm?.device ?? '-';
-  const affectedTask = selectedTask?.devices?.includes(affectedDevice)
-    ? selectedTask.id
-    : tasks.find((task) => task.devices.includes(affectedDevice))?.id ?? '-';
   const summary =
     highRiskCount > 0
-      ? `高危报警 ${highRiskCount}｜未处理报警 ${untreatedCount}｜影响设备 ${affectedDevice}｜影响任务 ${affectedTask}`
-      : `当前无高危报警｜未处理一般报警 ${untreatedCount}`;
+      ? `紧急：${highRiskCount} 条高危报警待处理`
+      : `当前无高危报警｜${untreatedCount} 条一般报警待处理`;
 
   return (
     <section className="panel alarm-strip-panel">
@@ -623,9 +618,20 @@ function CommandsPage() {
 function AlarmsPage({ setPage, setSelectedTaskId, setSelectedDeviceId, setLogFilter, setLogTypeFilter }) {
   const [selectedAlarmName, setSelectedAlarmName] = useState(alarms[0]?.name ?? '');
   const [alarmFilter, setAlarmFilter] = useState('全部');
-  const filteredAlarms = useMemo(() => filterAlarms(alarms, alarmFilter), [alarmFilter]);
-  const selectedAlarm = alarms.find((alarm) => alarm.name === selectedAlarmName) ?? alarms[0];
-  const relatedLogs = getAlarmRelatedLogs(selectedAlarm);
+  const [recordFilter, setRecordFilter] = useState('全部');
+  const [alarmStatusOverrides, setAlarmStatusOverrides] = useState({});
+  const [handlingRecords, setHandlingRecords] = useState([]);
+  const alarmRows = useMemo(
+    () => alarms.map((alarm) => ({ ...alarm, status: alarmStatusOverrides[alarm.name] ?? alarm.status })),
+    [alarmStatusOverrides],
+  );
+  const filteredAlarms = useMemo(() => filterAlarms(alarmRows, alarmFilter), [alarmRows, alarmFilter]);
+  const selectedAlarm = alarmRows.find((alarm) => alarm.name === selectedAlarmName) ?? alarmRows[0];
+  const relatedLogs = useMemo(
+    () => filterHandlingLogs([...getAlarmRelatedLogs(selectedAlarm), ...handlingRecords.filter((record) => isRecordRelatedToAlarm(record, selectedAlarm))], recordFilter),
+    [selectedAlarm, handlingRecords, recordFilter],
+  );
+  const relatedDeviceIds = useMemo(() => getAlarmRelatedDeviceIds(selectedAlarm), [selectedAlarm]);
 
   useEffect(() => {
     if (filteredAlarms[0] && !filteredAlarms.some((alarm) => alarm.name === selectedAlarmName)) {
@@ -636,16 +642,22 @@ function AlarmsPage({ setPage, setSelectedTaskId, setSelectedDeviceId, setLogFil
   return (
     <div className="page-grid alarms-grid alarms-layout">
       <section className="panel alarm-overview-panel">
-        <AlarmOverviewBar alarms={alarms} filter={alarmFilter} onFilterChange={setAlarmFilter} />
+        <AlarmOverviewBar alarms={alarmRows} filter={alarmFilter} onFilterChange={setAlarmFilter} />
       </section>
       <section className="panel alarm-card-panel">
         <SectionTitle icon={AlertTriangle} title="报警卡片列表" action={`${filteredAlarms.length} 条`} />
         <AlarmCardList alarms={filteredAlarms} selectedAlarmName={selectedAlarmName} onSelect={setSelectedAlarmName} />
       </section>
       <section className="panel alarm-current-panel">
-        <SectionTitle icon={MonitorCog} title="当前报警详情与处理" />
+        <SectionTitle icon={MonitorCog} title="处理工作台" />
         <AlarmActionPanel
           alarm={selectedAlarm}
+          onRecord={(record, nextStatus) => {
+            setHandlingRecords((records) => [record, ...records]);
+            if (nextStatus) {
+              setAlarmStatusOverrides((overrides) => ({ ...overrides, [selectedAlarm.name]: nextStatus }));
+            }
+          }}
           onNavigate={(target, payload) => {
             if (target === 'tasks' && payload) {
               setSelectedTaskId(payload);
@@ -665,11 +677,12 @@ function AlarmsPage({ setPage, setSelectedTaskId, setSelectedDeviceId, setLogFil
       </section>
       <section className="panel interlock-matrix-panel">
         <SectionTitle icon={ShieldCheck} title="互锁状态总览" />
-        <InterlockTable />
+        <InterlockTable highlightedDeviceIds={relatedDeviceIds} />
       </section>
       <section className="panel alarm-record-panel">
-        <SectionTitle icon={History} title="处理记录" action={selectedAlarm?.name ?? '-'} />
-        <SimpleLogTable rows={relatedLogs} />
+        <SectionTitle icon={History} title="处理记录" action="已按当前报警筛选" />
+        <SegmentedFilter options={['全部', '报警', '互锁', '任务', '审计', '设备']} value={recordFilter} onChange={setRecordFilter} />
+        {relatedLogs.length ? <SimpleLogTable rows={relatedLogs} /> : <div className="attachment-empty">暂无相关处理记录</div>}
       </section>
     </div>
   );
@@ -1127,15 +1140,11 @@ function AttachmentPreview({ attachment, onClose }) {
 
 function AlarmOverviewBar({ alarms: alarmRows, filter, onFilterChange }) {
   const stats = getAlarmOverviewStats(alarmRows);
+  const urgencyText = getAlarmUrgencyText(alarmRows);
   return (
     <div className="alarm-overview-strip">
-      <div className="alarm-overview-stats">
-        <span>高危 <strong>{stats.high}</strong></span>
-        <span>未处理 <strong>{stats.unhandled}</strong></span>
-        <span>处理中 <strong>{stats.processing}</strong></span>
-        <span>已恢复 <strong>{stats.recovered}</strong></span>
-        <span>阻塞任务 <strong>{stats.blockedTasks}</strong></span>
-      </div>
+      <div className="alarm-overview-stats">高危 {stats.high}｜未处理 {stats.unhandled}｜处理中 {stats.processing}｜已恢复 {stats.recovered}｜阻塞任务 {stats.blockedTasks}</div>
+      <div className="alarm-emergency-line">{urgencyText}</div>
       <SegmentedFilter options={['全部', '未处理', '处理中', '已恢复', '高危', '阻塞任务']} value={filter} onChange={onFilterChange} />
     </div>
   );
@@ -1162,9 +1171,9 @@ function AlarmCardList({ alarms: alarmRows, selectedAlarmName, onSelect }) {
               <strong>{alarm.name}</strong>
             </div>
             <div className="alarm-card-meta">
-              {alarm.device}｜{alarm.type}｜{alarm.status}｜{alarm.time}
+              {alarm.device}｜{alarm.status}｜{alarm.time}
             </div>
-            {context.task !== '无' && <div className="alarm-card-task">关联任务：{context.task}</div>}
+            <div className="alarm-card-task">{context.task}</div>
           </button>
         );
       })}
@@ -1172,7 +1181,7 @@ function AlarmCardList({ alarms: alarmRows, selectedAlarmName, onSelect }) {
   );
 }
 
-function AlarmActionPanel({ alarm, onNavigate }) {
+function AlarmActionPanel({ alarm, onNavigate, onRecord }) {
   const [action, setAction] = useState('');
   useEffect(() => {
     setAction('');
@@ -1184,6 +1193,7 @@ function AlarmActionPanel({ alarm, onNavigate }) {
 
   const context = getAlarmHandlingContext(alarm);
   const actions = getAlarmActionsByStatus(alarm.status);
+  const operation = getAlarmOperationContext(alarm, context);
   const runAction = (label) => {
     if (label === '查看任务') {
       if (context.task === '无') {
@@ -1197,30 +1207,48 @@ function AlarmActionPanel({ alarm, onNavigate }) {
       onNavigate?.('logs', alarm.name === '日志上传失败' ? '日志上传' : alarm.name);
       return;
     }
+    if (label === '查看处理记录') {
+      setAction(`已定位处理记录：${alarm.name}`);
+      return;
+    }
+    const actionResult = getAlarmActionResult(label, alarm);
+    const record = {
+      time: formatNowTime(),
+      objectId: alarm.device,
+      logType: '报警处理',
+      content: actionResult.content,
+      status: actionResult.status,
+    };
+    onRecord?.(record, actionResult.nextStatus);
     setAction(`${label}：${alarm.name} / ${alarm.device}`);
   };
 
   return (
     <div className="alarm-action-panel">
       <div className="alarm-process-summary">
-        <span>当前报警处理｜{alarm.level}｜{alarm.status}</span>
-        <strong>{alarm.name}</strong>
-        <p>
-          {alarm.device}
-          {context.task !== '无' ? `｜关联任务 ${context.task}` : ''}
-          ｜{alarm.time}
-        </p>
+        <span>当前对象</span>
+        <p>{alarm.device}｜{context.task}｜{alarm.level}｜{alarm.status}</p>
       </div>
-      <div className="alarm-process-body">
-        <div className="alarm-handling-context">
-          <Info label="影响判断" value={context.impact} />
-          <Info label="处理建议" value={context.suggestion} />
-          <Info label="最近记录" value={context.latestRecord} />
+      <div className="alarm-workbench-body">
+        <div className="alarm-workbench-cards">
+          <div className="workbench-info-card">
+            <span>影响判断</span>
+            <strong>{context.impact}</strong>
+          </div>
+          <div className="workbench-info-card">
+            <span>处理建议</span>
+            <strong>{context.suggestion}</strong>
+          </div>
+          <div className="workbench-info-card">
+            <span>{operation.reason ? '不可操作原因' : '操作前置'}</span>
+            <strong>{operation.reason || operation.precondition}</strong>
+          </div>
         </div>
+        <div className="workbench-record">最近记录：{context.latestRecord}</div>
         <div className="alarm-action-buttons">
           <h3>处理操作</h3>
           {actions.map((label) => (
-            <button key={label} type="button" onClick={() => runAction(label)}>
+            <button key={label} type="button" disabled={isAlarmActionDisabled(label, operation)} onClick={() => runAction(label)}>
               {label}
             </button>
           ))}
@@ -1294,7 +1322,7 @@ function AlarmPointDetail({ point, device }) {
       <Info label="发生时间" value={alarm.time} />
       <Info label="关联任务" value={alarm.task} />
       <Info label="影响说明" value={alarm.impact} />
-      <Info label="建议处理" value={alarm.suggestion} />
+      <Info label="处理建议" value={alarm.suggestion} />
       <Info label="数据来源" value="MQTT" />
       <Info label="处理入口" value="报警互锁页" />
     </div>
@@ -1362,14 +1390,25 @@ function StepList({ taskId }) {
   );
 }
 
-function InterlockTable() {
+function InterlockTable({ highlightedDeviceIds = [] }) {
   const [filter, setFilter] = useState('全部');
+  const [matrixExpanded, setMatrixExpanded] = useState(false);
   const [selectedDeviceId, setSelectedDeviceId] = useState('');
   const [actionResult, setActionResult] = useState('');
   const rows = useMemo(() => getInterlockMatrixRows(), []);
   const stats = useMemo(() => getInterlockStats(rows), [rows]);
   const visibleRows = useMemo(() => filterInterlockRows(rows, filter), [rows, filter]);
-  const selectedRow = visibleRows.find((row) => row.id === selectedDeviceId) ?? visibleRows[0] ?? rows[0];
+  const relatedRows = useMemo(() => rows.filter((row) => highlightedDeviceIds.includes(row.id) || highlightedDeviceIds.includes(row.affectedTask)), [rows, highlightedDeviceIds]);
+  const relatedInterlock = getRelatedInterlockSummary(relatedRows);
+  const highlightedId = highlightedDeviceIds.find((id) => visibleRows.some((row) => row.id === id));
+  const selectedRow = visibleRows.find((row) => row.id === selectedDeviceId) ?? visibleRows.find((row) => row.id === highlightedId) ?? visibleRows[0] ?? rows[0];
+
+  useEffect(() => {
+    if (highlightedId) {
+      setSelectedDeviceId(highlightedId);
+      setActionResult('');
+    }
+  }, [highlightedId]);
 
   useEffect(() => {
     if (visibleRows[0] && !visibleRows.some((row) => row.id === selectedDeviceId)) {
@@ -1383,50 +1422,66 @@ function InterlockTable() {
 
   return (
     <div className="interlock-overview">
-      <div className="interlock-summary">
-        <span>涉及设备 <strong>{stats.total}</strong></span>
-        <span>满足 <strong>{stats.satisfied}</strong></span>
-        <span>不满足 <strong>{stats.unsatisfied}</strong></span>
-        <span>阻塞任务 <strong>{stats.blockedTasks}</strong></span>
+      <div className="interlock-related-summary">
+        <strong>{relatedInterlock}</strong>
+        <button type="button" onClick={() => setMatrixExpanded((expanded) => !expanded)}>
+          {matrixExpanded ? '收起矩阵' : '展开矩阵'}
+        </button>
       </div>
-      <SegmentedFilter options={['全部', '不满足', '阻塞任务', '已满足']} value={filter} onChange={setFilter} />
-      <DataTable
-        columns={['设备', '防护门', '夹具', '急停', '机器人安全区', '总体状态', '影响任务', '更新时间']}
-        rows={visibleRows.map((row) => [
-          row.id,
-          renderInterlockValue(row.door),
-          renderInterlockValue(row.fixture),
-          renderInterlockValue(row.estop),
-          renderInterlockValue(row.robotArea),
-          <StatusText value={row.overall} />,
-          row.overall === '不满足' ? row.affectedTask : '-',
-          row.updatedAt,
-        ])}
-        rowKeys={visibleRows.map((row) => row.id)}
-        selectedKey={selectedRow?.id}
-        onRowClick={(id) => {
-          setSelectedDeviceId(id);
-          setActionResult('');
-        }}
-      />
-      {selectedRow && (
-        <div className="interlock-detail-panel">
-          <div className="detail-list dense">
-            <Info label="当前选中设备" value={`${selectedRow.id} / ${selectedRow.type}`} />
-            <Info label="阻塞原因" value={selectedRow.blockReason} />
-            <Info label="影响任务" value={selectedRow.affectedTask} />
-            <Info label="建议处理" value={selectedRow.suggestion} />
-            <Info label="最近更新时间" value={selectedRow.updatedAt} />
+      {matrixExpanded && (
+        <>
+          <div className="interlock-summary">
+            <span>涉及设备 <strong>{stats.total}</strong></span>
+            <span>满足 <strong>{stats.satisfied}</strong></span>
+            <span>不满足 <strong>{stats.unsatisfied}</strong></span>
+            <span>阻塞任务 <strong>{stats.blockedTasks}</strong></span>
           </div>
-          <div className="button-row interlock-actions">
-            {['刷新状态', '查看关联任务', '记录处理结果'].map((label) => (
-              <button key={label} type="button" onClick={() => runAction(label)}>
-                {label}
-              </button>
-            ))}
-          </div>
-          {actionResult && <div className="alarm-action-result">{actionResult}</div>}
-        </div>
+          <SegmentedFilter options={['全部', '不满足', '阻塞任务', '已满足']} value={filter} onChange={setFilter} />
+          {visibleRows.length ? (
+            <DataTable
+              columns={['设备编号', '设备类型', '防护门', '夹具状态', '急停状态', '机器人安全区', '总体状态', '影响任务', '阻塞原因', '更新时间']}
+              rows={visibleRows.map((row) => [
+                row.id,
+                row.type,
+                renderInterlockValue(row.door),
+                renderInterlockValue(row.fixture),
+                renderInterlockValue(row.estop),
+                renderInterlockValue(row.robotArea),
+                <StatusText value={row.overall} />,
+                row.overall === '不满足' ? row.affectedTask : '-',
+                row.overall === '不满足' ? row.blockReason : '-',
+                row.updatedAt,
+              ])}
+              rowKeys={visibleRows.map((row) => row.id)}
+              selectedKey={selectedRow?.id}
+              onRowClick={(id) => {
+                setSelectedDeviceId(id);
+                setActionResult('');
+              }}
+            />
+          ) : (
+            <div className="attachment-empty">{filter === '阻塞任务' ? '暂无阻塞任务' : '当前互锁均满足'}</div>
+          )}
+          {selectedRow && (
+            <div className="interlock-detail-panel">
+              <div className="detail-list dense">
+                <Info label="当前选中设备" value={`${selectedRow.id} / ${selectedRow.type}`} />
+                <Info label="阻塞原因" value={selectedRow.blockReason} />
+                <Info label="影响任务" value={selectedRow.affectedTask} />
+                <Info label="处理建议" value={selectedRow.suggestion} />
+                <Info label="最近更新时间" value={selectedRow.updatedAt} />
+              </div>
+              <div className="button-row interlock-actions">
+                {['刷新状态', '查看关联任务', '记录处理结果'].map((label) => (
+                  <button key={label} type="button" onClick={() => runAction(label)}>
+                    {label}
+                  </button>
+                ))}
+              </div>
+              {actionResult && <div className="alarm-action-result">{actionResult}</div>}
+            </div>
+          )}
+        </>
       )}
     </div>
   );
@@ -1571,6 +1626,39 @@ function filterAlarms(alarmRows, filter) {
   return alarmRows.filter((alarm) => alarm.status === filter);
 }
 
+function getAlarmUrgencyText(alarmRows) {
+  const highRiskAlarm = alarmRows.find((alarm) => alarm.level === '高危' && alarm.status !== '已恢复' && alarm.status !== '已关闭');
+  if (highRiskAlarm) {
+    return `紧急：${alarmRows.filter((alarm) => alarm.level === '高危' && alarm.status !== '已恢复' && alarm.status !== '已关闭').length} 条高危报警待处理`;
+  }
+  const lowRiskRecovered = alarmRows.filter((alarm) => alarm.level === '低危' && alarm.status === '已恢复').length;
+  return `当前无高危报警｜${lowRiskRecovered} 条低危报警待归档`;
+}
+
+function filterHandlingLogs(rows, filter) {
+  if (filter === '全部') return rows;
+  return rows.filter((row) => row.logType?.includes(filter) || row.logType === filter);
+}
+
+function isRecordRelatedToAlarm(record, alarm) {
+  if (!record || !alarm) return false;
+  const context = getAlarmHandlingContext(alarm);
+  return (
+    record.objectId === alarm.device ||
+    record.deviceId === alarm.device ||
+    record.taskId === context.task ||
+    String(record.content ?? '').includes(alarm.name)
+  );
+}
+
+function getAlarmRelatedDeviceIds(alarm) {
+  if (!alarm) return [];
+  const context = getAlarmHandlingContext(alarm);
+  const task = tasks.find((item) => item.id === context.task);
+  const ids = [alarm.device, ...(task?.devices.split(',').map((item) => item.trim()) ?? [])];
+  return Array.from(new Set(ids));
+}
+
 function getAlarmRelatedLogs(alarm) {
   if (!alarm) return [];
   if (alarm.name === '日志上传失败') {
@@ -1597,7 +1685,7 @@ function getAlarmHandlingContext(alarm) {
     return {
       impact: '日志上传曾失败，当前已恢复，需确认是否存在待补传日志',
       task: '无',
-      suggestion: '检查待上传队列，确认补传完成后标记恢复',
+      suggestion: '检查待补传日志，确认无残留后归档',
       latestRecord: '09:06:12 日志上传恢复',
     };
   }
@@ -1638,6 +1726,47 @@ function getAlarmActionsByStatus(status) {
   return actionMap[status] ?? ['查看日志', '查看任务'];
 }
 
+function getAlarmOperationContext(alarm, context) {
+  const task = tasks.find((item) => item.id === context.task);
+  const device = devices.find((item) => item.id === alarm.device);
+  const relatedIds = getAlarmRelatedDeviceIds(alarm);
+  const relatedInterlocks = getInterlockMatrixRows().filter((row) => relatedIds.includes(row.id) || row.affectedTask === context.task);
+  const blocker = relatedInterlocks.find((row) => row.overall === '不满足');
+  const reason = device?.online === '离线'
+    ? `${alarm.device} 离线，无法恢复任务`
+    : blocker
+      ? blocker.blockReason
+      : '';
+  return {
+    reason,
+    precondition: `任务${task?.status ?? '无关联'}｜${reason ? '互锁不满足' : '互锁满足'}`,
+  };
+}
+
+function isAlarmActionDisabled(label, operation) {
+  const guardedActions = ['标记恢复', '确认处理', '派发维修'];
+  return Boolean(operation.reason && guardedActions.includes(label));
+}
+
+function getAlarmActionResult(label, alarm) {
+  const map = {
+    确认处理: { status: '处理中', nextStatus: '处理中', content: `已确认${alarm.name}` },
+    派发维修: { status: '处理中', nextStatus: '处理中', content: `已派发维修：${alarm.name}` },
+    标记恢复: { status: '已恢复', nextStatus: '已恢复', content: `${alarm.name}已标记恢复` },
+    确认归档: { status: '已关闭', nextStatus: '已关闭', content: `${alarm.name}已归档` },
+  };
+  return map[label] ?? { status: alarm.status, nextStatus: '', content: `${label}：${alarm.name}` };
+}
+
+function formatNowTime() {
+  return new Intl.DateTimeFormat('zh-CN', {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  }).format(new Date());
+}
+
 function getInterlockMatrixRows() {
   return devices
     .map((device) => {
@@ -1647,9 +1776,12 @@ function getInterlockMatrixRows() {
       const estop = getInterlockPoint(points, 'estop');
       const robotArea = getInterlockPoint(points, 'in_cnc_work_area');
       const interlockPoints = [door, fixture, estop, robotArea].filter((point) => point.value !== '-');
-      if (!interlockPoints.length) return null;
+      if (!interlockPoints.length && device.online !== '离线') return null;
 
       const failed = interlockPoints.filter((point) => !point.ok);
+      if (device.online === '离线') {
+        failed.push({ label: '设备状态', value: '离线', ok: false, time: device.updatedAt });
+      }
       const overall = failed.length ? '不满足' : '满足';
       const relatedTask = getRelatedTaskForDevice(device.id);
       const affectedTask = overall === '不满足' ? (relatedTask === '无' ? '无当前任务' : relatedTask) : '-';
@@ -1700,6 +1832,7 @@ function getInterlockSuggestion(failedPoints) {
     if (point.label === '夹具状态') return '锁紧夹具';
     if (point.label === '急停状态') return '检查急停回路';
     if (point.label === '机器人安全区') return '确认机器人退出加工区';
+    if (point.label === '设备状态') return '恢复设备通信';
     return `检查${point.label}`;
   });
   return `${Array.from(new Set(actions)).join('，')}，刷新点位后再执行任务`;
@@ -1719,6 +1852,13 @@ function filterInterlockRows(rows, filter) {
   if (filter === '阻塞任务') return rows.filter((row) => row.affectedTask !== '-' && row.affectedTask !== '无当前任务');
   if (filter === '已满足') return rows.filter((row) => row.overall === '满足');
   return rows;
+}
+
+function getRelatedInterlockSummary(rows) {
+  if (!rows.length) return '关联互锁：无关联互锁';
+  const blocked = rows.find((row) => row.overall === '不满足');
+  if (!blocked) return '关联互锁：满足';
+  return `关联互锁：不满足｜阻塞原因：${blocked.blockReason}`;
 }
 
 function renderInterlockValue(point) {

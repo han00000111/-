@@ -1802,8 +1802,8 @@ tr.selected {
 .alarm-process-summary,
 .alarm-detail-hero {
   display: grid;
-  gap: 6px;
-  padding: 10px;
+  gap: 4px;
+  padding: 8px 10px;
   border: 1px solid #d7dde3;
   border-radius: 6px;
   background: #f4f6f8;
@@ -1822,7 +1822,7 @@ tr.selected {
 
 .alarm-process-summary p {
   margin: 0;
-  color: #4b5563;
+  color: #182433;
   font-size: 13px;
   font-weight: 700;
 }
@@ -1844,13 +1844,57 @@ tr.selected {
   gap: 8px;
 }
 
+.alarm-workbench-body {
+  display: grid;
+  gap: 10px;
+}
+
+.alarm-workbench-cards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.workbench-info-card {
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  min-height: 96px;
+  padding: 10px;
+  border: 1px solid #d7dde3;
+  border-radius: 6px;
+  background: #f4f6f8;
+}
+
+.workbench-info-card span {
+  color: #5d6875;
+  font-size: 12px;
+}
+
+.workbench-info-card strong {
+  color: #182433;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.workbench-record {
+  padding: 7px 9px;
+  border: 1px solid #d7dde3;
+  border-radius: 6px;
+  background: #fafafa;
+  color: #4b5563;
+  font-size: 13px;
+  font-weight: 700;
+}
+
 .alarm-action-buttons {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
 }
 
 .alarm-action-buttons h3 {
+  grid-column: 1 / -1;
   margin: 0;
   color: #4b5563;
   font-size: 13px;
@@ -1858,6 +1902,11 @@ tr.selected {
 
 .alarm-action-buttons button {
   width: 100%;
+}
+
+.alarm-action-buttons button:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
 }
 
 .alarm-action-panel .alarm-action-result {
@@ -1871,27 +1920,22 @@ tr.selected {
 }
 
 .alarm-overview-stats {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 6px;
-}
-
-.alarm-overview-stats span {
-  display: flex;
   min-height: 34px;
-  align-items: center;
-  justify-content: space-between;
   padding: 6px 9px;
   border: 1px solid #d7dde3;
   border-radius: 6px;
   background: #f4f6f8;
-  color: #5d6875;
-  font-size: 12px;
+  color: #182433;
+  font-weight: 700;
 }
 
-.alarm-overview-stats strong {
+.alarm-emergency-line {
+  padding: 8px 10px;
+  border: 1px solid #d7dde3;
+  border-radius: 6px;
+  background: #f4f6f8;
   color: #182433;
-  font-size: 16px;
+  font-weight: 700;
 }
 
 .alarm-card-list {
@@ -1938,6 +1982,53 @@ tr.selected {
   font-size: 13px;
 }
 
+.operation-context {
+  display: grid;
+  gap: 4px;
+  padding: 8px;
+  border: 1px solid #d7dde3;
+  border-radius: 6px;
+  background: #f7f8fa;
+  font-size: 12px;
+}
+
+.operation-context span {
+  color: #5d6875;
+}
+
+.operation-context strong {
+  color: #182433;
+  line-height: 1.35;
+}
+
+.interlock-related-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid #d7dde3;
+  border-radius: 6px;
+  background: #f4f6f8;
+}
+
+.interlock-related-summary strong {
+  color: #182433;
+}
+
+.interlock-related-summary button {
+  min-height: 28px;
+  padding: 4px 8px;
+  border: 1px solid #d7dde3;
+  border-radius: 6px;
+  background: #fff;
+  cursor: pointer;
+}
+
+.interlock-related-summary button:hover {
+  background: #eef1f4;
+}
+
 .button-row button:disabled {
   cursor: not-allowed;
   opacity: 0.48;
@@ -1971,6 +2062,7 @@ tr.selected {
 
   .alarm-action-panel,
   .alarm-process-body,
+  .alarm-workbench-cards,
   .alarm-overview-stats {
     grid-template-columns: 1fr;
   }
