@@ -11,7 +11,9 @@ body {
 }
 
 button,
-input {
+input,
+select,
+textarea {
   font: inherit;
 }
 
@@ -73,6 +75,11 @@ button {
   margin-top: 16px;
 }
 
+.nav-group {
+  display: grid;
+  gap: 5px;
+}
+
 .nav-item {
   display: flex;
   width: 100%;
@@ -89,6 +96,30 @@ button {
 
 .nav-item:hover,
 .nav-item.active {
+  border-color: #cfd6df;
+  background: #687381;
+  color: #fff;
+}
+
+.nav-subtabs {
+  display: grid;
+  gap: 4px;
+  padding-left: 26px;
+}
+
+.nav-subtabs button {
+  min-height: 28px;
+  padding: 5px 8px;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  background: transparent;
+  color: #d7dce2;
+  font-size: 12px;
+  text-align: left;
+}
+
+.nav-subtabs button:hover,
+.nav-subtabs button.active {
   border-color: #cfd6df;
   background: #687381;
   color: #fff;
@@ -157,6 +188,130 @@ button {
   font-size: 13px;
 }
 
+.user-entry-wrap {
+  position: relative;
+}
+
+.user-entry {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 4px 8px 4px 5px;
+  border: 1px solid #d0d0d0;
+  border-radius: 999px;
+  background: #eef1f4;
+  color: #303a45;
+  font-size: 12px;
+}
+
+.user-entry:hover {
+  background: #e3e7eb;
+}
+
+.user-avatar {
+  display: inline-grid;
+  width: 26px;
+  height: 26px;
+  place-items: center;
+  border: 1px solid #c2c9d0;
+  border-radius: 50%;
+  background: #d8dde2;
+  color: #4b5563;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.user-avatar.signed {
+  background: #cfd6df;
+  color: #1f2933;
+}
+
+.user-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 20;
+  display: none;
+  min-width: 220px;
+  gap: 7px;
+  padding: 10px;
+  border: 1px solid #cfd6df;
+  border-radius: 8px;
+  background: #fbfcfd;
+  box-shadow: 0 12px 30px rgba(31, 41, 51, 0.16);
+}
+
+.user-entry-wrap.open .user-menu,
+.user-entry-wrap:focus-within .user-menu,
+.user-entry-wrap:hover .user-menu {
+  display: grid;
+}
+
+.user-menu strong,
+.user-menu span {
+  color: #344050;
+  font-size: 13px;
+}
+
+.user-menu button {
+  min-height: 30px;
+  border: 1px solid #cfd6df;
+  border-radius: 6px;
+  background: #fff;
+  color: #1f2933;
+  font-size: 13px;
+}
+
+.login-form,
+.account-panel {
+  display: grid;
+  gap: 10px;
+}
+
+.login-form label {
+  display: grid;
+  gap: 5px;
+  color: #5d6875;
+  font-size: 13px;
+}
+
+.login-form input,
+.login-form select {
+  min-height: 34px;
+  padding: 6px 8px;
+  border: 1px solid #d7dde3;
+  border-radius: 6px;
+  background: #fff;
+  color: #182433;
+}
+
+.avatar-preview,
+.account-card {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px;
+  border: 1px solid #d7dde3;
+  border-radius: 6px;
+  background: #f2f4f6;
+}
+
+.account-card div {
+  display: grid;
+  gap: 3px;
+}
+
+.account-card strong {
+  font-size: 14px;
+}
+
+.account-card span,
+.avatar-preview span {
+  color: #5d6875;
+  font-size: 12px;
+}
+
 .page-grid {
   display: grid;
   gap: 14px;
@@ -216,6 +371,11 @@ button {
     "devices points detail"
     "devices points attachments"
     "logs logs logs";
+}
+
+.devices-page {
+  display: grid;
+  gap: 14px;
 }
 
 .tasks-grid,
@@ -451,6 +611,20 @@ tr:last-child td {
 tr.clickable:hover,
 tr.selected {
   background: #dde3e8;
+}
+
+tr.row-flash {
+  animation: row-flash 0.9s ease-out;
+}
+
+@keyframes row-flash {
+  0%,
+  55% {
+    background: #cfd6df;
+  }
+  100% {
+    background: transparent;
+  }
 }
 
 .status-text {
@@ -710,6 +884,13 @@ tr.selected {
 .confirm-modal-actions .danger {
   border-color: #991b1b;
   color: #991b1b;
+}
+
+button:disabled,
+.button-row button:disabled,
+.filterbar button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
 }
 
 .attachment-list {
@@ -1100,7 +1281,7 @@ tr.selected {
 
 .interlock-detail-panel {
   display: grid;
-  grid-template-columns: minmax(260px, 1fr) minmax(180px, auto);
+  grid-template-columns: minmax(0, 1fr) 180px;
   gap: 10px;
   padding: 10px;
   border: 1px solid #d7dde3;
@@ -1108,8 +1289,57 @@ tr.selected {
   background: #f7f8fa;
 }
 
+.interlock-detail-card {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.interlock-detail-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.interlock-point-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.interlock-point-grid span,
+.interlock-detail-block {
+  padding: 7px 8px;
+  border: 1px solid #d7dde3;
+  border-radius: 6px;
+  background: #fff;
+  color: #4b5563;
+  font-size: 12px;
+}
+
+.interlock-detail-block {
+  display: grid;
+  gap: 3px;
+}
+
+.interlock-detail-block strong {
+  color: #182433;
+  line-height: 1.35;
+}
+
 .interlock-actions {
   align-content: start;
+  display: grid;
+  gap: 8px;
+}
+
+.interlock-actions button {
+  width: 100%;
+}
+
+.interlock-actions .secondary {
+  background: #f7f8fa;
 }
 
 .alarm-selection-detail {
@@ -1423,6 +1653,8 @@ tr.selected {
   width: 100%;
   max-width: 360px;
   align-content: start;
+  max-height: 286px;
+  overflow: auto;
 }
 
 .step-item {
@@ -1444,6 +1676,18 @@ tr.selected {
 
 .step-item.current {
   background: #e2e7ec;
+  border-color: #aeb7c2;
+  box-shadow: inset 3px 0 0 #4b5563;
+}
+
+.step-empty {
+  display: grid;
+  min-height: 120px;
+  place-items: center;
+  border: 1px dashed #cbd2d9;
+  border-radius: 6px;
+  color: #6b7280;
+  font-size: 13px;
 }
 
 .task-step-layout {
@@ -2018,11 +2262,18 @@ tr.selected {
 
 .interlock-related-summary button {
   min-height: 28px;
-  padding: 4px 8px;
+  min-width: 28px;
+  padding: 4px;
   border: 1px solid #d7dde3;
   border-radius: 6px;
   background: #fff;
   cursor: pointer;
+}
+
+.interlock-related-summary .collapse-icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .interlock-related-summary button:hover {
@@ -2054,6 +2305,43 @@ tr.selected {
   min-width: 560px;
 }
 
+.interlock-record-modal {
+  max-width: 480px;
+}
+
+.interlock-record-form {
+  display: grid;
+  gap: 8px;
+}
+
+.interlock-record-form label {
+  display: grid;
+  gap: 5px;
+  color: #5d6875;
+  font-size: 13px;
+}
+
+.interlock-record-form select,
+.interlock-record-form textarea {
+  width: 100%;
+  border: 1px solid #d7dde3;
+  border-radius: 6px;
+  background: #fff;
+  color: #182433;
+  font: inherit;
+}
+
+.interlock-record-form select {
+  min-height: 32px;
+  padding: 5px 8px;
+}
+
+.interlock-record-form textarea {
+  min-height: 70px;
+  padding: 8px;
+  resize: vertical;
+}
+
 @media (max-width: 1180px) {
   .overview-grid,
   .alarm-detail-grid {
@@ -2063,7 +2351,9 @@ tr.selected {
   .alarm-action-panel,
   .alarm-process-body,
   .alarm-workbench-cards,
-  .alarm-overview-stats {
+  .alarm-overview-stats,
+  .interlock-detail-panel,
+  .interlock-point-grid {
     grid-template-columns: 1fr;
   }
 

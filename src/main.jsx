@@ -61,6 +61,13 @@ const pageTitle = {
   settings: '系统设置',
 };
 
+const deviceTabs = [
+  { key: 'realtime', label: '实时监控' },
+  { key: 'mapping', label: '点位映射' },
+  { key: 'compare', label: '数值对比' },
+  { key: 'status', label: '设备状态' },
+];
+
 const allLogs = [
   ...commandLogs,
   ...telemetryLogs,
@@ -70,18 +77,60 @@ const allLogs = [
 
 function App() {
   const [page, setPage] = useState('overview');
+  const [activeDeviceTab, setActiveDeviceTab] = useState('realtime');
   const [selectedTaskId, setSelectedTaskId] = useState('TASK-001');
   const [selectedDeviceId, setSelectedDeviceId] = useState('CNC-001');
   const [logFilter, setLogFilter] = useState('');
   const [logTypeFilter, setLogTypeFilter] = useState('全部');
   const [taskStatusOverrides, setTaskStatusOverrides] = useState({});
+  const [currentUser, setCurrentUser] = useState(null);
+  const [loginModalOpen, setLoginModalOpen] = useState(false);
+  const [accountLogs, setAccountLogs] = useState([]);
 
   const taskList = useMemo(
-    () => tasks.map((task) => ({ ...task, status: taskStatusOverrides[task.id] ?? task.status })),
+    () => tasks.map((task) => {
+      const override = taskStatusOverrides[task.id];
+      return typeof override === 'string' ? { ...task, status: override } : { ...task, ...override };
+    }),
     [taskStatusOverrides]
   );
   const selectedTask = taskList.find((task) => task.id === selectedTaskId) ?? taskList[0];
   const selectedDevice = devices.find((device) => device.id === selectedDeviceId) ?? devices[0];
+  const logRows = useMemo(() => [...accountLogs, ...allLogs].sort((a, b) => b.time.localeCompare(a.time)), [accountLogs]);
+
+  const writeAccountLog = (user, content) => {
+    setAccountLogs((rows) => [
+      {
+        time: formatNowTime(),
+        objectId: user?.username ?? '未登录',
+        deviceId: user?.username ?? '未登录',
+        taskId: '',
+        logType: '账号',
+        content,
+        params: user?.role ?? '-',
+        status: '成功',
+      },
+      ...rows,
+    ]);
+  };
+
+  const handleLogin = (payload) => {
+    const username = payload.username.trim() || getDefaultUsername(payload.role);
+    const user = {
+      username,
+      role: payload.role,
+      avatar: payload.avatar,
+      loginAt: formatNowTime(),
+    };
+    setCurrentUser(user);
+    setLoginModalOpen(false);
+    writeAccountLog(user, currentUser ? '切换用户' : '登录系统');
+  };
+
+  const handleLogout = () => {
+    if (currentUser) writeAccountLog(currentUser, '退出登录');
+    setCurrentUser(null);
+  };
 
   const openTaskDetail = () => setPage('tasks');
   const openTaskLogs = () => {
@@ -104,15 +153,15 @@ function App() {
     }[action];
 
     if (nextStatus) {
-      setTaskStatusOverrides((statuses) => ({ ...statuses, [task.id]: nextStatus }));
+      setTaskStatusOverrides((statuses) => ({ ...statuses, [task.id]: getTaskActionOverride(task, action, nextStatus) }));
     }
   };
 
   return (
     <div className="app-shell">
-      <Sidebar page={page} setPage={setPage} />
+      <Sidebar activeDeviceTab={activeDeviceTab} page={page} setActiveDeviceTab={setActiveDeviceTab} setPage={setPage} />
       <main className={`main ${page === 'overview' ? 'overview-main' : ''}`}>
-        <TopBar title={pageTitle[page]} />
+        <TopBar title={pageTitle[page]} currentUser={currentUser} onLoginRequest={() => setLoginModalOpen(true)} onLogout={handleLogout} onAccountSettings={() => setPage('settings')} />
         {page === 'overview' && (
           <OverviewPage
             selectedTask={selectedTask}
@@ -120,6 +169,7 @@ function App() {
             selectedTaskId={selectedTaskId}
             setSelectedTaskId={setSelectedTaskId}
             onTaskAction={handleTaskAction}
+            currentUser={currentUser}
             openTaskDetail={openTaskDetail}
             openTaskLogs={openTaskLogs}
             openDevice={openDevice}
@@ -131,6 +181,7 @@ function App() {
         )}
         {page === 'devices' && (
           <DevicesPage
+            activeDeviceTab={activeDeviceTab}
             selectedDevice={selectedDevice}
             selectedDeviceId={selectedDeviceId}
             setSelectedDeviceId={setSelectedDeviceId}
@@ -143,6 +194,7 @@ function App() {
             selectedTaskId={selectedTaskId}
             setSelectedTaskId={setSelectedTaskId}
             onTaskAction={handleTaskAction}
+            currentUser={currentUser}
             openTaskLogs={openTaskLogs}
           />
         )}
@@ -154,6 +206,7 @@ function App() {
             setSelectedDeviceId={setSelectedDeviceId}
             setLogFilter={setLogFilter}
             setLogTypeFilter={setLogTypeFilter}
+            currentUser={currentUser}
           />
         )}
         {page === 'logs' && (
@@ -162,15 +215,17 @@ function App() {
             setFilter={setLogFilter}
             typeFilter={logTypeFilter}
             setTypeFilter={setLogTypeFilter}
+            rows={logRows}
           />
         )}
-        {page === 'settings' && <SettingsPage />}
+        {page === 'settings' && <SettingsPage currentUser={currentUser} onLoginRequest={() => setLoginModalOpen(true)} onLogout={handleLogout} />}
       </main>
+      {loginModalOpen && <LoginModal currentUser={currentUser} onSubmit={handleLogin} onClose={() => setLoginModalOpen(false)} />}
     </div>
   );
 }
 
-function Sidebar({ page, setPage }) {
+function Sidebar({ activeDeviceTab, page, setActiveDeviceTab, setPage }) {
   return (
     <aside className="sidebar">
       <div className="brand">
@@ -184,15 +239,32 @@ function Sidebar({ page, setPage }) {
         {navItems.map((item) => {
           const Icon = iconMap[item.key];
           return (
-            <button
-              key={item.key}
-              className={`nav-item ${page === item.key ? 'active' : ''}`}
-              onClick={() => setPage(item.key)}
-              type="button"
-            >
-              <Icon size={17} />
-              <span>{item.label}</span>
-            </button>
+            <div className="nav-group" key={item.key}>
+              <button
+                className={`nav-item ${page === item.key ? 'active' : ''}`}
+                onClick={() => setPage(item.key)}
+                type="button"
+              >
+                <Icon size={17} />
+                <span>{item.label}</span>
+              </button>
+              {item.key === 'devices' && page === 'devices' && (
+                <div className="nav-subtabs" role="tablist" aria-label="设备与点位二级页签">
+                  {deviceTabs.map((tab) => (
+                    <button
+                      aria-selected={activeDeviceTab === tab.key}
+                      className={activeDeviceTab === tab.key ? 'active' : ''}
+                      key={tab.key}
+                      onClick={() => setActiveDeviceTab(tab.key)}
+                      role="tab"
+                      type="button"
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           );
         })}
       </nav>
@@ -200,7 +272,18 @@ function Sidebar({ page, setPage }) {
   );
 }
 
-function TopBar({ title }) {
+function TopBar({ title, currentUser, onLoginRequest, onLogout, onAccountSettings }) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const openLogin = () => {
+    setMenuOpen(false);
+    onLoginRequest?.();
+  };
+  const closeMenuOnBlur = (event) => {
+    if (!event.currentTarget.contains(event.relatedTarget)) {
+      setMenuOpen(false);
+    }
+  };
+
   return (
     <header className="topbar">
       <div>
@@ -214,9 +297,116 @@ function TopBar({ title }) {
         <StatusBadge label="MQTT" status="正常" />
         <StatusBadge label="日志上传" status="正常" />
         <StatusBadge label="本地缓存" status="7 天" tone="neutral" />
+        <div className={`user-entry-wrap ${menuOpen ? 'open' : ''}`} onBlur={closeMenuOnBlur}>
+          <button
+            className="user-entry"
+            type="button"
+            onMouseDown={(event) => {
+              event.preventDefault();
+              setMenuOpen((open) => !open);
+            }}
+            aria-expanded={menuOpen}
+          >
+            <UserAvatar user={currentUser} />
+            {currentUser ? (
+              <span>
+                {currentUser.username}｜{currentUser.role}
+              </span>
+            ) : (
+              <span>未登录</span>
+            )}
+          </button>
+          <div className="user-menu" aria-hidden={!menuOpen}>
+            {currentUser ? (
+              <>
+                <strong>当前用户：{currentUser.username}</strong>
+                <span>角色：{currentUser.role}</span>
+                <span>登录状态：已登录</span>
+                <button type="button" onMouseDown={(event) => { event.preventDefault(); setMenuOpen(false); onAccountSettings?.(); }}>
+                  账号设置
+                </button>
+                <button type="button" onMouseDown={(event) => { event.preventDefault(); openLogin(); }}>
+                  切换用户
+                </button>
+                <button type="button" onMouseDown={(event) => { event.preventDefault(); setMenuOpen(false); onLogout?.(); }}>
+                  退出登录
+                </button>
+              </>
+            ) : (
+              <>
+                <strong>当前状态：未登录</strong>
+                <span>登录后可进行任务操作、报警处理和系统配置</span>
+                <button type="button" onMouseDown={(event) => { event.preventDefault(); openLogin(); }}>
+                  立即登录
+                </button>
+              </>
+            )}
+          </div>
+        </div>
         <span className="time">2025-05-27 10:30:45</span>
       </div>
     </header>
+  );
+}
+
+function UserAvatar({ user, avatar }) {
+  const value = avatar ?? user?.avatar ?? '默认头像';
+  const label = user ? getAvatarLetter(user.role, user.username, value) : '未';
+  return <span className={`user-avatar ${user ? 'signed' : ''}`}>{label}</span>;
+}
+
+function LoginModal({ currentUser, onSubmit, onClose }) {
+  const [form, setForm] = useState({
+    username: currentUser?.username ?? '',
+    password: '',
+    role: currentUser?.role ?? '操作员',
+    avatar: currentUser?.avatar ?? '操作员头像',
+  });
+  const update = (key, value) => setForm((state) => ({ ...state, [key]: value }));
+
+  return (
+    <div className="modal-backdrop" role="presentation">
+      <div className="confirm-modal login-modal" role="dialog" aria-modal="true" aria-labelledby="login-title">
+        <div className="confirm-modal-head">
+          <strong id="login-title">{currentUser ? '切换用户' : '用户登录'}</strong>
+          <span>账号</span>
+        </div>
+        <div className="login-form">
+          <label>
+            <span>工号/账号</span>
+            <input value={form.username} onChange={(event) => update('username', event.target.value)} placeholder="admin / engineer01" />
+          </label>
+          <label>
+            <span>密码</span>
+            <input value={form.password} onChange={(event) => update('password', event.target.value)} placeholder="演示密码" type="password" />
+          </label>
+          <label>
+            <span>角色</span>
+            <select value={form.role} onChange={(event) => update('role', event.target.value)}>
+              {['操作员', '工程师', '管理员'].map((role) => (
+                <option key={role} value={role}>{role}</option>
+              ))}
+            </select>
+          </label>
+          <label>
+            <span>头像</span>
+            <select value={form.avatar} onChange={(event) => update('avatar', event.target.value)}>
+              {['默认头像', '操作员头像', '工程师头像', '管理员头像'].map((item) => (
+                <option key={item} value={item}>{item}</option>
+              ))}
+            </select>
+          </label>
+          <div className="avatar-preview">
+            <UserAvatar user={{ username: form.username || getDefaultUsername(form.role), role: form.role, avatar: form.avatar }} />
+            <span>{form.username || getDefaultUsername(form.role)}｜{form.role}</span>
+          </div>
+        </div>
+        <div className="confirm-modal-actions">
+          <button type="button" onMouseDown={(event) => { event.preventDefault(); onClose(); }}>取消</button>
+          <button type="button" onMouseDown={(event) => { event.preventDefault(); onSubmit(form); }}>登录</button>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -235,6 +425,7 @@ function OverviewPage({
   selectedTaskId,
   setSelectedTaskId,
   onTaskAction,
+  currentUser,
   openTaskDetail,
   openTaskLogs,
   openDevice,
@@ -283,6 +474,7 @@ function OverviewPage({
             selectedTaskId={selectedTaskId}
             setSelectedTaskId={setSelectedTaskId}
             onTaskAction={onTaskAction}
+            currentUser={currentUser}
             onDetail={openTaskDetail}
             onLogs={openTaskLogs}
           />
@@ -354,6 +546,7 @@ function TaskOverviewModule({
   selectedTaskId,
   setSelectedTaskId,
   onTaskAction,
+  currentUser,
   onDetail,
   onLogs,
 }) {
@@ -387,7 +580,7 @@ function TaskOverviewModule({
       />
       <div className="task-overview-layout">
         <TaskQueue taskList={filteredTasks} selectedTaskId={visibleSelectedTask} setSelectedTaskId={setSelectedTaskId} />
-        <CurrentTaskCard task={selectedTask} onTaskAction={onTaskAction} onDetail={onDetail} onLogs={onLogs} />
+        <CurrentTaskCard task={selectedTask} onTaskAction={onTaskAction} currentUser={currentUser} onDetail={onDetail} onLogs={onLogs} />
         <PointTable points={taskPoints[selectedTask.id] ?? []} title="当前任务关联点位" />
       </div>
     </div>
@@ -423,7 +616,7 @@ function AlarmInterlockDetail({ onAlarmJump }) {
   );
 }
 
-function DevicesPage({ selectedDevice, selectedDeviceId, setSelectedDeviceId }) {
+function DevicesPage({ activeDeviceTab, selectedDevice, selectedDeviceId, setSelectedDeviceId }) {
   const [deviceSearch, setDeviceSearch] = useState('');
   const [deviceFilter, setDeviceFilter] = useState('全部');
   const points = useMemo(() => getDevicePointsFor(selectedDevice), [selectedDevice]);
@@ -449,85 +642,147 @@ function DevicesPage({ selectedDevice, selectedDeviceId, setSelectedDeviceId }) 
   }, [selectedDeviceId, points]);
 
   const selectedPoint = points.find((point) => point.code === selectedPointCode) ?? points[0];
+  const allPointRows = useMemo(
+    () => devices.flatMap((device) => getDevicePointsFor(device).map((point) => ({ device, point }))),
+    []
+  );
+  const numericPointRows = useMemo(
+    () => allPointRows.filter(({ point }) => getPointType(point) === 'numeric'),
+    [allPointRows]
+  );
 
   return (
-    <div className="page-grid devices-grid">
-      <section className="panel device-list-panel">
-        <SectionTitle icon={Cpu} title="设备列表" />
-        <div className="device-search-row">
-          <Search size={16} />
-          <input
-            list="device-search-options"
-            onChange={(event) => setDeviceSearch(event.target.value)}
-            placeholder="搜索设备编号/类型/状态"
-            value={deviceSearch}
+    <div className="devices-page">
+      {activeDeviceTab === 'realtime' && (
+        <div className="page-grid devices-grid">
+          <section className="panel device-list-panel">
+            <SectionTitle icon={Cpu} title="设备列表" />
+            <div className="device-search-row">
+              <Search size={16} />
+              <input
+                list="device-search-options"
+                onChange={(event) => setDeviceSearch(event.target.value)}
+                placeholder="搜索设备编号/类型/状态"
+                value={deviceSearch}
+              />
+              <datalist id="device-search-options">
+                {devices.map((device) => (
+                  <option key={device.id} value={device.id} />
+                ))}
+              </datalist>
+              <select value={deviceFilter} onChange={(event) => setDeviceFilter(event.target.value)}>
+                {deviceFilterOptions.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="compact-device-list">
+              {filteredDevices.map((device) => (
+                <button
+                  className={`compact-device-row ${selectedDeviceId === device.id ? 'selected' : ''}`}
+                  key={device.id}
+                  onClick={() => setSelectedDeviceId(device.id)}
+                  type="button"
+                >
+                  <div className="device-row-main">
+                    <strong>{device.id}</strong>
+                    <small>{device.updatedAt}</small>
+                  </div>
+                  <div className="device-row-sub">
+                    <span>{device.type}</span>
+                    <StatusText value={device.online} />
+                    <StatusText value={device.runStatus} />
+                  </div>
+                </button>
+              ))}
+              {!filteredDevices.length && <div className="attachment-empty">无匹配设备</div>}
+            </div>
+          </section>
+          <section className="panel trend-panel">
+            <SectionTitle icon={Activity} title="趋势" action="最近 30 秒" />
+            <TrendChart device={selectedDevice} />
+          </section>
+          <section className="panel point-table-panel">
+            <SectionTitle icon={Database} title={`${selectedDevice.id} 点位表`} action={`${points.length} 个点位`} />
+            <PointTable points={points} selectedPointCode={selectedPoint?.code} onSelectPoint={setSelectedPointCode} />
+          </section>
+          <section className="panel detail-panel">
+            <SectionTitle icon={Search} title={getPointDetailTitle(selectedPoint)} action={selectedPoint?.name ?? '-'} />
+            <PointDetail point={selectedPoint} device={selectedDevice} />
+          </section>
+          <section className="panel attachment-panel">
+            <SectionTitle icon={FileClock} title="设备附件" action={selectedDevice.id} />
+            <AttachmentList items={deviceAttachments[selectedDevice.id] ?? []} onPreview={setPreviewAttachment} />
+          </section>
+          <section className="panel collect-log-panel">
+            <SectionTitle icon={FileClock} title="采集日志" />
+            <SimpleLogTable rows={telemetryLogs} />
+          </section>
+        </div>
+      )}
+
+      {activeDeviceTab === 'mapping' && (
+        <section className="panel page-full">
+          <SectionTitle icon={Database} title="设备与点位映射关系" action={`${allPointRows.length} 个点位`} />
+          <DataTable
+            columns={['设备编号', '设备类型', '点位名称', '点位编码', '点位类型', '当前值', '业务状态', '采集质量', '更新时间']}
+            rows={allPointRows.map(({ device, point }) => [
+              device.id,
+              device.type,
+              point.name,
+              point.code,
+              getPointTypeLabel(point),
+              point.value,
+              <StatusText value={point.status} />,
+              point.quality,
+              point.updatedAt,
+            ])}
           />
-          <datalist id="device-search-options">
-            {devices.map((device) => (
-              <option key={device.id} value={device.id} />
-            ))}
-          </datalist>
-          <select value={deviceFilter} onChange={(event) => setDeviceFilter(event.target.value)}>
-            {deviceFilterOptions.map((option) => (
-              <option key={option} value={option}>
-                {option}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="compact-device-list">
-          {filteredDevices.map((device) => (
-            <button
-              className={`compact-device-row ${selectedDeviceId === device.id ? 'selected' : ''}`}
-              key={device.id}
-              onClick={() => setSelectedDeviceId(device.id)}
-              type="button"
-            >
-              <div className="device-row-main">
-                <strong>{device.id}</strong>
-                <small>{device.updatedAt}</small>
-              </div>
-              <div className="device-row-sub">
-                <span>{device.type}</span>
-                <StatusText value={device.online} />
-                <StatusText value={device.runStatus} />
-              </div>
-            </button>
-          ))}
-          {!filteredDevices.length && <div className="attachment-empty">无匹配设备</div>}
-        </div>
-      </section>
-      <section className="panel trend-panel">
-        <SectionTitle icon={Activity} title="趋势" action="最近 30 秒" />
-        <TrendChart device={selectedDevice} />
-      </section>
-      <section className="panel point-table-panel">
-        <SectionTitle icon={Database} title={`${selectedDevice.id} 点位表`} action={`${points.length} 个点位`} />
-        <PointTable points={points} selectedPointCode={selectedPoint?.code} onSelectPoint={setSelectedPointCode} />
-      </section>
-      <section className="panel detail-panel">
-        <SectionTitle icon={Search} title={getPointDetailTitle(selectedPoint)} action={selectedPoint?.name ?? '-'} />
-        <PointDetail point={selectedPoint} device={selectedDevice} />
-      </section>
-      <section className="panel attachment-panel">
-        <SectionTitle icon={FileClock} title="设备附件" action={selectedDevice.id} />
-        <AttachmentList items={deviceAttachments[selectedDevice.id] ?? []} onPreview={setPreviewAttachment} />
-      </section>
-      <section className="panel collect-log-panel">
-        <SectionTitle icon={FileClock} title="采集日志" />
-        <SimpleLogTable rows={telemetryLogs} />
-      </section>
+        </section>
+      )}
+
+      {activeDeviceTab === 'compare' && (
+        <section className="panel page-full">
+          <SectionTitle icon={Activity} title="当前值与历史值对比" action={`${numericPointRows.length} 个数值点位`} />
+          <DataTable
+            columns={['设备编号', '点位名称', '点位编码', '当前值', '历史值', '变化量', '更新时间']}
+            rows={numericPointRows.map(({ device, point }) => {
+              const comparison = getPointValueComparison(point);
+              return [
+                device.id,
+                point.name,
+                point.code,
+                comparison.current,
+                comparison.history,
+                comparison.delta,
+                point.updatedAt,
+              ];
+            })}
+          />
+        </section>
+      )}
+
+      {activeDeviceTab === 'status' && (
+        <section className="panel page-full">
+          <SectionTitle icon={Cpu} title="全部设备状态" action={`${devices.length} 台设备`} />
+          <DeviceTable devicesForTable={devices} />
+        </section>
+      )}
+
       {previewAttachment && <AttachmentPreview attachment={previewAttachment} onClose={() => setPreviewAttachment(null)} />}
     </div>
   );
 }
 
-function TasksPage({ selectedTask, taskList, selectedTaskId, setSelectedTaskId, onTaskAction, openTaskLogs }) {
+function TasksPage({ selectedTask, taskList, selectedTaskId, setSelectedTaskId, onTaskAction, currentUser, openTaskLogs }) {
   const [previewAttachment, setPreviewAttachment] = useState(null);
   const [query, setQuery] = useState('');
   const [scope, setScope] = useState('全部');
   const filteredTasks = useMemo(() => filterTasks(taskList, query, scope), [taskList, query, scope]);
   const visibleSelectedTask = filteredTasks.some((task) => task.id === selectedTaskId) ? selectedTaskId : undefined;
+  const currentStepDetail = getTaskCurrentStepDetail(selectedTask);
 
   return (
     <div className="page-grid tasks-grid">
@@ -544,17 +799,17 @@ function TasksPage({ selectedTask, taskList, selectedTaskId, setSelectedTaskId, 
         <TaskQueue taskList={filteredTasks} selectedTaskId={visibleSelectedTask} setSelectedTaskId={setSelectedTaskId} />
       </section>
       <section className="panel task-step-panel">
-        <SectionTitle icon={MonitorCog} title="步骤执行" />
+        <SectionTitle icon={MonitorCog} title="工序" />
         <div className="task-step-layout">
-          <StepList taskId={selectedTask.id} />
+          <StepList task={selectedTask} />
           <div className="step-detail-compact">
-            <TaskActions task={selectedTask} onTaskAction={onTaskAction} onLogs={openTaskLogs} />
+            <TaskActions task={selectedTask} onTaskAction={onTaskAction} currentUser={currentUser} onLogs={openTaskLogs} />
             <div className="detail-list">
-              <Info label="当前步骤" value={toChineseStep(selectedTask.currentStep)} />
-              <Info label="当前指令" value={selectedTask.command} />
-              <Info label="下发状态" value="已下发" />
-              <Info label="回执状态" value="已确认" />
-              <Info label="失败原因" value={selectedTask.status === '失败' ? '设备离线，回执超时' : '无'} />
+              <Info label="当前步骤" value={currentStepDetail.stepLabel} />
+              <Info label="当前指令" value={currentStepDetail.command} />
+              <Info label="下发状态" value={currentStepDetail.dispatchStatus} />
+              <Info label="回执状态" value={currentStepDetail.receiptStatus} />
+              <Info label="失败原因" value={currentStepDetail.failureReason} />
               <Info label="操作对象" value={`当前任务 ${selectedTask.id}`} />
             </div>
             <AttachmentList compact title="当前任务附件" items={taskAttachments[selectedTask.id] ?? []} onPreview={setPreviewAttachment} />
@@ -615,9 +870,9 @@ function CommandsPage() {
   );
 }
 
-function AlarmsPage({ setPage, setSelectedTaskId, setSelectedDeviceId, setLogFilter, setLogTypeFilter }) {
+function AlarmsPage({ setPage, setSelectedTaskId, setSelectedDeviceId, setLogFilter, setLogTypeFilter, currentUser }) {
   const [selectedAlarmName, setSelectedAlarmName] = useState(alarms[0]?.name ?? '');
-  const [alarmFilter, setAlarmFilter] = useState('全部');
+  const [alarmFilter, setAlarmFilter] = useState('当前待办');
   const [recordFilter, setRecordFilter] = useState('全部');
   const [alarmStatusOverrides, setAlarmStatusOverrides] = useState({});
   const [handlingRecords, setHandlingRecords] = useState([]);
@@ -626,7 +881,7 @@ function AlarmsPage({ setPage, setSelectedTaskId, setSelectedDeviceId, setLogFil
     [alarmStatusOverrides],
   );
   const filteredAlarms = useMemo(() => filterAlarms(alarmRows, alarmFilter), [alarmRows, alarmFilter]);
-  const selectedAlarm = alarmRows.find((alarm) => alarm.name === selectedAlarmName) ?? alarmRows[0];
+  const selectedAlarm = filteredAlarms.find((alarm) => alarm.name === selectedAlarmName) ?? filteredAlarms[0] ?? null;
   const relatedLogs = useMemo(
     () => filterHandlingLogs([...getAlarmRelatedLogs(selectedAlarm), ...handlingRecords.filter((record) => isRecordRelatedToAlarm(record, selectedAlarm))], recordFilter),
     [selectedAlarm, handlingRecords, recordFilter],
@@ -646,7 +901,7 @@ function AlarmsPage({ setPage, setSelectedTaskId, setSelectedDeviceId, setLogFil
       </section>
       <section className="panel alarm-card-panel">
         <SectionTitle icon={AlertTriangle} title="报警卡片列表" action={`${filteredAlarms.length} 条`} />
-        <AlarmCardList alarms={filteredAlarms} selectedAlarmName={selectedAlarmName} onSelect={setSelectedAlarmName} />
+        <AlarmCardList alarms={filteredAlarms} filter={alarmFilter} selectedAlarmName={selectedAlarmName} onSelect={setSelectedAlarmName} />
       </section>
       <section className="panel alarm-current-panel">
         <SectionTitle icon={MonitorCog} title="处理工作台" />
@@ -673,11 +928,20 @@ function AlarmsPage({ setPage, setSelectedTaskId, setSelectedDeviceId, setLogFil
               setPage('logs');
             }
           }}
+          currentUser={currentUser}
         />
       </section>
       <section className="panel interlock-matrix-panel">
         <SectionTitle icon={ShieldCheck} title="互锁状态总览" />
-        <InterlockTable highlightedDeviceIds={relatedDeviceIds} />
+        <InterlockTable
+          highlightedDeviceIds={relatedDeviceIds}
+          onNavigate={(taskId) => {
+            setSelectedTaskId(taskId);
+            setPage('tasks');
+          }}
+          onRecord={(record) => setHandlingRecords((records) => [record, ...records])}
+          currentUser={currentUser}
+        />
       </section>
       <section className="panel alarm-record-panel">
         <SectionTitle icon={History} title="处理记录" action="已按当前报警筛选" />
@@ -688,8 +952,8 @@ function AlarmsPage({ setPage, setSelectedTaskId, setSelectedDeviceId, setLogFil
   );
 }
 
-function LogsPage({ filter, setFilter, typeFilter, setTypeFilter }) {
-  const filtered = filterLogs(allLogs, typeFilter, filter);
+function LogsPage({ filter, setFilter, typeFilter, setTypeFilter, rows = allLogs }) {
+  const filtered = filterLogs(rows, typeFilter, filter);
   return (
     <section className="panel page-full">
       <SectionTitle icon={History} title="日志审计" />
@@ -708,9 +972,10 @@ function LogsPage({ filter, setFilter, typeFilter, setTypeFilter }) {
   );
 }
 
-function SettingsPage() {
+function SettingsPage({ currentUser, onLoginRequest, onLogout }) {
   const [connectionStatus, setConnectionStatus] = useState({});
   const [settingsModal, setSettingsModal] = useState(null);
+  const [permissionMessage, setPermissionMessage] = useState('');
   const linkRows = [
     { key: 'backend', label: '后台地址', value: 'https://platform.local', status: connectionStatus.backend ?? '正常', action: '测试连接' },
     { key: 'mqtt', label: 'MQTT Broker', value: 'mqtt://10.10.1.20:1883', status: connectionStatus.mqtt ?? '正常', action: '测试连接' },
@@ -719,6 +984,10 @@ function SettingsPage() {
   ];
 
   const runSettingAction = (row) => {
+    if (!hasPermission(currentUser, 'system-config')) {
+      setPermissionMessage(getPermissionReason(currentUser, '系统配置修改'));
+      return;
+    }
     if (row.action === '测试连接') {
       setConnectionStatus((current) => ({ ...current, [row.key]: '检测中' }));
       window.setTimeout(() => {
@@ -735,7 +1004,7 @@ function SettingsPage() {
         <SectionTitle icon={Settings} title="基础信息" />
         <div className="settings-grid">
           {settings.slice(0, 2).concat([
-            { label: '当前用户', value: 'admin', desc: '现场端登录用户' },
+            { label: '当前用户', value: currentUser?.username ?? '未登录', desc: '现场端登录用户' },
             { label: '本地缓存周期', value: '7 天', desc: '断网缓存保留周期' },
           ]).map((item) => (
             <div className="setting-item" key={item.label}>
@@ -747,6 +1016,10 @@ function SettingsPage() {
         </div>
       </section>
       <section className="panel">
+        <SectionTitle icon={ShieldCheck} title="账号与权限" />
+        <AccountPermissionPanel currentUser={currentUser} onLoginRequest={onLoginRequest} onLogout={onLogout} />
+      </section>
+      <section className="panel">
         <SectionTitle icon={TerminalSquare} title="链路配置" />
         <DataTable
           columns={['配置项', '当前值', '状态', '操作']}
@@ -754,11 +1027,12 @@ function SettingsPage() {
             row.label,
             row.value,
             <StatusText value={row.status} />,
-            <button className="table-action" type="button" onClick={() => runSettingAction(row)}>
+            <button className="table-action" type="button" disabled={!hasPermission(currentUser, 'system-config')} title={!hasPermission(currentUser, 'system-config') ? getPermissionReason(currentUser, '系统配置修改') : undefined} onClick={() => runSettingAction(row)}>
               {row.action}
             </button>,
           ])}
         />
+        {permissionMessage && <div className="action-disabled-reason">{permissionMessage}</div>}
       </section>
       <section className="panel">
         <SectionTitle icon={Activity} title="本地运行状态" />
@@ -778,6 +1052,50 @@ function SettingsPage() {
         </div>
       </section>
       {settingsModal && <SettingsModal type={settingsModal} onClose={() => setSettingsModal(null)} />}
+    </div>
+  );
+}
+
+function AccountPermissionPanel({ currentUser, onLoginRequest, onLogout }) {
+  if (!currentUser) {
+    return (
+      <div className="account-panel">
+        <div className="account-card">
+          <UserAvatar />
+          <div>
+            <strong>当前状态：未登录</strong>
+            <span>请登录后进行任务操作、报警处理和系统配置</span>
+          </div>
+        </div>
+        <div className="button-row">
+          <button type="button" onMouseDown={(event) => { event.preventDefault(); onLoginRequest?.(); }}>立即登录</button>
+          <button type="button" onClick={() => window.alert('未登录只能查看，登录后按角色开放操作权限。')}>权限说明</button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="account-panel">
+      <div className="account-card">
+        <UserAvatar user={currentUser} />
+        <div>
+          <strong>{currentUser.username}</strong>
+          <span>{currentUser.role}｜已登录｜最近登录 {currentUser.loginAt}</span>
+        </div>
+      </div>
+      <div className="detail-list dense">
+        <Info label="当前登录用户" value={currentUser.username} />
+        <Info label="用户角色" value={currentUser.role} />
+        <Info label="登录状态" value="已登录" />
+        <Info label="最近登录时间" value={currentUser.loginAt} />
+        <Info label="权限范围" value={getPermissionScope(currentUser.role)} />
+      </div>
+      <div className="button-row">
+        <button type="button" onMouseDown={(event) => { event.preventDefault(); onLoginRequest?.(); }}>切换用户</button>
+        <button type="button" onMouseDown={(event) => { event.preventDefault(); onLogout?.(); }}>退出登录</button>
+        <button type="button" onClick={() => window.alert(getPermissionScope(currentUser.role))}>权限说明</button>
+      </div>
     </div>
   );
 }
@@ -935,7 +1253,7 @@ function TaskQueue({ taskList = tasks, selectedTaskId, setSelectedTaskId }) {
   );
 }
 
-function CurrentTaskCard({ task, onTaskAction, onDetail, onLogs }) {
+function CurrentTaskCard({ task, onTaskAction, currentUser, onDetail, onLogs }) {
   return (
     <div className="current-task">
       <div className="current-task-head">
@@ -943,7 +1261,7 @@ function CurrentTaskCard({ task, onTaskAction, onDetail, onLogs }) {
         <strong>{task.id}</strong>
       </div>
       <div className="current-task-body">
-        <TaskActions task={task} onTaskAction={onTaskAction} onDetail={onDetail} onLogs={onLogs} />
+        <TaskActions task={task} onTaskAction={onTaskAction} currentUser={currentUser} onDetail={onDetail} onLogs={onLogs} />
         <div className="detail-list dense current-task-detail">
           <Info label="状态" value={task.status} />
           <Info label="当前步骤" value={toChineseStep(task.currentStep)} />
@@ -958,7 +1276,7 @@ function CurrentTaskCard({ task, onTaskAction, onDetail, onLogs }) {
   );
 }
 
-function TaskActions({ task, onTaskAction, onDetail, onLogs }) {
+function TaskActions({ task, onTaskAction, currentUser, onDetail, onLogs }) {
   const [confirmAbort, setConfirmAbort] = useState(false);
   const interlockCheck = getInterlockCheck();
   const config = getTaskActionConfig(task.status);
@@ -976,7 +1294,8 @@ function TaskActions({ task, onTaskAction, onDetail, onLogs }) {
       <div className="button-row">
         {visibleActions.map((action) => {
           const needsInterlock = ['开始', '恢复'].includes(action);
-          const disabled = needsInterlock && !interlockCheck.ok;
+          const permissionOk = hasPermission(currentUser, getTaskActionPermission(action));
+          const disabled = !permissionOk || (needsInterlock && !interlockCheck.ok);
           return (
             <button
               className={action === '中止' ? 'danger' : ''}
@@ -984,7 +1303,7 @@ function TaskActions({ task, onTaskAction, onDetail, onLogs }) {
               key={action}
               onClick={() => (action === '中止' ? setConfirmAbort(true) : runAction(action))}
               type="button"
-              title={disabled ? interlockCheck.reason : undefined}
+              title={!permissionOk ? getPermissionReason(currentUser, action) : needsInterlock && !interlockCheck.ok ? interlockCheck.reason : undefined}
             >
               {getActionIcon(action)}
               {action}
@@ -1004,6 +1323,9 @@ function TaskActions({ task, onTaskAction, onDetail, onLogs }) {
       </div>
       {!interlockCheck.ok && visibleActions.some((action) => ['开始', '恢复'].includes(action)) && (
         <div className="action-disabled-reason">开始/恢复不可用：{interlockCheck.reason}</div>
+      )}
+      {visibleActions.some((action) => !hasPermission(currentUser, getTaskActionPermission(action))) && (
+        <div className="action-disabled-reason">{getPermissionReason(currentUser, '任务操作')}</div>
       )}
       {confirmAbort && (
         <div className="modal-backdrop" role="presentation">
@@ -1143,16 +1465,16 @@ function AlarmOverviewBar({ alarms: alarmRows, filter, onFilterChange }) {
   const urgencyText = getAlarmUrgencyText(alarmRows);
   return (
     <div className="alarm-overview-strip">
-      <div className="alarm-overview-stats">高危 {stats.high}｜未处理 {stats.unhandled}｜处理中 {stats.processing}｜已恢复 {stats.recovered}｜阻塞任务 {stats.blockedTasks}</div>
+      <div className="alarm-overview-stats">高危 {stats.high}｜未处理 {stats.unhandled}｜处理中 {stats.processing}｜待归档 {stats.waitingArchive}｜已归档 {stats.archived}｜阻塞任务 {stats.blockedTasks}</div>
       <div className="alarm-emergency-line">{urgencyText}</div>
-      <SegmentedFilter options={['全部', '未处理', '处理中', '已恢复', '高危', '阻塞任务']} value={filter} onChange={onFilterChange} />
+      <SegmentedFilter options={['当前待办', '全部', '未处理', '处理中', '待归档', '已归档', '高危', '阻塞任务']} value={filter} onChange={onFilterChange} />
     </div>
   );
 }
 
-function AlarmCardList({ alarms: alarmRows, selectedAlarmName, onSelect }) {
+function AlarmCardList({ alarms: alarmRows, filter, selectedAlarmName, onSelect }) {
   if (!alarmRows.length) {
-    return <div className="attachment-empty">无匹配报警</div>;
+    return <div className="attachment-empty">{filter === '当前待办' ? '暂无待处理报警' : '无匹配报警'}</div>;
   }
 
   return (
@@ -1181,14 +1503,14 @@ function AlarmCardList({ alarms: alarmRows, selectedAlarmName, onSelect }) {
   );
 }
 
-function AlarmActionPanel({ alarm, onNavigate, onRecord }) {
+function AlarmActionPanel({ alarm, onNavigate, onRecord, currentUser }) {
   const [action, setAction] = useState('');
   useEffect(() => {
     setAction('');
   }, [alarm?.name]);
 
   if (!alarm) {
-    return <div className="attachment-empty">请选择报警</div>;
+    return <div className="attachment-empty">当前无待处理报警</div>;
   }
 
   const context = getAlarmHandlingContext(alarm);
@@ -1247,13 +1569,17 @@ function AlarmActionPanel({ alarm, onNavigate, onRecord }) {
         <div className="workbench-record">最近记录：{context.latestRecord}</div>
         <div className="alarm-action-buttons">
           <h3>处理操作</h3>
-          {actions.map((label) => (
-            <button key={label} type="button" disabled={isAlarmActionDisabled(label, operation)} onClick={() => runAction(label)}>
-              {label}
-            </button>
-          ))}
+          {actions.map((label) => {
+            const permissionOk = hasPermission(currentUser, getAlarmActionPermission(label));
+            return (
+              <button key={label} type="button" disabled={!permissionOk || isAlarmActionDisabled(label, operation)} title={!permissionOk ? getPermissionReason(currentUser, label) : undefined} onClick={() => runAction(label)}>
+                {label}
+              </button>
+            );
+          })}
         </div>
       </div>
+      {actions.some((label) => !hasPermission(currentUser, getAlarmActionPermission(label))) && <div className="action-disabled-reason">{getPermissionReason(currentUser, '报警处理')}</div>}
       {action && <div className="alarm-action-result">{action}</div>}
     </div>
   );
@@ -1375,33 +1701,44 @@ function RecentLogs({ selectedTaskId, setLogFilter, setLogTypeFilter }) {
   );
 }
 
-function StepList({ taskId }) {
-  const steps = stepsByTask[taskId] ?? [];
+function StepList({ task }) {
+  const steps = getTaskStepPreview(task);
+  if (!steps.length) {
+    return <div className="step-empty">暂无工序信息，请检查任务配置。</div>;
+  }
+
   return (
     <div className="step-list">
       {steps.map((step) => (
-        <div className={`step-item ${step.status === '执行中' ? 'current' : ''}`} key={step.id}>
+        <div className={`step-item ${step.isCurrent ? 'current' : ''}`} key={step.id}>
           <span>{toChineseStep(step.id)}</span>
           <strong>{step.name}</strong>
-          <StatusText value={step.status} />
+          <StatusText value={step.displayStatus} />
         </div>
       ))}
     </div>
   );
 }
 
-function InterlockTable({ highlightedDeviceIds = [] }) {
+function InterlockTable({ highlightedDeviceIds = [], onNavigate, onRecord, currentUser }) {
   const [filter, setFilter] = useState('全部');
   const [matrixExpanded, setMatrixExpanded] = useState(false);
   const [selectedDeviceId, setSelectedDeviceId] = useState('');
   const [actionResult, setActionResult] = useState('');
+  const [refreshingId, setRefreshingId] = useState('');
+  const [flashId, setFlashId] = useState('');
+  const [refreshError, setRefreshError] = useState('');
+  const [refreshedAtByDevice, setRefreshedAtByDevice] = useState({});
+  const [recordModalOpen, setRecordModalOpen] = useState(false);
+  const [recordDraft, setRecordDraft] = useState({ type: '刷新确认', result: '已确认', remark: '' });
   const rows = useMemo(() => getInterlockMatrixRows(), []);
-  const stats = useMemo(() => getInterlockStats(rows), [rows]);
-  const visibleRows = useMemo(() => filterInterlockRows(rows, filter), [rows, filter]);
-  const relatedRows = useMemo(() => rows.filter((row) => highlightedDeviceIds.includes(row.id) || highlightedDeviceIds.includes(row.affectedTask)), [rows, highlightedDeviceIds]);
+  const displayRows = useMemo(() => rows.map((row) => ({ ...row, updatedAt: refreshedAtByDevice[row.id] ?? row.updatedAt })), [rows, refreshedAtByDevice]);
+  const stats = useMemo(() => getInterlockStats(displayRows), [displayRows]);
+  const visibleRows = useMemo(() => filterInterlockRows(displayRows, filter), [displayRows, filter]);
+  const relatedRows = useMemo(() => displayRows.filter((row) => highlightedDeviceIds.includes(row.id) || highlightedDeviceIds.includes(row.affectedTask)), [displayRows, highlightedDeviceIds]);
   const relatedInterlock = getRelatedInterlockSummary(relatedRows);
   const highlightedId = highlightedDeviceIds.find((id) => visibleRows.some((row) => row.id === id));
-  const selectedRow = visibleRows.find((row) => row.id === selectedDeviceId) ?? visibleRows.find((row) => row.id === highlightedId) ?? visibleRows[0] ?? rows[0];
+  const selectedRow = visibleRows.find((row) => row.id === selectedDeviceId) ?? visibleRows.find((row) => row.id === highlightedId) ?? visibleRows[0] ?? displayRows[0];
 
   useEffect(() => {
     if (highlightedId) {
@@ -1416,16 +1753,53 @@ function InterlockTable({ highlightedDeviceIds = [] }) {
     }
   }, [selectedDeviceId, visibleRows]);
 
-  const runAction = (label) => {
-    setActionResult(`${label}：${selectedRow?.id ?? '-'}，互锁真实状态未被人工改写`);
+  const refreshStatus = () => {
+    if (!selectedRow || !hasPermission(currentUser, 'interlock-refresh')) return;
+    setActionResult('');
+    setRefreshError('');
+    setRefreshingId(selectedRow.id);
+    window.setTimeout(() => {
+      if (selectedRow.id === 'CNC-003') {
+        setRefreshError('刷新失败：设备连接异常');
+      } else {
+        setRefreshedAtByDevice((current) => ({ ...current, [selectedRow.id]: formatNowTime() }));
+        setFlashId(selectedRow.id);
+        window.setTimeout(() => setFlashId(''), 900);
+      }
+      setRefreshingId('');
+    }, 650);
   };
+
+  const viewRelatedTask = () => {
+    if (!selectedRow?.affectedTask || ['-', '无当前任务'].includes(selectedRow.affectedTask)) return;
+    onNavigate?.(selectedRow.affectedTask);
+  };
+
+  const saveHandlingRecord = () => {
+    if (!selectedRow || !hasPermission(currentUser, 'record-handle')) return;
+    const content = recordDraft.remark.trim() || getInterlockRecordContent(selectedRow, recordDraft);
+    onRecord?.({
+      time: formatNowTime(),
+      objectId: selectedRow.id,
+      deviceId: selectedRow.id,
+      taskId: ['-', '无当前任务'].includes(selectedRow.affectedTask) ? '' : selectedRow.affectedTask,
+      logType: selectedRow.overall === '满足' ? '互锁复核' : '互锁处理',
+      content,
+      status: recordDraft.result,
+    });
+    setRecordModalOpen(false);
+    setActionResult('处理结果已记录');
+    setRecordDraft({ type: '刷新确认', result: '已确认', remark: '' });
+  };
+  const hasRelatedTask = selectedRow?.affectedTask && !['-', '无当前任务'].includes(selectedRow.affectedTask);
+  const isSatisfied = selectedRow?.overall === '满足';
 
   return (
     <div className="interlock-overview">
       <div className="interlock-related-summary">
         <strong>{relatedInterlock}</strong>
-        <button type="button" onClick={() => setMatrixExpanded((expanded) => !expanded)}>
-          {matrixExpanded ? '收起矩阵' : '展开矩阵'}
+        <button className="collapse-icon-button" type="button" aria-label={matrixExpanded ? '收起互锁矩阵' : '展开互锁矩阵'} onClick={() => setMatrixExpanded((expanded) => !expanded)}>
+          {matrixExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
         </button>
       </div>
       {matrixExpanded && (
@@ -1439,14 +1813,11 @@ function InterlockTable({ highlightedDeviceIds = [] }) {
           <SegmentedFilter options={['全部', '不满足', '阻塞任务', '已满足']} value={filter} onChange={setFilter} />
           {visibleRows.length ? (
             <DataTable
-              columns={['设备编号', '设备类型', '防护门', '夹具状态', '急停状态', '机器人安全区', '总体状态', '影响任务', '阻塞原因', '更新时间']}
+              columns={['设备编号', '设备类型', '互锁摘要', '总体状态', '影响任务', '阻塞原因', '更新时间']}
               rows={visibleRows.map((row) => [
                 row.id,
                 row.type,
-                renderInterlockValue(row.door),
-                renderInterlockValue(row.fixture),
-                renderInterlockValue(row.estop),
-                renderInterlockValue(row.robotArea),
+                getInterlockShortSummary(row),
                 <StatusText value={row.overall} />,
                 row.overall === '不满足' ? row.affectedTask : '-',
                 row.overall === '不满足' ? row.blockReason : '-',
@@ -1454,34 +1825,135 @@ function InterlockTable({ highlightedDeviceIds = [] }) {
               ])}
               rowKeys={visibleRows.map((row) => row.id)}
               selectedKey={selectedRow?.id}
+              highlightedKey={flashId}
               onRowClick={(id) => {
                 setSelectedDeviceId(id);
                 setActionResult('');
+                setRefreshError('');
               }}
             />
           ) : (
             <div className="attachment-empty">{filter === '阻塞任务' ? '暂无阻塞任务' : '当前互锁均满足'}</div>
           )}
-          {selectedRow && (
-            <div className="interlock-detail-panel">
-              <div className="detail-list dense">
-                <Info label="当前选中设备" value={`${selectedRow.id} / ${selectedRow.type}`} />
-                <Info label="阻塞原因" value={selectedRow.blockReason} />
-                <Info label="影响任务" value={selectedRow.affectedTask} />
-                <Info label="处理建议" value={selectedRow.suggestion} />
-                <Info label="最近更新时间" value={selectedRow.updatedAt} />
-              </div>
-              <div className="button-row interlock-actions">
-                {['刷新状态', '查看关联任务', '记录处理结果'].map((label) => (
-                  <button key={label} type="button" onClick={() => runAction(label)}>
-                    {label}
-                  </button>
-                ))}
-              </div>
-              {actionResult && <div className="alarm-action-result">{actionResult}</div>}
-            </div>
-          )}
         </>
+      )}
+      {selectedRow && (
+        <div className="interlock-detail-panel">
+          <div className="interlock-detail-card">
+            <div className="interlock-detail-head">
+              <strong>{selectedRow.id}｜{selectedRow.type}</strong>
+              <StatusText value={selectedRow.overall === '满足' ? '互锁满足' : '互锁不满足'} />
+            </div>
+            <div className="interlock-point-grid">
+              <span>防护门：{selectedRow.door.value}</span>
+              <span>夹具状态：{selectedRow.fixture.value}</span>
+              <span>急停状态：{selectedRow.estop.value}</span>
+              <span>机器人安全区：{selectedRow.robotArea.value}</span>
+            </div>
+            {isSatisfied ? (
+              <>
+                <div className="interlock-detail-block">
+                  <span>互锁判断</span>
+                  <strong>无阻塞，当前不影响任务执行。</strong>
+                </div>
+                <div className="interlock-detail-block">
+                  <span>关联任务</span>
+                  <strong>{hasRelatedTask ? selectedRow.affectedTask : '无'}</strong>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="interlock-detail-block">
+                  <span>阻塞原因</span>
+                  <strong>{selectedRow.blockReason}</strong>
+                </div>
+                <div className="interlock-detail-block">
+                  <span>影响任务</span>
+                  <strong>{selectedRow.affectedTask}</strong>
+                </div>
+                <div className="interlock-detail-block">
+                  <span>处理建议</span>
+                  <strong>{selectedRow.suggestion}</strong>
+                </div>
+              </>
+            )}
+            <div className="interlock-detail-block">
+              <span>最近更新时间</span>
+              <strong>{selectedRow.updatedAt}</strong>
+            </div>
+            {refreshError && <div className="action-disabled-reason">{refreshError}</div>}
+            {actionResult && <div className="alarm-action-result">{actionResult}</div>}
+            {!hasPermission(currentUser, 'interlock-refresh') && <div className="action-disabled-reason">{getPermissionReason(currentUser, '刷新互锁')}</div>}
+          </div>
+          <div className="button-row interlock-actions">
+            <button type="button" disabled={refreshingId === selectedRow.id || !hasPermission(currentUser, 'interlock-refresh')} onClick={refreshStatus}>
+              {refreshingId === selectedRow.id ? '刷新中...' : '刷新状态'}
+            </button>
+            {isSatisfied ? (
+              <>
+                <button type="button" onClick={() => setActionResult('已定位当前互锁相关记录')}>
+                  查看记录
+                </button>
+                <button className="secondary" type="button" disabled={!hasPermission(currentUser, 'record-handle')} onClick={() => setRecordModalOpen(true)}>
+                  记录处理结果
+                </button>
+                <button type="button" disabled>
+                  {hasRelatedTask ? '查看关联任务' : '无关联任务'}
+                </button>
+              </>
+            ) : (
+              <>
+                <button type="button" disabled={!hasRelatedTask} onClick={viewRelatedTask}>
+                  {hasRelatedTask ? '查看关联任务' : '无关联任务'}
+                </button>
+                <button className="primary" type="button" disabled={!hasPermission(currentUser, 'record-handle')} onClick={() => setRecordModalOpen(true)}>
+                  记录处理结果
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+      {recordModalOpen && selectedRow && (
+        <div className="modal-backdrop" role="presentation">
+          <div className="confirm-modal interlock-record-modal" role="dialog" aria-modal="true" aria-labelledby="interlock-record-title">
+            <div className="confirm-modal-head">
+              <strong id="interlock-record-title">记录处理结果</strong>
+              <span>{selectedRow.id}</span>
+            </div>
+            <div className="interlock-record-form">
+              <Info label="处理对象" value={`${selectedRow.id}｜${selectedRow.type}`} />
+              <label>
+                <span>处理类型</span>
+                <select value={recordDraft.type} onChange={(event) => setRecordDraft((current) => ({ ...current, type: event.target.value }))}>
+                  {['刷新确认', '人工复核', '现场处理', '误报确认'].map((item) => (
+                    <option key={item} value={item}>{item}</option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                <span>处理结果</span>
+                <select value={recordDraft.result} onChange={(event) => setRecordDraft((current) => ({ ...current, result: event.target.value }))}>
+                  {['已确认', '已恢复', '需维修', '暂不处理'].map((item) => (
+                    <option key={item} value={item}>{item}</option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                <span>备注</span>
+                <textarea value={recordDraft.remark} onChange={(event) => setRecordDraft((current) => ({ ...current, remark: event.target.value }))} placeholder="可选，填写现场处理说明" />
+              </label>
+            </div>
+            <div className="confirm-modal-actions">
+              <button type="button" onClick={() => setRecordModalOpen(false)}>
+                取消
+              </button>
+              <button type="button" onClick={saveHandlingRecord}>
+                确认保存
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
@@ -1537,6 +2009,35 @@ function getPointType(point) {
   if (point.code === 'alarm_code') return 'alarm';
   if (['spindle_speed', 'feed_rate', 'spindle_load', 'air_pressure'].includes(point.code)) return 'numeric';
   return 'status';
+}
+
+function getPointTypeLabel(point) {
+  const labels = {
+    numeric: '数值',
+    status: '状态',
+    alarm: '报警',
+  };
+  return labels[getPointType(point)] ?? '状态';
+}
+
+function getPointValueComparison(point) {
+  const [, numberText = '0', unit = ''] = String(point.value).match(/^(-?\d+(?:\.\d+)?)(.*)$/) ?? [];
+  const currentNumber = Number(numberText);
+  const step = {
+    spindle_speed: 180,
+    feed_rate: 70,
+    spindle_load: 4,
+    air_pressure: 0.1,
+  }[point.code] ?? 1;
+  const delta = currentNumber === 0 ? 0 : step;
+  const historyNumber = currentNumber - delta;
+  const format = (value) => `${Number.isInteger(value) ? value : value.toFixed(1)}${unit}`;
+
+  return {
+    current: point.value,
+    history: format(historyNumber),
+    delta: `${delta >= 0 ? '+' : ''}${Number.isInteger(delta) ? delta : delta.toFixed(1)}${unit}`,
+  };
 }
 
 function getPointDetailTitle(point) {
@@ -1611,25 +2112,29 @@ function getRelatedTaskForDevice(deviceId) {
 
 function getAlarmOverviewStats(alarmRows) {
   return {
-    high: alarmRows.filter((alarm) => alarm.level === '高危').length,
+    high: alarmRows.filter((alarm) => alarm.level === '高危' && alarm.status !== '已归档').length,
     unhandled: alarmRows.filter((alarm) => alarm.status === '未处理').length,
     processing: alarmRows.filter((alarm) => alarm.status === '处理中').length,
-    recovered: alarmRows.filter((alarm) => alarm.status === '已恢复').length,
-    blockedTasks: new Set(alarmRows.map((alarm) => getAlarmHandlingContext(alarm).task).filter((task) => task !== '无')).size,
+    waitingArchive: alarmRows.filter((alarm) => alarm.status === '已恢复').length,
+    archived: alarmRows.filter((alarm) => alarm.status === '已归档').length,
+    blockedTasks: new Set(alarmRows.filter((alarm) => alarm.status !== '已归档').map((alarm) => getAlarmHandlingContext(alarm).task).filter((task) => task !== '无')).size,
   };
 }
 
 function filterAlarms(alarmRows, filter) {
-  if (filter === '高危') return alarmRows.filter((alarm) => alarm.level === '高危');
-  if (filter === '阻塞任务') return alarmRows.filter((alarm) => getAlarmHandlingContext(alarm).task !== '无');
+  if (filter === '当前待办') return alarmRows.filter((alarm) => ['未处理', '处理中', '已恢复'].includes(alarm.status));
+  if (filter === '待归档') return alarmRows.filter((alarm) => alarm.status === '已恢复');
+  if (filter === '已归档') return alarmRows.filter((alarm) => alarm.status === '已归档');
+  if (filter === '高危') return alarmRows.filter((alarm) => alarm.level === '高危' && alarm.status !== '已归档');
+  if (filter === '阻塞任务') return alarmRows.filter((alarm) => alarm.status !== '已归档' && getAlarmHandlingContext(alarm).task !== '无');
   if (filter === '全部') return alarmRows;
   return alarmRows.filter((alarm) => alarm.status === filter);
 }
 
 function getAlarmUrgencyText(alarmRows) {
-  const highRiskAlarm = alarmRows.find((alarm) => alarm.level === '高危' && alarm.status !== '已恢复' && alarm.status !== '已关闭');
+  const highRiskAlarm = alarmRows.find((alarm) => alarm.level === '高危' && alarm.status !== '已恢复' && alarm.status !== '已归档');
   if (highRiskAlarm) {
-    return `紧急：${alarmRows.filter((alarm) => alarm.level === '高危' && alarm.status !== '已恢复' && alarm.status !== '已关闭').length} 条高危报警待处理`;
+    return `紧急：${alarmRows.filter((alarm) => alarm.level === '高危' && alarm.status !== '已恢复' && alarm.status !== '已归档').length} 条高危报警待处理`;
   }
   const lowRiskRecovered = alarmRows.filter((alarm) => alarm.level === '低危' && alarm.status === '已恢复').length;
   return `当前无高危报警｜${lowRiskRecovered} 条低危报警待归档`;
@@ -1721,7 +2226,7 @@ function getAlarmActionsByStatus(status) {
     未处理: ['确认处理', '派发维修', '查看任务', '查看日志'],
     处理中: ['标记恢复', '派发维修', '查看任务', '查看日志'],
     已恢复: ['确认归档', '查看日志', '查看任务'],
-    已关闭: ['查看日志', '查看处理记录'],
+    已归档: ['查看日志', '查看处理记录'],
   };
   return actionMap[status] ?? ['查看日志', '查看任务'];
 }
@@ -1753,7 +2258,7 @@ function getAlarmActionResult(label, alarm) {
     确认处理: { status: '处理中', nextStatus: '处理中', content: `已确认${alarm.name}` },
     派发维修: { status: '处理中', nextStatus: '处理中', content: `已派发维修：${alarm.name}` },
     标记恢复: { status: '已恢复', nextStatus: '已恢复', content: `${alarm.name}已标记恢复` },
-    确认归档: { status: '已关闭', nextStatus: '已关闭', content: `${alarm.name}已归档` },
+    确认归档: { status: '已归档', nextStatus: '已归档', content: `${alarm.name}已归档` },
   };
   return map[label] ?? { status: alarm.status, nextStatus: '', content: `${label}：${alarm.name}` };
 }
@@ -1836,6 +2341,27 @@ function getInterlockSuggestion(failedPoints) {
     return `检查${point.label}`;
   });
   return `${Array.from(new Set(actions)).join('，')}，刷新点位后再执行任务`;
+}
+
+function getInterlockShortSummary(row) {
+  const shortLabel = (point) => {
+    if (!point || point.value === '-') return '-';
+    if (point.label === '防护门') return point.ok ? '门关' : '门未关';
+    if (point.label === '夹具状态') return point.ok ? '夹具锁' : '夹具未锁';
+    if (point.label === '急停状态') return point.ok ? '急停未触发' : '急停触发';
+    if (point.label === '机器人安全区') return point.ok ? '不在加工区' : '在加工区';
+    return point.value;
+  };
+  return [row.door, row.fixture, row.estop, row.robotArea].map(shortLabel).filter((item) => item !== '-').join('｜') || '-';
+}
+
+function getInterlockRecordContent(row, draft) {
+  if (row.overall === '满足') {
+    return draft.type === '刷新确认' ? '确认互锁满足，无需处理' : `${draft.type}：确认互锁满足`;
+  }
+  if (draft.result === '已恢复') return `${row.blockReason}已处理，等待刷新确认`;
+  if (draft.result === '需维修') return `${row.blockReason}，需维修跟进`;
+  return `${draft.type}：${row.blockReason}`;
 }
 
 function getInterlockStats(rows) {
@@ -1985,7 +2511,7 @@ function LogTable({ rows, simple = false }) {
   );
 }
 
-function DataTable({ columns, rows, rowKeys = [], selectedKey, onRowClick, className = '', compact = false }) {
+function DataTable({ columns, rows, rowKeys = [], selectedKey, highlightedKey, onRowClick, className = '', compact = false }) {
   const handleWheel = (event) => {
     const target = event.currentTarget;
     const canScrollX = target.scrollWidth > target.clientWidth;
@@ -2009,7 +2535,7 @@ function DataTable({ columns, rows, rowKeys = [], selectedKey, onRowClick, class
             const key = rowKeys[index] ?? index;
             return (
               <tr
-                className={`${selectedKey === key ? 'selected' : ''} ${onRowClick ? 'clickable' : ''}`}
+                className={`${selectedKey === key ? 'selected' : ''} ${highlightedKey === key ? 'row-flash' : ''} ${onRowClick ? 'clickable' : ''}`}
                 key={key}
                 onClick={() => onRowClick?.(key)}
               >
@@ -2027,11 +2553,11 @@ function DataTable({ columns, rows, rowKeys = [], selectedKey, onRowClick, class
 
 function StatusText({ value }) {
   const tone =
-    ['正常', '在线', '运行中', '已确认', '已下发', '已关闭', '已锁紧', '未触发', '良好', '完成', '已恢复', '满足', '低危'].includes(value)
+    ['正常', '在线', '运行中', '已确认', '已下发', '已关闭', '已锁紧', '未触发', '良好', '完成', '已完成', '已恢复', '已归档', '满足', '低危'].includes(value)
       ? 'ok'
-      : ['偏高', '暂停', '排队中', '处理中', '维护中', '等待前置条件', '检测中', '中危'].includes(value)
+      : ['偏高', '暂停', '暂停中', '排队中', '待执行', '等待开始', '处理中', '维护中', '等待前置条件', '检测中', '中危'].includes(value)
         ? 'warn'
-        : ['失败', '离线', '停止', '报警', '未处理', '异常', '已中止', '不满足', '高危'].includes(value)
+        : ['失败', '离线', '停止', '报警', '未处理', '异常', '已中止', '已跳过', '未执行', '不满足', '高危'].includes(value)
           ? 'bad'
           : 'neutral';
   return <span className={`status-text ${tone}`}>{value}</span>;
@@ -2119,6 +2645,63 @@ function getInterlockCheck() {
   return { ok: false, reason: `${failed.name}为${failed.status}` };
 }
 
+function getDefaultUsername(role) {
+  if (role === '工程师') return 'engineer01';
+  if (role === '管理员') return 'admin';
+  return 'operator01';
+}
+
+function getAvatarLetter(role, username, avatar) {
+  if (avatar === '管理员头像' || role === '管理员') return 'M';
+  if (avatar === '工程师头像' || role === '工程师') return 'E';
+  if (avatar === '操作员头像' || role === '操作员') return 'O';
+  return String(username || 'U').slice(0, 1).toUpperCase();
+}
+
+function getRoleLevel(user) {
+  if (!user) return 0;
+  return { 操作员: 1, 工程师: 2, 管理员: 3 }[user.role] ?? 0;
+}
+
+function hasPermission(user, permission) {
+  const level = getRoleLevel(user);
+  const required = {
+    view: 0,
+    'alarm-handle': 1,
+    'task-pause': 1,
+    'interlock-refresh': 1,
+    'record-handle': 1,
+    'command-send': 2,
+    'device-debug': 2,
+    'task-control': 2,
+    'system-config': 3,
+  }[permission] ?? 0;
+  return level >= required;
+}
+
+function getTaskActionPermission(action) {
+  if (action === '暂停') return 'task-pause';
+  if (['查看详情', '查看日志'].includes(action)) return 'view';
+  return 'task-control';
+}
+
+function getAlarmActionPermission(label) {
+  if (['查看任务', '查看日志', '查看处理记录'].includes(label)) return 'view';
+  return 'alarm-handle';
+}
+
+function getPermissionReason(user, action) {
+  if (!user) return '无权限：请先登录后再执行该操作';
+  return `无权限：当前角色不可执行${action}`;
+}
+
+function getPermissionScope(role) {
+  if (role === '管理员') return '查看、报警处理、任务控制、指令下发、设备调试、系统配置';
+  if (role === '工程师') return '查看、报警处理、任务控制、指令下发、设备调试';
+  if (role === '操作员') return '查看、报警处理、任务暂停、刷新互锁、查看日志';
+  return '仅查看';
+}
+
 function getTaskActionConfig(status) {
   const config = {
     排队中: ['开始'],
@@ -2129,6 +2712,139 @@ function getTaskActionConfig(status) {
     已中止: ['重新运行'],
   };
   return { actions: config[status] ?? [] };
+}
+
+const defaultProcessStepNames = ['等待上料', '机器人搬运', '夹具锁紧', '启动加工', '加工监控', '下料完成', '质量确认', '任务归档'];
+
+function getTaskActionOverride(task, action, nextStatus) {
+  const steps = buildTaskProcessSteps(task);
+  const firstStep = steps[0];
+  const { current, total } = parseTaskProgress(task.step);
+  const totalSteps = Math.max(total, steps.length);
+
+  if (['开始', '恢复'].includes(action)) {
+    const nextStepNumber = Math.max(current, 1);
+    const currentStep = steps[nextStepNumber - 1] ?? firstStep;
+    return {
+      status: nextStatus,
+      step: `${nextStepNumber}/${totalSteps || 1}`,
+      currentStep: currentStep?.id ?? 'STEP-001',
+      command: currentStep?.name ?? '等待上料',
+      startedAt: task.startedAt === '-' ? formatNowTime() : task.startedAt,
+    };
+  }
+
+  if (['重试', '重新运行'].includes(action)) {
+    return {
+      status: nextStatus,
+      step: `0/${totalSteps || 1}`,
+      currentStep: 'STEP-000',
+      command: '等待开始',
+    };
+  }
+
+  return { status: nextStatus };
+}
+
+function parseTaskProgress(stepText) {
+  const [currentText, totalText] = String(stepText ?? '0/0').split('/');
+  const current = Number(currentText);
+  const total = Number(totalText);
+  return {
+    current: Number.isFinite(current) ? current : 0,
+    total: Number.isFinite(total) ? total : 0,
+  };
+}
+
+function buildTaskProcessSteps(task) {
+  const configuredSteps = stepsByTask[task.id] ?? [];
+  if (!configuredSteps.length) return [];
+
+  const { current, total } = parseTaskProgress(task.step);
+  const stepCount = Math.max(configuredSteps.length, total);
+  return Array.from({ length: stepCount }, (_, index) => {
+    const stepNumber = index + 1;
+    const configuredStep = configuredSteps[index];
+    const fallbackStep = {
+      id: `STEP-${String(stepNumber).padStart(3, '0')}`,
+      name: defaultProcessStepNames[index] ?? `工序 ${stepNumber}`,
+    };
+    const name = configuredStep?.name && configuredStep.name !== '等待执行' ? configuredStep.name : fallbackStep.name;
+    return { ...fallbackStep, ...configuredStep, name };
+  });
+}
+
+function getTaskStepPreview(task) {
+  const steps = buildTaskProcessSteps(task);
+  if (!steps.length) return [];
+
+  const { current } = parseTaskProgress(task.step);
+  const effectiveCurrent = getEffectiveCurrentStepNumber(task.status, current);
+  return steps.map((step, index) => {
+    const stepNumber = index + 1;
+    const displayStatus = getTaskStepDisplayStatus(task.status, effectiveCurrent, stepNumber, step.status);
+    return {
+      ...step,
+      displayStatus,
+      isCurrent: ['运行中', '暂停', '失败'].includes(task.status) && effectiveCurrent === stepNumber,
+    };
+  });
+}
+
+function getEffectiveCurrentStepNumber(taskStatus, currentStepNumber) {
+  if (['运行中', '暂停', '失败'].includes(taskStatus)) {
+    return Math.max(currentStepNumber, 1);
+  }
+  return currentStepNumber;
+}
+
+function getTaskStepDisplayStatus(taskStatus, currentStepNumber, stepNumber, configuredStatus) {
+  if (taskStatus === '运行中') {
+    if (stepNumber < currentStepNumber) return '已完成';
+    if (stepNumber === currentStepNumber) return '执行中';
+    return '待执行';
+  }
+
+  if (taskStatus === '排队中') {
+    return stepNumber === 1 ? '等待开始' : '待执行';
+  }
+
+  if (taskStatus === '暂停') {
+    if (stepNumber < currentStepNumber) return '已完成';
+    if (stepNumber === currentStepNumber) return '暂停中';
+    return '待执行';
+  }
+
+  if (taskStatus === '失败') {
+    if (stepNumber < currentStepNumber) return '已完成';
+    if (stepNumber === currentStepNumber) return '失败';
+    return '未执行';
+  }
+
+  if (taskStatus === '已完成') return '已完成';
+
+  if (taskStatus === '已中止') {
+    if (currentStepNumber > 0 && stepNumber < currentStepNumber) return '已完成';
+    return '已跳过';
+  }
+
+  return configuredStatus ?? '待执行';
+}
+
+function getTaskCurrentStepDetail(task) {
+  const steps = getTaskStepPreview(task);
+  const { current } = parseTaskProgress(task.step);
+  const effectiveCurrent = getEffectiveCurrentStepNumber(task.status, current);
+  const selectedStep = steps.find((step) => step.isCurrent) ?? steps[effectiveCurrent > 0 ? effectiveCurrent - 1 : 0];
+  const command = !task.command || task.command === '等待执行' ? selectedStep?.name : task.command;
+
+  return {
+    stepLabel: selectedStep ? toChineseStep(selectedStep.id) : toChineseStep(task.currentStep),
+    command: command || '-',
+    dispatchStatus: task.status === '排队中' ? '待下发' : '已下发',
+    receiptStatus: task.status === '排队中' ? '待确认' : '已确认',
+    failureReason: task.status === '失败' ? '设备离线，回执超时' : '无',
+  };
 }
 
 function getActionIcon(action) {
