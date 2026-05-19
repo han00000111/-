@@ -783,12 +783,117 @@ button {
   width: min(620px, calc(100vw - 36px));
 }
 
+.history-object-summary {
+  display: grid;
+  gap: 4px;
+  margin-bottom: 10px;
+  padding: 9px 10px;
+  border: 1px solid #d7dde3;
+  border-radius: 6px;
+  background: #eef1f4;
+  color: #182433;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.history-object-summary div + div {
+  color: #4b5563;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.history-main-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 7fr) minmax(260px, 3fr);
+  gap: 12px;
+  align-items: stretch;
+  margin-bottom: 10px;
+}
+
 .history-trend-block {
-  margin: 10px 0 12px;
+  margin: 0;
   padding: 10px;
   border: 1px solid #d7dde3;
   border-radius: 6px;
   background: #f7f9fa;
+}
+
+.history-trend-block .trend-layout {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.history-analysis-panel {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid #d7dde3;
+  border-radius: 6px;
+  background: #f7f9fa;
+}
+
+.history-analysis-panel h3 {
+  margin: 0;
+  color: #182433;
+  font-size: 14px;
+}
+
+.history-analysis-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.history-analysis-item {
+  display: grid;
+  gap: 3px;
+  min-height: 48px;
+  padding: 6px 7px;
+  border: 1px solid #d7dde3;
+  border-radius: 5px;
+  background: #fff;
+}
+
+.history-analysis-item span,
+.history-analysis-note span {
+  color: #5d6875;
+  font-size: 12px;
+}
+
+.history-analysis-item strong {
+  overflow: hidden;
+  color: #182433;
+  font-size: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.history-analysis-note {
+  display: grid;
+  gap: 4px;
+  padding-top: 2px;
+}
+
+.history-event-list {
+  display: grid;
+  gap: 6px;
+}
+
+.history-event-row {
+  display: grid;
+  grid-template-columns: 90px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  min-height: 34px;
+  padding: 6px 8px;
+  border: 1px solid #d7dde3;
+  border-radius: 6px;
+  background: #fff;
+  font-size: 12px;
+}
+
+.history-event-row span {
+  color: #4b5563;
 }
 
 .device-type-preview {
@@ -2466,6 +2571,7 @@ button:disabled,
   .device-detail-grid .summary-strip,
   .history-compare-page .summary-strip,
   .device-type-preview-grid,
+  .history-main-layout,
   .trend-history-layout,
   .point-workspace-grid,
   .device-overview-card-grid,

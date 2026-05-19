@@ -1154,79 +1154,78 @@ function SearchableFilterField({ label, value, options, onChange, defaultValue =
   );
 }
 
-function HistoryComparePage({ allPointRows, selectedDeviceId }) {
-  const [filters, setFilters] = useState({ device: selectedDeviceId, pointCode: '', range: '近5分钟', pointType: '数值' });
-  const deviceOptions = useMemo(() => ['全部', ...devices.map((device) => device.id)], []);
-  const selectedDevice = devices.find((device) => device.id === filters.device) ?? devices.find((device) => device.id === selectedDeviceId) ?? devices[0];
+function HistoryComparePage({ allPointRows, selectedDeviceId: initialDeviceId }) {
+  const [selectedDeviceId, setSelectedDeviceId] = useState(initialDeviceId);
+  const [selectedPointCode, setSelectedPointCode] = useState('');
+  const [selectedTimeRange, setSelectedTimeRange] = useState('近5分钟');
+  const [selectedPointType, setSelectedPointType] = useState('数值');
+  const deviceOptions = useMemo(() => devices.map((device) => device.id), []);
+  const selectedDevice = devices.find((device) => device.id === selectedDeviceId) ?? devices.find((device) => device.id === initialDeviceId) ?? devices[0];
   const selectedDeviceRows = useMemo(
-    () => allPointRows.filter(({ device }) => device.id === filters.device),
-    [allPointRows, filters.device]
+    () => allPointRows.filter(({ device }) => device.id === selectedDeviceId),
+    [allPointRows, selectedDeviceId]
   );
   const selectedDevicePointTypes = useMemo(
     () => Array.from(new Set(selectedDeviceRows.map(({ point }) => getPointTypeLabel(point)))),
     [selectedDeviceRows]
   );
   const deviceRows = useMemo(
-    () => allPointRows.filter(({ device, point }) => (filters.device === '全部' || device.id === filters.device) && getPointTypeLabel(point) === filters.pointType),
-    [allPointRows, filters.device, filters.pointType]
+    () => selectedDeviceRows.filter(({ point }) => getPointTypeLabel(point) === selectedPointType),
+    [selectedDeviceRows, selectedPointType]
   );
   const pointOptions = useMemo(
-    () => Array.from(new Map(deviceRows.map(({ point }) => [point.code, { label: point.name, value: point.code }])).values()),
+    () => deviceRows.map(({ point }) => ({ label: point.name, value: point.code })),
     [deviceRows]
   );
 
   useEffect(() => {
-    setFilters((current) => (current.device === selectedDeviceId ? current : { ...current, device: selectedDeviceId }));
-  }, [selectedDeviceId]);
+    setSelectedDeviceId(initialDeviceId);
+  }, [initialDeviceId]);
 
   useEffect(() => {
-    if (filters.device === '全部') return;
-    if (selectedDevicePointTypes.length && !selectedDevicePointTypes.includes(filters.pointType)) {
-      setFilters((current) => ({ ...current, pointType: selectedDevicePointTypes[0], pointCode: '' }));
+    if (selectedDevicePointTypes.length && !selectedDevicePointTypes.includes(selectedPointType)) {
+      setSelectedPointType(selectedDevicePointTypes[0]);
+      setSelectedPointCode('');
     }
-  }, [filters.device, filters.pointType, selectedDevicePointTypes]);
+  }, [selectedDevicePointTypes, selectedPointType]);
 
   useEffect(() => {
-    if (!deviceRows.some(({ point }) => point.code === filters.pointCode)) {
-      setFilters((current) => ({ ...current, pointCode: deviceRows[0]?.point.code ?? '' }));
+    if (!deviceRows.some(({ point }) => point.code === selectedPointCode)) {
+      setSelectedPointCode(deviceRows[0]?.point.code ?? '');
     }
-  }, [deviceRows, filters.pointCode]);
+  }, [deviceRows, selectedPointCode]);
 
-  const selectedRow = deviceRows.find(({ point }) => point.code === filters.pointCode) ?? deviceRows[0];
-  const comparison = selectedRow ? getHistoryComparison(selectedRow.point) : null;
-  const historyRecords = selectedRow ? getHistoryRecords(selectedRow.point) : [];
-  const update = (key, value) => setFilters((current) => ({ ...current, [key]: value }));
+  const selectedRow = deviceRows.find(({ point }) => point.code === selectedPointCode) ?? deviceRows[0];
+  const pointType = selectedRow ? getPointType(selectedRow.point) : getPointTypeFromLabel(selectedPointType);
+  const comparison = selectedRow ? getHistoryComparison(selectedRow.point, selectedTimeRange) : null;
+  const historyRecords = selectedRow ? getHistoryRecords(selectedRow.point, selectedTimeRange) : [];
+  const statusRecords = selectedRow ? getStatusHistoryRecords(selectedRow.point, selectedTimeRange) : [];
+  const alarmRecords = selectedRow ? getAlarmHistoryRecords(selectedRow.point, selectedTimeRange) : [];
 
   return (
     <section className="panel page-full history-compare-page">
       <SectionTitle icon={History} title="历史对比" />
       <div className="filterbar history-filter">
-        <SearchableFilterField label="设备编号" value={filters.device} options={deviceOptions} onChange={(value) => update('device', value)} commitOnType={false} defaultValue={selectedDeviceId || '全部'} />
-        <SearchableFilterField label="点位名称" value={filters.pointCode} options={pointOptions} onChange={(value) => update('pointCode', value)} commitOnType={false} defaultValue={pointOptions[0]?.value ?? ''} />
-        <SearchableFilterField label="时间范围" value={filters.range} options={['近5分钟', '近15分钟', '近30分钟', '近1小时']} onChange={(value) => update('range', value)} commitOnType={false} defaultValue="近5分钟" />
-        <SearchableFilterField label="点位类型" value={filters.pointType} options={['数值', '状态', '报警']} onChange={(value) => update('pointType', value)} commitOnType={false} defaultValue={selectedDevicePointTypes[0] ?? '数值'} />
+        <SearchableFilterField label="设备编号" value={selectedDeviceId} options={deviceOptions} onChange={setSelectedDeviceId} commitOnType={false} defaultValue={initialDeviceId} />
+        <SearchableFilterField label="点位名称" value={selectedPointCode} options={pointOptions} onChange={setSelectedPointCode} commitOnType={false} defaultValue={pointOptions[0]?.value ?? ''} />
+        <SearchableFilterField label="时间范围" value={selectedTimeRange} options={['近5分钟', '近15分钟', '近30分钟', '近1小时']} onChange={setSelectedTimeRange} commitOnType={false} defaultValue="近5分钟" />
+        <SearchableFilterField label="点位类型" value={selectedPointType} options={['数值', '状态', '报警']} onChange={(value) => {
+          setSelectedPointType(value);
+          setSelectedPointCode('');
+        }} commitOnType={false} defaultValue={selectedDevicePointTypes[0] ?? '数值'} />
       </div>
-      <DeviceTypePreviewSection selectedDevice={selectedDevice} />
-      {comparison ? (
-        <>
-          <SummaryStrip
-            items={[
-              { label: '当前值', value: comparison.current },
-              { label: '上一值', value: comparison.previous },
-              { label: '5分钟均值', value: comparison.average },
-              { label: '历史最大', value: comparison.max },
-              { label: '历史最小', value: comparison.min },
-              { label: '变化幅度', value: comparison.delta },
-            ]}
-          />
-          <div className="history-trend-block">
-            <TrendChart device={selectedRow.device} point={selectedRow.point} timeRange={filters.range} />
-          </div>
-          <DataTable
-            columns={['时间', '当前值', '变化量', '状态', '采集质量']}
-            rows={historyRecords.map((row) => [row.time, row.value, row.delta, <StatusText value={row.status} />, row.quality])}
-          />
-        </>
+      <CurrentObjectSummary comparison={comparison} device={selectedDevice} point={selectedRow?.point} timeRange={selectedTimeRange} />
+      {selectedRow ? (
+        <HistoryPointTemplate
+          alarmRecords={alarmRecords}
+          comparison={comparison}
+          historyRecords={historyRecords}
+          point={selectedRow.point}
+          pointType={pointType}
+          selectedDevice={selectedRow.device}
+          selectedTimeRange={selectedTimeRange}
+          statusRecords={statusRecords}
+        />
       ) : (
         <div className="attachment-empty">当前设备暂无该类型点位</div>
       )}
@@ -1234,36 +1233,157 @@ function HistoryComparePage({ allPointRows, selectedDeviceId }) {
   );
 }
 
-function DeviceTypePreviewSection({ selectedDevice }) {
-  const previewDevices = useMemo(() => getHistoryPreviewDevices(selectedDevice), [selectedDevice]);
-
-  if (!previewDevices.length) {
+function CurrentObjectSummary({ comparison, device, point, timeRange }) {
+  if (!device) {
     return <div className="attachment-empty">暂无设备状态数据</div>;
   }
+  const task = getCurrentTaskForDevice(device.id);
+  const compareLabel = rangeToCompareLabel(timeRange);
 
   return (
-    <div className="device-type-preview">
-      <h3>设备对比预览</h3>
-      <div className="device-type-preview-grid">
-        {previewDevices.map((device) => {
-          const task = getCurrentTaskForDevice(device.id);
-          return (
-            <div className={`device-type-preview-card ${device.id === selectedDevice?.id ? 'selected' : ''}`} key={device.id}>
-              <div className="device-type-preview-head">
-                <span>{device.type}</span>
-                <strong>{device.id}</strong>
-                <StatusText value={device.runStatus} />
-              </div>
-              <div className="device-type-preview-meta">
-                <span>当前任务：{task?.id ?? '无'}</span>
-                <span>报警数：{device.alarmCount}</span>
-                <span>更新时间：{device.updatedAt}</span>
-              </div>
-              <KeyPointOverview device={device} />
-            </div>
-          );
-        })}
+    <div className="history-object-summary">
+      <div>
+        当前对象：{device.id}｜{device.type}｜{point?.name ?? '-'}｜{point?.value ?? '-'}｜{point?.status ?? '-'}｜较{compareLabel} {comparison?.delta ?? '-'}
       </div>
+      <div>
+        当前任务：{task?.id ?? '无'}｜报警数：{device.alarmCount}｜更新时间：{device.updatedAt}
+      </div>
+    </div>
+  );
+}
+
+function HistoryPointTemplate({ alarmRecords, comparison, historyRecords, point, pointType, selectedDevice, selectedTimeRange, statusRecords }) {
+  if (pointType === 'status') {
+    const statusSummary = getStatusComparison(point, statusRecords);
+    const statusAnalysis = getStatusAnalysis(statusSummary);
+    return (
+      <>
+        <div className="history-main-layout">
+          <div className="history-trend-block">
+            <StatusTimeline records={statusRecords} />
+          </div>
+          <HistoryAnalysisPanel
+            title="状态分析"
+            items={[
+              { label: '当前状态', value: statusSummary.current },
+              { label: '上一状态', value: statusSummary.previous },
+              { label: '变化次数', value: statusSummary.changeCount },
+              { label: '最近变化时间', value: statusSummary.lastChangedAt },
+            ]}
+            judgement={statusAnalysis.judgement}
+            suggestion={statusAnalysis.suggestion}
+          />
+        </div>
+        <DataTable
+          columns={['时间', '当前状态', '上一状态', '状态变化', '采集质量']}
+          rows={statusRecords.map((row) => [row.time, <StatusText value={row.value} />, row.previous, row.changed ? '变化' : '保持', row.quality])}
+        />
+      </>
+    );
+  }
+
+  if (pointType === 'alarm') {
+    const alarmSummary = getAlarmComparison(point, alarmRecords);
+    const alarmAnalysis = getAlarmAnalysis(alarmSummary);
+    return (
+      <>
+        <div className="history-main-layout">
+          <div className="history-trend-block">
+            <AlarmEventList records={alarmRecords} />
+          </div>
+          <HistoryAnalysisPanel
+            title="报警分析"
+            items={[
+              { label: '当前报警码', value: alarmSummary.current },
+              { label: '上一报警码', value: alarmSummary.previous },
+              { label: '触发次数', value: alarmSummary.triggerCount },
+              { label: '最近触发时间', value: alarmSummary.lastTriggeredAt },
+            ]}
+            judgement={alarmAnalysis.judgement}
+            suggestion={alarmAnalysis.suggestion}
+          />
+        </div>
+        <DataTable
+          columns={['时间', '报警码', '事件', '状态', '采集质量']}
+          rows={alarmRecords.map((row) => [row.time, row.value, row.event, <StatusText value={row.status} />, row.quality])}
+        />
+      </>
+    );
+  }
+
+  const numericAnalysis = getNumericAnalysis(point, comparison);
+  return (
+    <>
+      <div className="history-main-layout">
+        <div className="history-trend-block">
+          <TrendChart device={selectedDevice} point={point} showMini={false} timeRange={selectedTimeRange} />
+        </div>
+        <HistoryAnalysisPanel
+          title="对比分析"
+          items={[
+            { label: '当前值', value: comparison.current },
+            { label: '上一值', value: comparison.previous },
+            { label: '5分钟均值', value: comparison.average },
+            { label: '历史最大', value: comparison.max },
+            { label: '历史最小', value: comparison.min },
+            { label: '变化幅度', value: comparison.delta },
+          ]}
+          judgement={numericAnalysis.judgement}
+          suggestion={numericAnalysis.suggestion}
+        />
+      </div>
+      <DataTable
+        columns={['时间', '当前值', '变化量', '状态', '采集质量']}
+        rows={historyRecords.map((row) => [row.time, row.value, row.delta, <StatusText value={row.status} />, row.quality])}
+      />
+    </>
+  );
+}
+
+function HistoryAnalysisPanel({ items, judgement, suggestion, title }) {
+  return (
+    <aside className="history-analysis-panel">
+      <h3>{title}</h3>
+      <div className="history-analysis-grid">
+        {items.map((item) => (
+          <div className="history-analysis-item" key={item.label}>
+            <span>{item.label}</span>
+            <strong>{item.value}</strong>
+          </div>
+        ))}
+      </div>
+      <div className="history-analysis-note">
+        <span>判断：{judgement}</span>
+        <span>建议：{suggestion}</span>
+      </div>
+    </aside>
+  );
+}
+
+function StatusTimeline({ records }) {
+  return (
+    <div className="history-event-list">
+      {records.map((row) => (
+        <div className="history-event-row" key={row.time}>
+          <strong>{row.time}</strong>
+          <span>{row.previous} → {row.value}</span>
+          <StatusText value={row.changed ? '已确认' : '正常'} />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function AlarmEventList({ records }) {
+  return (
+    <div className="history-event-list">
+      {records.map((row) => (
+        <div className="history-event-row" key={row.time}>
+          <strong>{row.time}</strong>
+          <span>{row.event}｜{row.value}</span>
+          <StatusText value={row.status} />
+        </div>
+      ))}
     </div>
   );
 }
@@ -2701,6 +2821,12 @@ function rangeToCompareLabel(range) {
   return '5分钟均值';
 }
 
+function getPointTypeFromLabel(label) {
+  if (label === '状态') return 'status';
+  if (label === '报警') return 'alarm';
+  return 'numeric';
+}
+
 function getDevicePointsFor(device) {
   if (!device) return [];
   const configured = devicePoints[device.id];
@@ -3047,9 +3173,9 @@ function getPointValueComparison(point) {
   };
 }
 
-function getHistoryComparison(point) {
+function getHistoryComparison(point, range = '近5分钟') {
   const parsed = parsePointValue(point.value);
-  const trend = getPointTrendInfo(point);
+  const trend = getPointTrendInfo(point, rangeToCompareLabel(range));
   const percent = Number(trend.text.replace('%', ''));
   const direction = trend.icon === '↓' ? -1 : trend.icon === '↑' ? 1 : 0;
   const previousNumber = direction === 0 ? parsed.value : parsed.value / (1 + (direction * percent) / 100);
@@ -3066,13 +3192,14 @@ function getHistoryComparison(point) {
   };
 }
 
-function getHistoryRecords(point) {
+function getHistoryRecords(point, range = '近5分钟') {
   const parsed = parsePointValue(point.value);
-  const trend = getPointTrendInfo(point);
+  const trend = getPointTrendInfo(point, rangeToCompareLabel(range));
   const direction = trend.icon === '↓' ? -1 : trend.icon === '↑' ? 1 : 0;
-  return ['09:07:18', '09:08:18', '09:09:18', '09:10:18', point.updatedAt].map((time, index) => {
+  const times = getHistoryTimes(point.updatedAt, range);
+  return times.map((time, index) => {
     const step = direction * Math.max(parsed.value * 0.015, 1);
-    const value = parsed.value - (4 - index) * step;
+    const value = parsed.value - (times.length - index - 1) * step;
     const previous = index === 0 ? value : value - step;
     const delta = value - previous;
     return {
@@ -3082,6 +3209,100 @@ function getHistoryRecords(point) {
       status: point.status,
       quality: point.quality,
     };
+  });
+}
+
+function getStatusHistoryRecords(point, range = '近5分钟') {
+  const times = getHistoryTimes(point.updatedAt, range);
+  return times.map((time, index) => {
+    const changed = index === times.length - 2 && point.status !== '异常';
+    const previous = changed ? '待确认' : point.value;
+    return {
+      time,
+      value: point.value,
+      previous,
+      changed,
+      quality: point.quality,
+    };
+  });
+}
+
+function getAlarmHistoryRecords(point, range = '近5分钟') {
+  const times = getHistoryTimes(point.updatedAt, range);
+  const currentCode = String(point.value ?? '0');
+  return times.map((time, index) => {
+    const triggered = currentCode !== '0' && index >= Math.max(0, times.length - 2);
+    return {
+      time,
+      value: triggered ? currentCode : '0',
+      event: triggered ? '报警触发' : '无报警',
+      status: triggered ? point.status : '正常',
+      quality: point.quality,
+    };
+  });
+}
+
+function getStatusComparison(point, records) {
+  const changes = records.filter((row) => row.changed);
+  return {
+    current: point.value,
+    previous: records.at(-2)?.value ?? point.value,
+    changeCount: changes.length,
+    lastChangedAt: changes.at(-1)?.time ?? '无',
+  };
+}
+
+function getAlarmComparison(point, records) {
+  const triggered = records.filter((row) => row.value !== '0');
+  return {
+    current: point.value,
+    previous: records.at(-2)?.value ?? '0',
+    triggerCount: triggered.length,
+    lastTriggeredAt: triggered.at(-1)?.time ?? '无',
+  };
+}
+
+function getNumericAnalysis(point, comparison) {
+  if (comparison.delta.startsWith('↑')) {
+    return {
+      judgement: '当前值高于5分钟均值，存在上升趋势。',
+      suggestion: point.status === '偏高' ? '关注加工负载变化，必要时检查进给参数。' : '持续观察趋势变化，确认工艺参数稳定。',
+    };
+  }
+  if (comparison.delta.startsWith('↓')) {
+    return {
+      judgement: '当前值低于5分钟均值，存在下降趋势。',
+      suggestion: '关注设备输出变化，必要时检查气压、速度或状态配置。',
+    };
+  }
+  return {
+    judgement: '当前值与5分钟均值基本持平。',
+    suggestion: '维持当前参数，继续观察采集质量。',
+  };
+}
+
+function getStatusAnalysis(summary) {
+  return {
+    judgement: summary.changeCount ? '当前状态在所选时间范围内发生变化。' : '当前状态在所选时间范围内保持稳定。',
+    suggestion: summary.changeCount ? '核对最近变化时间，确认现场动作是否符合预期。' : '继续关注状态点位采集质量。',
+  };
+}
+
+function getAlarmAnalysis(summary) {
+  return {
+    judgement: Number(summary.triggerCount) > 0 ? '所选时间范围内存在报警触发记录。' : '所选时间范围内未发现报警触发。',
+    suggestion: Number(summary.triggerCount) > 0 ? '优先确认报警码含义和关联设备状态。' : '保持监控，必要时扩大时间范围复查。',
+  };
+}
+
+function getHistoryTimes(updatedAt, range) {
+  const count = range === '近1小时' ? 8 : range === '近30分钟' ? 7 : range === '近15分钟' ? 6 : 5;
+  const current = updatedAt || '09:11:18';
+  const baseMinute = Number(current.slice(3, 5)) || 11;
+  const second = current.slice(6, 8) || '18';
+  return Array.from({ length: count }, (_, index) => {
+    const minute = Math.max(0, baseMinute - (count - index - 1));
+    return `09:${String(minute).padStart(2, '0')}:${second}`;
   });
 }
 
