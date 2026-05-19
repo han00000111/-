@@ -714,9 +714,12 @@ function DevicesPage({ activeDeviceTab, currentUser, selectedDevice, selectedDev
 
 function DeviceOverviewPage({ onSelectDevice, selectedDeviceId }) {
   const [filter, setFilter] = useState('全部');
-  const rows = useMemo(() => devices.map(getDeviceOverviewRow), []);
+  const rows = useMemo(() => sortDeviceOverviewRows(devices.map(getDeviceOverviewRow)), []);
   const filteredRows = useMemo(() => filterDeviceOverviewRows(rows, filter), [rows, filter]);
   const stats = useMemo(() => getDeviceOverviewStats(rows), [rows]);
+  const attentionRows = useMemo(() => rows.filter(isDeviceNeedAttention), [rows]);
+  const typeRows = useMemo(() => getDeviceTypeOverviewRows(rows), [rows]);
+  const overviewText = useMemo(() => getDeviceOverviewSummaryText(rows, attentionRows), [rows, attentionRows]);
 
   return (
     <section className="panel page-full device-overview-page">
@@ -731,10 +734,55 @@ function DeviceOverviewPage({ onSelectDevice, selectedDeviceId }) {
           { label: '维护', value: stats.maintenance, tone: 'warn' },
         ]}
       />
+      <div className="overview-status-summary">{overviewText}</div>
+      <div className="overview-section-grid">
+        <section className="overview-subpanel attention-devices-panel">
+          <div className="subsection-title">
+            <strong>异常设备</strong>
+            <span>{attentionRows.length ? `${attentionRows.length} 台需关注` : '当前无异常设备'}</span>
+          </div>
+          {attentionRows.length ? (
+            <div className="attention-device-list">
+              {attentionRows.map((row) => (
+                <button className="attention-device-row" key={row.id} type="button" onClick={() => onSelectDevice(row.id)}>
+                  <div>
+                    <strong>{row.id}</strong>
+                    <span>{row.type}</span>
+                  </div>
+                  <div>{row.problemSummary}</div>
+                  <div>{row.currentTask === '无' ? '无当前任务' : `影响 ${row.currentTask}`}</div>
+                  <div>{row.suggestion}</div>
+                  <span>查看详情</span>
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div className="attachment-empty">暂无设备状态数据</div>
+          )}
+        </section>
+        <section className="overview-subpanel device-type-overview-panel">
+          <div className="subsection-title">
+            <strong>设备类型概览</strong>
+            <span>按类型汇总</span>
+          </div>
+          <DataTable
+            compact
+            columns={['设备类型', '设备数量', '运行中', '异常', '离线', '维护']}
+            rows={typeRows.map((row) => [
+              row.type,
+              `${row.total} 台`,
+              `${row.running} 运行中`,
+              `${row.abnormal} 异常`,
+              `${row.offline} 离线`,
+              `${row.maintenance} 维护`,
+            ])}
+          />
+        </section>
+      </div>
       <SegmentedFilter options={['全部', '异常', '离线', '运行中', '维护', '有任务']} value={filter} onChange={setFilter} />
       {filteredRows.length ? (
         <DataTable
-          columns={['设备编号', '类型', '在线状态', '运行状态', '当前任务', '报警数', '互锁状态', '关键点位异常数', '最后心跳', '更新时间']}
+          columns={['设备编号', '类型', '在线状态', '运行状态', '当前任务', '报警数', '互锁状态', '关键点位异常数', '状态摘要', '更新时间', '操作']}
           rows={filteredRows.map((row) => [
             row.id,
             row.type,
@@ -744,8 +792,14 @@ function DeviceOverviewPage({ onSelectDevice, selectedDeviceId }) {
             row.alarmCount,
             <StatusText value={row.interlockStatus} />,
             row.keyAbnormalCount,
-            row.lastHeartbeat,
+            row.statusSummary,
             row.updatedAt,
+            <button className="table-link-button" type="button" onClick={(event) => {
+              event.stopPropagation();
+              onSelectDevice(row.id);
+            }}>
+              查看详情
+            </button>,
           ])}
           rowKeys={filteredRows.map((row) => row.id)}
           selectedKey={selectedDeviceId}
@@ -942,14 +996,22 @@ function DeviceDetailPage({
 }
 
 function PointManagementPage({ allPointRows }) {
-  const [filters, setFilters] = useState({ type: '全部', device: '全部', pointType: '全部', source: '全部', status: '全部', query: '' });
+  const defaultFilters = { type: '全部', device: '全部', pointType: '全部', source: '全部', status: '全部', enableStatus: '全部', query: '' };
+  const [filters, setFilters] = useState(defaultFilters);
   const [selectedPointRow, setSelectedPointRow] = useState(null);
   const [copyFeedback, setCopyFeedback] = useState('');
   const rows = useMemo(() => getPointManagementRows(allPointRows), [allPointRows]);
   const filteredRows = useMemo(() => filterPointManagementRows(rows, filters), [rows, filters]);
   const stats = useMemo(() => getPointManagementStats(rows), [rows]);
   const update = (key, value) => setFilters((current) => ({ ...current, [key]: value }));
-  const applyStatusFilter = (status) => setFilters((current) => ({ ...current, status }));
+  const applyStatFilter = (summaryFilter) => {
+    const nextFilters = { ...defaultFilters };
+    if (summaryFilter === 'normal') nextFilters.status = '正常';
+    if (summaryFilter === 'problem') nextFilters.status = '问题点位';
+    if (summaryFilter === 'unconfigured') nextFilters.status = '未配置';
+    setFilters(nextFilters);
+  };
+  const activeSummaryFilter = getActivePointSummaryFilter(filters, defaultFilters);
   const deviceIds = ['全部', ...devices.map((device) => device.id)];
 
   return (
@@ -957,10 +1019,10 @@ function PointManagementPage({ allPointRows }) {
       <SectionTitle icon={Database} title="点位管理" />
       <SummaryStrip
         items={[
-          { label: '总点位', value: stats.total, onClick: () => applyStatusFilter('全部') },
-          { label: '已启用', value: stats.enabled, tone: 'ok' },
-          { label: '异常', value: stats.abnormal, tone: stats.abnormal ? 'bad' : 'ok', onClick: () => applyStatusFilter('问题点位') },
-          { label: '未配置', value: stats.unconfigured, tone: stats.unconfigured ? 'warn' : 'ok', onClick: () => applyStatusFilter('未配置') },
+          { label: '总点位', value: stats.total, active: activeSummaryFilter === 'all', onClick: () => applyStatFilter('all') },
+          { label: '正常', value: stats.normal, tone: 'ok', active: activeSummaryFilter === 'normal', onClick: () => applyStatFilter('normal') },
+          { label: '异常', value: stats.abnormal, tone: stats.abnormal ? 'bad' : 'ok', active: activeSummaryFilter === 'problem', onClick: () => applyStatFilter('problem') },
+          { label: '未配置', value: stats.unconfigured, tone: stats.unconfigured ? 'warn' : 'ok', active: activeSummaryFilter === 'unconfigured', onClick: () => applyStatFilter('unconfigured') },
         ]}
       />
       <div className="filterbar point-management-filter">
@@ -991,8 +1053,8 @@ function PointManagementPage({ allPointRows }) {
 
 function PointManagementTable({ rows, onDetail, onCopyCode }) {
   const groups = useMemo(() => groupPointRows(rows), [rows]);
-  const columns = ['点位名称', '点位编码', '点位类型', '单位', '启用状态', '采集状态', '异常原因', '更新时间', '操作'];
-  const columnWidths = ['13%', '15%', '9%', '7%', '9%', '10%', '13%', '11%', '13%'];
+  const columns = ['点位名称', '点位编码', '点位类型', '启用状态', '采集状态', '异常原因', '更新时间', '操作'];
+  const columnWidths = ['16%', '18%', '12%', '10%', '12%', '16%', '12%', '14%'];
   const [expandedGroups, setExpandedGroups] = useState({});
 
   useEffect(() => {
@@ -1047,8 +1109,7 @@ function PointManagementTable({ rows, onDetail, onCopyCode }) {
                       <tr className={isProblemPoint(row) ? 'point-row-warning' : ''} key={`${row.deviceId}-${row.code}`}>
                         <td>{row.name}</td>
                         <td>{row.code}</td>
-                        <td>{row.pointType}</td>
-                        <td>{row.unit}</td>
+                        <td>{formatPointTypeWithUnit(row)}</td>
                         <td><StatusText value={row.enableStatus} /></td>
                         <td><StatusText value={row.collectStatus} /></td>
                         <td className="point-issue-reason">{getPointIssueShortReason(row)}</td>
@@ -1863,10 +1924,11 @@ function SummaryStrip({ items }) {
     <div className="summary-strip">
       {items.map((item) => (
         <div
-          className={`summary-item ${item.tone ?? ''} ${item.onClick ? 'clickable' : ''}`}
+          className={`summary-item ${item.tone ?? ''} ${item.onClick ? 'clickable' : ''} ${item.active ? 'active' : ''}`}
           key={item.label}
           onClick={item.onClick}
           role={item.onClick ? 'button' : undefined}
+          aria-pressed={item.onClick ? Boolean(item.active) : undefined}
           tabIndex={item.onClick ? 0 : undefined}
           onKeyDown={(event) => {
             if (item.onClick && (event.key === 'Enter' || event.key === ' ')) {
@@ -2976,6 +3038,9 @@ function getRepresentativeDevicesByType() {
 function getDeviceOverviewRow(device) {
   const currentTask = getCurrentTaskForDevice(device.id);
   const points = getDevicePointsFor(device);
+  const interlockStatus = getDeviceInterlockStatus(device, points);
+  const keyAbnormalCount = getKeyPointAbnormalCount(device);
+  const mappingSummary = getPointMappingSummary(device);
   return {
     id: device.id,
     type: device.type,
@@ -2983,10 +3048,15 @@ function getDeviceOverviewRow(device) {
     runStatus: device.runStatus,
     currentTask: currentTask?.id ?? '无',
     alarmCount: device.alarmCount,
-    interlockStatus: getDeviceInterlockStatus(device, points),
-    keyAbnormalCount: getKeyPointAbnormalCount(device),
+    interlockStatus,
+    keyAbnormalCount,
+    collectStatus: mappingSummary.collectStatus,
     lastHeartbeat: device.online === '离线' ? '超时' : device.updatedAt,
     updatedAt: device.updatedAt,
+    problemSummary: getDeviceProblemSummary(device, { interlockStatus, keyAbnormalCount, mappingSummary }),
+    statusSummary: getDeviceStatusSummary(device, { interlockStatus, keyAbnormalCount, mappingSummary }),
+    suggestion: getDeviceSuggestion(device, { interlockStatus, keyAbnormalCount, mappingSummary }),
+    priority: getDeviceAttentionPriority(device, { interlockStatus, keyAbnormalCount, mappingSummary }),
   };
 }
 
@@ -2995,19 +3065,91 @@ function getDeviceOverviewStats(rows) {
     total: rows.length,
     online: rows.filter((row) => row.online === '在线').length,
     running: rows.filter((row) => row.runStatus === '运行中').length,
-    abnormal: rows.filter((row) => row.alarmCount > 0 || row.keyAbnormalCount > 0 || row.interlockStatus === '不满足').length,
+    abnormal: rows.filter(isDeviceNeedAttention).length,
     offline: rows.filter((row) => row.online === '离线').length,
     maintenance: rows.filter((row) => row.runStatus === '维护中').length,
   };
 }
 
 function filterDeviceOverviewRows(rows, filter) {
-  if (filter === '异常') return rows.filter((row) => row.alarmCount > 0 || row.keyAbnormalCount > 0 || row.interlockStatus === '不满足');
+  if (filter === '异常') return rows.filter(isDeviceNeedAttention);
   if (filter === '离线') return rows.filter((row) => row.online === '离线');
   if (filter === '运行中') return rows.filter((row) => row.runStatus === '运行中');
   if (filter === '维护') return rows.filter((row) => row.runStatus === '维护中');
   if (filter === '有任务') return rows.filter((row) => row.currentTask !== '无');
   return rows;
+}
+
+function sortDeviceOverviewRows(rows) {
+  return [...rows].sort((left, right) => left.priority - right.priority || left.id.localeCompare(right.id));
+}
+
+function isDeviceNeedAttention(row) {
+  return row.online === '离线' || row.alarmCount > 0 || row.interlockStatus === '不满足' || row.keyAbnormalCount > 0 || row.collectStatus === '需检查';
+}
+
+function getDeviceOverviewSummaryText(rows, attentionRows) {
+  if (!attentionRows.length) return '当前设备整体正常，无需优先处理。';
+  const collectAbnormal = attentionRows.filter((row) => row.collectStatus === '需检查').length;
+  const taskImpacted = attentionRows.filter((row) => row.currentTask !== '无').length;
+  return `当前 ${attentionRows.length} 台设备需关注，其中 ${collectAbnormal} 台存在采集异常，${taskImpacted} 台影响任务执行。`;
+}
+
+function getDeviceTypeOverviewRows(rows) {
+  const groups = rows.reduce((result, row) => {
+    if (!result.has(row.type)) {
+      result.set(row.type, { type: row.type, total: 0, running: 0, abnormal: 0, offline: 0, maintenance: 0 });
+    }
+    const group = result.get(row.type);
+    group.total += 1;
+    if (row.runStatus === '运行中') group.running += 1;
+    if (isDeviceNeedAttention(row)) group.abnormal += 1;
+    if (row.online === '离线') group.offline += 1;
+    if (row.runStatus === '维护中') group.maintenance += 1;
+    return result;
+  }, new Map());
+  return Array.from(groups.values());
+}
+
+function getDeviceAttentionPriority(device, context) {
+  if (device.online === '离线') return 0;
+  if (context.interlockStatus === '不满足') return 1;
+  if (device.alarmCount > 0 || context.keyAbnormalCount > 0 || context.mappingSummary.collectStatus === '需检查') return 2;
+  if (device.runStatus === '维护中') return 3;
+  return 4;
+}
+
+function getDeviceProblemSummary(device, context) {
+  const items = [];
+  if (device.online === '离线') items.push('离线');
+  if (context.mappingSummary.collectStatus === '需检查') items.push('点位超时');
+  if (context.interlockStatus === '不满足') items.push('互锁不满足');
+  if (context.keyAbnormalCount > 0) items.push(getKeyPointProblemText(device));
+  if (device.alarmCount > 0) items.push(`${device.alarmCount} 条报警`);
+  return items.length ? Array.from(new Set(items)).slice(0, 3).join(' / ') : '运行正常';
+}
+
+function getDeviceStatusSummary(device, context) {
+  if (device.online === '离线') return context.mappingSummary.collectStatus === '需检查' ? '离线，点位超时' : '离线';
+  if (context.interlockStatus === '不满足') return '互锁不满足，影响任务';
+  if (context.keyAbnormalCount > 0) return getKeyPointProblemText(device);
+  if (device.alarmCount > 0) return `${device.alarmCount} 条报警待处理`;
+  return '运行正常';
+}
+
+function getKeyPointProblemText(device) {
+  if (device.type === '数控机床') return '主轴负载偏高';
+  if (device.type === '控制器') return '防护门异常';
+  if (device.type === '工业机器人') return '机器人加工区异常';
+  return '关键点位异常';
+}
+
+function getDeviceSuggestion(device, context) {
+  if (device.online === '离线' || context.mappingSummary.collectStatus === '需检查') return '检查设备连接';
+  if (context.interlockStatus === '不满足') return device.type === '控制器' ? '检查防护门' : '复核互锁条件';
+  if (context.keyAbnormalCount > 0) return device.type === '工业机器人' ? '复核机器人区域' : '检查关键点位';
+  if (device.alarmCount > 0) return '查看报警处理';
+  return '持续观察';
 }
 
 function getDeviceInterlockStatus(device, points = getDevicePointsFor(device)) {
@@ -3171,6 +3313,11 @@ function getPointIssueSuggestion(row) {
   return '无需处理';
 }
 
+function formatPointTypeWithUnit(row) {
+  if (row.pointType === '数值' && row.unit !== '无') return `${row.pointType}｜${row.unit}`;
+  return row.pointType;
+}
+
 function filterPointManagementRows(rows, filters) {
   const keyword = filters.query.trim().toLowerCase();
   return rows.filter((row) => {
@@ -3178,10 +3325,23 @@ function filterPointManagementRows(rows, filters) {
     const matchesDevice = matchesFilterValue(row.deviceId, filters.device);
     const matchesPointType = matchesFilterValue(row.pointType, filters.pointType);
     const matchesSource = matchesFilterValue(row.source, filters.source);
+    const matchesEnableStatus = matchesFilterValue(row.enableStatus, filters.enableStatus);
     const matchesStatus = filters.status === '问题点位' ? isProblemPoint(row) : matchesFilterValue(row.collectStatus, filters.status);
     const matchesKeyword = !keyword || [row.deviceId, row.name, row.code].some((value) => String(value).toLowerCase().includes(keyword));
-    return matchesType && matchesDevice && matchesPointType && matchesSource && matchesStatus && matchesKeyword;
+    return matchesType && matchesDevice && matchesPointType && matchesSource && matchesEnableStatus && matchesStatus && matchesKeyword;
   });
+}
+
+function getActivePointSummaryFilter(filters, defaultFilters) {
+  const baseKeys = ['type', 'device', 'pointType', 'source', 'query'];
+  const hasExtraFilter = baseKeys.some((key) => filters[key] !== defaultFilters[key]);
+  if (hasExtraFilter) return '';
+  if (filters.enableStatus !== '全部') return '';
+  if (filters.status === '正常') return 'normal';
+  if (filters.status === '问题点位') return 'problem';
+  if (filters.status === '未配置') return 'unconfigured';
+  if (filters.status === '全部') return 'all';
+  return '';
 }
 
 function matchesFilterValue(value, filterValue) {
@@ -3194,6 +3354,7 @@ function getPointManagementStats(rows) {
   return {
     total: rows.length,
     enabled: rows.filter((row) => row.enableStatus === '启用').length,
+    normal: rows.filter((row) => row.collectStatus === '正常').length,
     abnormal: rows.filter(isProblemPoint).length,
     unconfigured: rows.filter((row) => row.collectStatus === '未配置').length,
   };

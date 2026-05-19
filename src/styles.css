@@ -396,6 +396,120 @@ button {
   grid-template-columns: repeat(6, minmax(0, 1fr));
 }
 
+.overview-status-summary {
+  padding: 10px 12px;
+  border: 1px solid #d7dde3;
+  border-radius: 6px;
+  background: #eef1f4;
+  color: #182433;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.overview-section-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(280px, 0.65fr);
+  gap: 12px;
+}
+
+.overview-subpanel {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid #d7dde3;
+  border-radius: 6px;
+  background: #f7f9fa;
+}
+
+.subsection-title {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  color: #182433;
+  font-size: 14px;
+}
+
+.subsection-title span {
+  color: #5d6875;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.attention-device-list {
+  display: grid;
+  gap: 6px;
+}
+
+.attention-device-row {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr) minmax(0, 0.9fr) minmax(0, 0.9fr) 72px;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 42px;
+  padding: 7px 8px;
+  border: 1px solid #d7dde3;
+  border-radius: 5px;
+  background: #fff;
+  color: #1f2933;
+  text-align: left;
+  font-size: 12px;
+}
+
+.attention-device-row:hover {
+  background: #eef1f4;
+}
+
+.attention-device-row > div {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.attention-device-row > div:first-child {
+  display: grid;
+  gap: 2px;
+}
+
+.attention-device-row strong {
+  color: #182433;
+  font-size: 13px;
+}
+
+.attention-device-row span {
+  color: #5d6875;
+  font-size: 12px;
+}
+
+.attention-device-row > span:last-child {
+  justify-self: end;
+  color: #1f2933;
+  font-weight: 700;
+}
+
+.device-type-overview-panel .table-wrap {
+  border-radius: 5px;
+}
+
+.device-type-overview-panel table {
+  min-width: 100%;
+}
+
+.table-link-button {
+  min-height: 24px;
+  padding: 2px 7px;
+  border: 1px solid #d7dde3;
+  border-radius: 5px;
+  background: #fff;
+  color: #4b5563;
+  font-size: 12px;
+}
+
+.table-link-button:hover {
+  background: #eef1f4;
+}
+
 .device-detail-grid {
   gap: 12px;
   grid-template-columns: 270px minmax(0, 1.45fr) minmax(320px, 0.85fr);
@@ -1297,6 +1411,12 @@ button {
 
 .summary-item.clickable:hover {
   background: #e3e7eb;
+}
+
+.summary-item.active {
+  border-color: #8f9aa8;
+  background: #dfe5ea;
+  font-weight: 700;
 }
 
 .panel[data-collapsed="true"] {
