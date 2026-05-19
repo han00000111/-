@@ -795,24 +795,20 @@ function DeviceDetailPage({
         <SectionTitle icon={Cpu} title="设备选择" />
         <div className="device-search-row">
           <Search size={16} />
-          <input
-            list="device-search-options"
-            onChange={(event) => setDeviceSearch(event.target.value)}
-            placeholder="搜索设备编号/类型/状态"
-            value={deviceSearch}
+          <SearchableFilterField
+            label="设备"
+            value={deviceSearch || '全部'}
+            options={['全部', ...devices.map((device) => ({ label: `${device.id}｜${device.type}`, value: device.id }))]}
+            onChange={(value) => setDeviceSearch(value === '全部' ? '' : value)}
+            commitOnType
           />
-          <datalist id="device-search-options">
-            {devices.map((device) => (
-              <option key={device.id} value={device.id} />
-            ))}
-          </datalist>
-          <select value={deviceFilter} onChange={(event) => setDeviceFilter(event.target.value)}>
-            {deviceFilterOptions.map((option) => (
-              <option key={option} value={option}>
-                {option}
-              </option>
-            ))}
-          </select>
+          <SearchableFilterField
+            label="状态"
+            value={deviceFilter}
+            options={deviceFilterOptions}
+            onChange={setDeviceFilter}
+            commitOnType={false}
+          />
         </div>
         <div className="compact-device-list">
           {filteredDevices.map((device) => (
@@ -848,7 +844,10 @@ function DeviceDetailPage({
           <Info label="报警数" value={selectedDevice.alarmCount} />
           <Info label="互锁状态" value={<StatusText value={overview.interlockStatus} />} />
           <Info label="更新时间" value={selectedDevice.updatedAt} />
-          <Info label="点位配置" value={`已配置 ${mappingSummary.total}｜启用 ${mappingSummary.enabled}｜异常 ${mappingSummary.abnormal}｜数据来源 ${mappingSummary.source}`} />
+          <Info label="已配置点位" value={mappingSummary.total} />
+          <Info label="启用点位" value={mappingSummary.enabled} />
+          <Info label="异常点位" value={mappingSummary.abnormal} />
+          <Info label="数据来源" value={mappingSummary.source} />
           <Info label="采集状态" value={<StatusText value={mappingSummary.collectStatus} />} />
         </div>
       </section>
@@ -945,6 +944,7 @@ function DeviceDetailPage({
 function PointManagementPage({ allPointRows }) {
   const [filters, setFilters] = useState({ type: '全部', device: '全部', pointType: '全部', source: '全部', status: '全部', query: '' });
   const [selectedPointRow, setSelectedPointRow] = useState(null);
+  const [copyFeedback, setCopyFeedback] = useState('');
   const rows = useMemo(() => getPointManagementRows(allPointRows), [allPointRows]);
   const filteredRows = useMemo(() => filterPointManagementRows(rows, filters), [rows, filters]);
   const stats = useMemo(() => getPointManagementStats(rows), [rows]);
@@ -959,7 +959,7 @@ function PointManagementPage({ allPointRows }) {
         items={[
           { label: '总点位', value: stats.total, onClick: () => applyStatusFilter('全部') },
           { label: '已启用', value: stats.enabled, tone: 'ok' },
-          { label: '异常', value: stats.abnormal, tone: stats.abnormal ? 'bad' : 'ok', onClick: () => applyStatusFilter('异常') },
+          { label: '异常', value: stats.abnormal, tone: stats.abnormal ? 'bad' : 'ok', onClick: () => applyStatusFilter('问题点位') },
           { label: '未配置', value: stats.unconfigured, tone: stats.unconfigured ? 'warn' : 'ok', onClick: () => applyStatusFilter('未配置') },
         ]}
       />
@@ -968,17 +968,18 @@ function PointManagementPage({ allPointRows }) {
         <SearchableFilterField label="设备编号" value={filters.device} options={deviceIds} onChange={(value) => update('device', value)} />
         <SearchableFilterField label="点位类型" value={filters.pointType} options={['全部', '数值', '状态', '报警']} onChange={(value) => update('pointType', value)} />
         <SearchableFilterField label="数据来源" value={filters.source} options={['全部', 'MQTT', 'PLC', '机器人控制器']} onChange={(value) => update('source', value)} />
-        <SearchableFilterField label="采集状态" value={filters.status} options={['全部', '正常', '超时', '异常', '未配置']} onChange={(value) => update('status', value)} />
+        <SearchableFilterField label="采集状态" value={filters.status} options={['全部', '正常', '超时', '异常', '未配置', '问题点位']} onChange={(value) => update('status', value)} />
         <div className="filter-search-field">
           <Search size={16} />
           <input value={filters.query} onChange={(event) => update('query', event.target.value)} onFocus={(event) => event.target.select()} onMouseUp={(event) => event.preventDefault()} placeholder="搜索设备编号/点位名称/点位编码" />
         </div>
       </div>
+      {copyFeedback && <div className="point-copy-toast" role="status">{copyFeedback}</div>}
       {filteredRows.length ? (
         <PointManagementTable
           rows={filteredRows}
           onDetail={setSelectedPointRow}
-          onCopyCode={(code) => navigator.clipboard?.writeText(code)}
+          onCopyCode={(code) => copyTextWithFeedback(code, setCopyFeedback, '已复制点位编码')}
         />
       ) : (
         <div className="attachment-empty">暂无点位映射数据</div>
@@ -990,51 +991,90 @@ function PointManagementPage({ allPointRows }) {
 
 function PointManagementTable({ rows, onDetail, onCopyCode }) {
   const groups = useMemo(() => groupPointRows(rows), [rows]);
-  const columns = ['设备编号', '点位名称', '点位编码', '点位类型', '单位', '启用状态', '采集状态', '更新时间', '操作'];
+  const columns = ['点位名称', '点位编码', '点位类型', '单位', '启用状态', '采集状态', '异常原因', '更新时间', '操作'];
+  const columnWidths = ['13%', '15%', '9%', '7%', '9%', '10%', '13%', '11%', '13%'];
+  const [expandedGroups, setExpandedGroups] = useState({});
+
+  useEffect(() => {
+    setExpandedGroups((current) => {
+      const next = {};
+      groups.forEach((group) => {
+        next[group.deviceId] = current[group.deviceId] ?? group.abnormalCount > 0;
+      });
+      return next;
+    });
+  }, [groups]);
+
+  const toggleGroup = (deviceId) => {
+    setExpandedGroups((current) => ({ ...current, [deviceId]: !current[deviceId] }));
+  };
 
   return (
-    <div className="table-wrap point-management-table">
-      <table>
-        <thead>
-          <tr>
-            {columns.map((column) => <th key={column}>{column}</th>)}
-          </tr>
-        </thead>
-        <tbody>
-          {groups.map((group) => (
-            <Fragment key={group.deviceId}>
-              <tr className="point-device-group">
-                <td colSpan={columns.length}>
-                  {group.deviceId}｜{group.deviceType}｜{group.rows.length} 个点位｜{group.summary}
-                </td>
-              </tr>
-              {group.rows.map((row) => (
-                <tr className={isProblemPoint(row) ? 'point-row-warning' : ''} key={`${row.deviceId}-${row.code}`}>
-                  <td>{row.deviceId}</td>
-                  <td>{row.name}</td>
-                  <td>{row.code}</td>
-                  <td>{row.pointType}</td>
-                  <td>{row.unit}</td>
-                  <td><StatusText value={row.enableStatus} /></td>
-                  <td><StatusText value={row.collectStatus} /></td>
-                  <td>{row.updatedAt}</td>
-                  <td>
-                    <div className="table-actions">
-                      <button type="button" onClick={() => onDetail(row)}>详情</button>
-                      <button type="button" onClick={() => onCopyCode(row.code)}>复制编码</button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </Fragment>
-          ))}
-        </tbody>
-      </table>
+    <div className="point-group-list">
+      {groups.map((group) => {
+        const expanded = Boolean(expandedGroups[group.deviceId]);
+        const ToggleIcon = expanded ? ChevronDown : ChevronRight;
+
+        return (
+          <section className={`point-device-card ${group.abnormalCount ? 'has-problem' : ''}`} key={group.deviceId}>
+            <button className="point-device-head" type="button" onClick={() => toggleGroup(group.deviceId)} aria-expanded={expanded}>
+              <ToggleIcon size={15} />
+              <div className="point-device-title">
+                <strong>{group.deviceId}｜{group.deviceType}</strong>
+                <span>{group.summary}</span>
+              </div>
+              <div className="point-device-meta">
+                <span>{group.rows.length} 个点位</span>
+                <span>{group.abnormalCount} 个异常</span>
+                <span>最后更新 {group.lastUpdatedAt}</span>
+              </div>
+            </button>
+            {expanded && (
+              <div className="table-wrap point-management-table">
+                <table>
+                  <colgroup>
+                    {columnWidths.map((width, index) => (
+                      <col key={`${columns[index]}-${width}`} style={{ width }} />
+                    ))}
+                  </colgroup>
+                  <thead>
+                    <tr>
+                      {columns.map((column) => <th key={column}>{column}</th>)}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {group.rows.map((row) => (
+                      <tr className={isProblemPoint(row) ? 'point-row-warning' : ''} key={`${row.deviceId}-${row.code}`}>
+                        <td>{row.name}</td>
+                        <td>{row.code}</td>
+                        <td>{row.pointType}</td>
+                        <td>{row.unit}</td>
+                        <td><StatusText value={row.enableStatus} /></td>
+                        <td><StatusText value={row.collectStatus} /></td>
+                        <td className="point-issue-reason">{getPointIssueShortReason(row)}</td>
+                        <td>{row.updatedAt}</td>
+                        <td>
+                          <div className="table-actions subtle">
+                            <button type="button" onClick={() => onDetail(row)}>查看</button>
+                            <button type="button" onClick={() => onCopyCode(row.code)}>复制</button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </section>
+        );
+      })}
     </div>
   );
 }
 
 function PointDetailModal({ row, onClose }) {
+  const [feedback, setFeedback] = useState('');
+
   return (
     <div className="modal-backdrop" role="presentation">
       <div className="confirm-modal point-detail-modal" role="dialog" aria-modal="true" aria-labelledby="point-detail-title">
@@ -1056,13 +1096,33 @@ function PointDetailModal({ row, onClose }) {
           <Info label="最后采集时间" value={row.lastCollectedAt} />
           <Info label="采集质量" value={row.quality} />
           <Info label="更新时间" value={row.updatedAt} />
+          <Info label="异常原因" value={getPointIssueReason(row)} />
+          <Info label="建议处理" value={getPointIssueSuggestion(row)} />
         </div>
+        {feedback && <div className="inline-feedback modal-feedback">{feedback}</div>}
         <div className="confirm-modal-actions">
+          <button type="button" onClick={() => copyTextWithFeedback(row.code, setFeedback, '已复制点位编码')}>复制点位编码</button>
+          <button type="button" onClick={() => copyTextWithFeedback(row.topic, setFeedback, '已复制 Topic/地址')}>复制 Topic/地址</button>
           <button type="button" onClick={onClose}>关闭</button>
         </div>
       </div>
     </div>
   );
+}
+
+async function copyTextWithFeedback(text, setFeedback, successText) {
+  setFeedback('正在复制...');
+  try {
+    if (!navigator.clipboard?.writeText) throw new Error('clipboard unavailable');
+    await Promise.race([
+      navigator.clipboard.writeText(text),
+      new Promise((_, reject) => window.setTimeout(() => reject(new Error('clipboard timeout')), 800)),
+    ]);
+    setFeedback(successText);
+  } catch {
+    setFeedback('复制失败，请手动复制');
+  }
+  window.setTimeout(() => setFeedback(''), 2400);
 }
 
 function SearchableFilterField({ label, value, options, onChange, defaultValue = '全部', commitOnType = true }) {
@@ -1086,7 +1146,10 @@ function SearchableFilterField({ label, value, options, onChange, defaultValue =
 
   const commitFirstVisibleOption = () => {
     const firstOption = visibleOptions[0];
-    if (!firstOption) return;
+    if (!firstOption) {
+      setOpen(false);
+      return;
+    }
     onChange(firstOption.value);
     setDraft(firstOption.label);
     setOpen(false);
@@ -1168,13 +1231,12 @@ function SearchableFilterField({ label, value, options, onChange, defaultValue =
   );
 }
 
-function HistoryComparePage({ allPointRows, selectedDeviceId: initialDeviceId, setSelectedDeviceId: setGlobalSelectedDeviceId }) {
-  const [selectedDeviceId, setSelectedDeviceId] = useState(initialDeviceId);
+function HistoryComparePage({ allPointRows, selectedDeviceId, setSelectedDeviceId }) {
   const [selectedPointCode, setSelectedPointCode] = useState('');
   const [selectedTimeRange, setSelectedTimeRange] = useState('近5分钟');
-  const [selectedPointType, setSelectedPointType] = useState(() => getInitialPointTypeForDevice(initialDeviceId));
+  const [selectedPointType, setSelectedPointType] = useState(() => getInitialPointTypeForDevice(selectedDeviceId));
   const deviceOptions = useMemo(() => devices.map((device) => device.id), []);
-  const selectedDevice = devices.find((device) => device.id === selectedDeviceId) ?? devices.find((device) => device.id === initialDeviceId) ?? devices[0];
+  const selectedDevice = devices.find((device) => device.id === selectedDeviceId) ?? devices[0];
   const selectedDeviceRows = useMemo(
     () => allPointRows.filter(({ device }) => device.id === selectedDeviceId),
     [allPointRows, selectedDeviceId]
@@ -1193,11 +1255,10 @@ function HistoryComparePage({ allPointRows, selectedDeviceId: initialDeviceId, s
   );
 
   useEffect(() => {
-    setSelectedDeviceId(initialDeviceId);
-  }, [initialDeviceId]);
-
-  useEffect(() => {
-    if (selectedDevicePointTypes.length && !selectedDevicePointTypes.includes(selectedPointType)) {
+    if (!selectedDevicePointTypes.length) {
+      setSelectedPointType('');
+      setSelectedPointCode('');
+    } else if (!selectedDevicePointTypes.includes(selectedPointType)) {
       setSelectedPointType(selectedDevicePointTypes[0]);
       setSelectedPointCode('');
     }
@@ -1220,17 +1281,15 @@ function HistoryComparePage({ allPointRows, selectedDeviceId: initialDeviceId, s
     <section className="panel page-full history-compare-page">
       <SectionTitle icon={History} title="历史对比" />
       <div className="filterbar history-filter">
-        <SearchableFilterField label="设备编号" value={selectedDeviceId} options={deviceOptions} onChange={(value) => {
-          setSelectedDeviceId(value);
-          setGlobalSelectedDeviceId(value);
-        }} commitOnType={false} defaultValue={initialDeviceId} />
+        <SearchableFilterField label="设备编号" value={selectedDeviceId} options={deviceOptions} onChange={setSelectedDeviceId} commitOnType={false} defaultValue={selectedDeviceId} />
         <SearchableFilterField label="点位名称" value={selectedPointCode} options={pointOptions} onChange={setSelectedPointCode} commitOnType={false} defaultValue={pointOptions[0]?.value ?? ''} />
         <SearchableFilterField label="时间范围" value={selectedTimeRange} options={['近5分钟', '近15分钟', '近30分钟', '近1小时']} onChange={setSelectedTimeRange} commitOnType={false} defaultValue="近5分钟" />
-        <SearchableFilterField label="点位类型" value={selectedPointType} options={['数值', '状态', '报警']} onChange={(value) => {
+        <SearchableFilterField label="点位类型" value={selectedPointType} options={selectedDevicePointTypes} onChange={(value) => {
           setSelectedPointType(value);
           setSelectedPointCode('');
-        }} commitOnType={false} defaultValue={selectedDevicePointTypes[0] ?? '数值'} />
+        }} commitOnType={false} defaultValue={selectedDevicePointTypes[0] ?? ''} />
       </div>
+      <div className="data-hint">当前为演示数据，真实环境接入时序数据后更新</div>
       <CurrentObjectSummary comparison={comparison} device={selectedDevice} point={selectedRow?.point} timeRange={selectedTimeRange} />
       {selectedRow ? (
         <HistoryPointTemplate
@@ -1244,7 +1303,7 @@ function HistoryComparePage({ allPointRows, selectedDeviceId: initialDeviceId, s
           statusRecords={statusRecords}
         />
       ) : (
-        <div className="attachment-empty">当前设备暂无该类型点位</div>
+        <div className="attachment-empty">{getHistoryEmptyText(selectedDevice, selectedPointType)}</div>
       )}
     </section>
   );
@@ -1267,6 +1326,13 @@ function CurrentObjectSummary({ comparison, device, point, timeRange }) {
       </div>
     </div>
   );
+}
+
+function getHistoryEmptyText(device, pointType) {
+  if (!device) return '暂无设备状态数据';
+  if (!getDevicePointsFor(device).length) return '当前设备暂无点位数据，请检查设备配置';
+  if (!pointType) return '当前设备暂无点位数据，请检查设备配置';
+  return `当前设备暂无“${pointType}”点位，请切换点位类型或设备编号`;
 }
 
 function HistoryPointTemplate({ alarmRecords, comparison, historyRecords, point, pointType, selectedDevice, selectedTimeRange, statusRecords }) {
@@ -2890,8 +2956,12 @@ function getPointTypeLabel(point) {
   return labels[getPointType(point)] ?? '状态';
 }
 
+function taskHasDevice(task, deviceId) {
+  return task.devices.split(',').map((item) => item.trim()).includes(deviceId);
+}
+
 function getCurrentTaskForDevice(deviceId) {
-  return tasks.find((task) => task.devices.split(',').map((item) => item.trim()).includes(deviceId));
+  return tasks.find((task) => taskHasDevice(task, deviceId));
 }
 
 function getRepresentativeDevicesByType() {
@@ -3052,6 +3122,8 @@ function groupPointRows(rows) {
         ...group,
         rows: sortedRows,
         summary: getPointGroupSummary(sortedRows),
+        abnormalCount: sortedRows.filter(isProblemPoint).length,
+        lastUpdatedAt: sortedRows.map((row) => row.updatedAt).sort().at(-1) ?? '-',
         priority: Math.min(...sortedRows.map(getPointRowPriority)),
       };
     })
@@ -3078,6 +3150,27 @@ function getPointGroupSummary(rows) {
   return '采集正常';
 }
 
+function getPointIssueReason(row) {
+  if (row.collectStatus === '超时') return '最后更新时间过久';
+  if (row.collectStatus === '异常') return '点位状态异常或采集质量异常';
+  if (row.collectStatus === '未配置') return '缺少点位编码或点位名称';
+  return '-';
+}
+
+function getPointIssueShortReason(row) {
+  if (row.collectStatus === '超时') return '更新过久';
+  if (row.collectStatus === '异常') return '状态异常';
+  if (row.collectStatus === '未配置') return '配置缺失';
+  return '-';
+}
+
+function getPointIssueSuggestion(row) {
+  if (row.collectStatus === '超时') return '检查采集链路和最后更新时间';
+  if (row.collectStatus === '异常') return '查看点位详情并核对采集质量';
+  if (row.collectStatus === '未配置') return '补齐点位编码或点位名称';
+  return '无需处理';
+}
+
 function filterPointManagementRows(rows, filters) {
   const keyword = filters.query.trim().toLowerCase();
   return rows.filter((row) => {
@@ -3085,7 +3178,7 @@ function filterPointManagementRows(rows, filters) {
     const matchesDevice = matchesFilterValue(row.deviceId, filters.device);
     const matchesPointType = matchesFilterValue(row.pointType, filters.pointType);
     const matchesSource = matchesFilterValue(row.source, filters.source);
-    const matchesStatus = matchesFilterValue(row.collectStatus, filters.status);
+    const matchesStatus = filters.status === '问题点位' ? isProblemPoint(row) : matchesFilterValue(row.collectStatus, filters.status);
     const matchesKeyword = !keyword || [row.deviceId, row.name, row.code].some((value) => String(value).toLowerCase().includes(keyword));
     return matchesType && matchesDevice && matchesPointType && matchesSource && matchesStatus && matchesKeyword;
   });
@@ -3230,9 +3323,10 @@ function getHistoryRecords(point, range = '近5分钟') {
 
 function getStatusHistoryRecords(point, range = '近5分钟') {
   const times = getHistoryTimes(point.updatedAt, range);
+  const hasIssue = point.status !== '正常';
   return times.map((time, index) => {
-    const changed = index === times.length - 2 && point.status !== '异常';
-    const previous = changed ? '待确认' : point.value;
+    const changed = hasIssue && index === times.length - 2;
+    const previous = changed ? getPreviousStatusValue(point) : point.value;
     return {
       time,
       value: point.value,
@@ -3260,12 +3354,22 @@ function getAlarmHistoryRecords(point, range = '近5分钟') {
 
 function getStatusComparison(point, records) {
   const changes = records.filter((row) => row.changed);
+  const lastChange = changes.at(-1);
   return {
     current: point.value,
-    previous: records.at(-2)?.value ?? point.value,
+    previous: lastChange?.previous ?? point.value,
     changeCount: changes.length,
-    lastChangedAt: changes.at(-1)?.time ?? '无',
+    lastChangedAt: lastChange?.time ?? '无',
   };
+}
+
+function getPreviousStatusValue(point) {
+  if (point.code === 'fixture_locked') return '已锁紧';
+  if (point.code === 'door_closed') return '已关闭';
+  if (point.code === 'estop') return '未触发';
+  if (point.code === 'in_cnc_work_area') return '不在加工区';
+  if (point.code === 'comm_status' || point.code === 'mqtt_link') return '在线';
+  return '正常';
 }
 
 function getAlarmComparison(point, records) {
@@ -3404,7 +3508,7 @@ function isInterlockSatisfied(point) {
 }
 
 function getRelatedTaskForDevice(deviceId) {
-  return tasks.find((task) => task.devices.includes(deviceId))?.id ?? '无';
+  return tasks.find((task) => taskHasDevice(task, deviceId))?.id ?? '无';
 }
 
 function getAlarmOverviewStats(alarmRows) {
