@@ -705,7 +705,7 @@ function DevicesPage({ activeDeviceTab, currentUser, selectedDevice, selectedDev
 
       {activeDeviceTab === 'points' && <PointManagementPage allPointRows={allPointRows} />}
 
-      {activeDeviceTab === 'history' && <HistoryComparePage allPointRows={allPointRows} selectedDeviceId={selectedDeviceId} />}
+      {activeDeviceTab === 'history' && <HistoryComparePage allPointRows={allPointRows} selectedDeviceId={selectedDeviceId} setSelectedDeviceId={setSelectedDeviceId} />}
 
       {previewAttachment && <AttachmentPreview attachment={previewAttachment} onClose={() => setPreviewAttachment(null)} />}
     </div>
@@ -848,11 +848,8 @@ function DeviceDetailPage({
           <Info label="报警数" value={selectedDevice.alarmCount} />
           <Info label="互锁状态" value={<StatusText value={overview.interlockStatus} />} />
           <Info label="更新时间" value={selectedDevice.updatedAt} />
-          <Info label="已配置点位数" value={mappingSummary.total} />
-          <Info label="启用点位数" value={mappingSummary.enabled} />
-          <Info label="异常点位数" value={mappingSummary.abnormal} />
-          <Info label="数据来源" value={mappingSummary.source} />
-          <Info label="映射状态" value={mappingSummary.status} />
+          <Info label="点位配置" value={`已配置 ${mappingSummary.total}｜启用 ${mappingSummary.enabled}｜异常 ${mappingSummary.abnormal}｜数据来源 ${mappingSummary.source}`} />
+          <Info label="采集状态" value={<StatusText value={mappingSummary.collectStatus} />} />
         </div>
       </section>
 
@@ -1087,14 +1084,25 @@ function SearchableFilterField({ label, value, options, onChange, defaultValue =
     setDraft(displayValue);
   }, [displayValue]);
 
+  const commitFirstVisibleOption = () => {
+    const firstOption = visibleOptions[0];
+    if (!firstOption) return;
+    onChange(firstOption.value);
+    setDraft(firstOption.label);
+    setOpen(false);
+  };
+
   return (
     <label className="filter-field searchable-filter-field">
       <span>{label}</span>
       <div
         className="searchable-select"
         onBlur={() => setTimeout(() => {
-          setOpen(false);
-          if (!commitOnType) setDraft(displayValue);
+          if (!commitOnType && draft !== displayValue) {
+            commitFirstVisibleOption();
+          } else {
+            setOpen(false);
+          }
         }, 120)}
       >
         <input
@@ -1116,6 +1124,12 @@ function SearchableFilterField({ label, value, options, onChange, defaultValue =
             event.target.select();
             setShowAllOptions(true);
             setOpen(true);
+          }}
+          onKeyDown={(event) => {
+            if (!commitOnType && event.key === 'Enter') {
+              event.preventDefault();
+              commitFirstVisibleOption();
+            }
           }}
           onMouseUp={(event) => event.preventDefault()}
         />
@@ -1154,11 +1168,11 @@ function SearchableFilterField({ label, value, options, onChange, defaultValue =
   );
 }
 
-function HistoryComparePage({ allPointRows, selectedDeviceId: initialDeviceId }) {
+function HistoryComparePage({ allPointRows, selectedDeviceId: initialDeviceId, setSelectedDeviceId: setGlobalSelectedDeviceId }) {
   const [selectedDeviceId, setSelectedDeviceId] = useState(initialDeviceId);
   const [selectedPointCode, setSelectedPointCode] = useState('');
   const [selectedTimeRange, setSelectedTimeRange] = useState('近5分钟');
-  const [selectedPointType, setSelectedPointType] = useState('数值');
+  const [selectedPointType, setSelectedPointType] = useState(() => getInitialPointTypeForDevice(initialDeviceId));
   const deviceOptions = useMemo(() => devices.map((device) => device.id), []);
   const selectedDevice = devices.find((device) => device.id === selectedDeviceId) ?? devices.find((device) => device.id === initialDeviceId) ?? devices[0];
   const selectedDeviceRows = useMemo(
@@ -1206,7 +1220,10 @@ function HistoryComparePage({ allPointRows, selectedDeviceId: initialDeviceId })
     <section className="panel page-full history-compare-page">
       <SectionTitle icon={History} title="历史对比" />
       <div className="filterbar history-filter">
-        <SearchableFilterField label="设备编号" value={selectedDeviceId} options={deviceOptions} onChange={setSelectedDeviceId} commitOnType={false} defaultValue={initialDeviceId} />
+        <SearchableFilterField label="设备编号" value={selectedDeviceId} options={deviceOptions} onChange={(value) => {
+          setSelectedDeviceId(value);
+          setGlobalSelectedDeviceId(value);
+        }} commitOnType={false} defaultValue={initialDeviceId} />
         <SearchableFilterField label="点位名称" value={selectedPointCode} options={pointOptions} onChange={setSelectedPointCode} commitOnType={false} defaultValue={pointOptions[0]?.value ?? ''} />
         <SearchableFilterField label="时间范围" value={selectedTimeRange} options={['近5分钟', '近15分钟', '近30分钟', '近1小时']} onChange={setSelectedTimeRange} commitOnType={false} defaultValue="近5分钟" />
         <SearchableFilterField label="点位类型" value={selectedPointType} options={['数值', '状态', '报警']} onChange={(value) => {
@@ -2827,6 +2844,12 @@ function getPointTypeFromLabel(label) {
   return 'numeric';
 }
 
+function getInitialPointTypeForDevice(deviceId) {
+  const device = devices.find((item) => item.id === deviceId) ?? devices[0];
+  const firstPoint = getDevicePointsFor(device)[0];
+  return getPointTypeLabel(firstPoint);
+}
+
 function getDevicePointsFor(device) {
   if (!device) return [];
   const configured = devicePoints[device.id];
@@ -2963,13 +2986,13 @@ function getCriticalPointsForDevice(device) {
 
 function getPointMappingSummary(device) {
   const rows = getPointManagementRows(getDevicePointsFor(device).map((point) => ({ device, point })));
-  const abnormal = rows.filter((row) => row.mappingStatus === '异常').length;
+  const abnormal = rows.filter(isProblemPoint).length;
   return {
     total: rows.length,
-    enabled: rows.filter((row) => row.mappingStatus !== '未配置').length,
+    enabled: rows.filter((row) => row.enableStatus === '启用').length,
     abnormal,
     source: rows[0]?.source ?? 'MQTT',
-    status: abnormal ? '需检查' : '已映射',
+    collectStatus: abnormal ? '需检查' : '正常',
   };
 }
 
@@ -3003,7 +3026,6 @@ function getPointManagementRows(allPointRows) {
     frequency: getPointFrequency(point),
     enableStatus: getPointEnableStatus(point),
     collectStatus: getPointCollectStatus(device, point),
-    mappingStatus: getPointMappingStatus(point),
     lastCollectedAt: point.updatedAt,
     quality: point.quality ?? '良好',
     updatedAt: point.updatedAt,
@@ -3079,7 +3101,7 @@ function getPointManagementStats(rows) {
   return {
     total: rows.length,
     enabled: rows.filter((row) => row.enableStatus === '启用').length,
-    abnormal: rows.filter((row) => row.collectStatus === '异常').length,
+    abnormal: rows.filter(isProblemPoint).length,
     unconfigured: rows.filter((row) => row.collectStatus === '未配置').length,
   };
 }
@@ -3100,12 +3122,6 @@ function getPointFrequency(point) {
   if (getPointType(point) === 'numeric') return '1 Hz';
   if (getPointType(point) === 'alarm') return '事件触发';
   return '2 Hz';
-}
-
-function getPointMappingStatus(point) {
-  if (!point.code || !point.name) return '未配置';
-  if (point.status === '异常' || point.quality === '异常') return '异常';
-  return '已映射';
 }
 
 function getPointEnableStatus(point) {
