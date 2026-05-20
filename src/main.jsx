@@ -68,6 +68,15 @@ const deviceTabs = [
   { key: 'history', label: '历史对比' },
 ];
 
+const DEVICE_OVERVIEW_SORT_OPTIONS = [
+  '异常优先',
+  '影响任务优先',
+  '离线优先',
+  '报警数从高到低',
+  '更新时间从新到旧',
+  '设备编号升序',
+];
+
 const allLogs = [
   ...commandLogs,
   ...telemetryLogs,
@@ -714,10 +723,13 @@ function DevicesPage({ activeDeviceTab, currentUser, selectedDevice, selectedDev
 
 function DeviceOverviewPage({ onSelectDevice, selectedDeviceId }) {
   const [filter, setFilter] = useState('全部');
+  const [detailSort, setDetailSort] = useState('异常优先');
+  const [showAllAttention, setShowAllAttention] = useState(false);
   const rows = useMemo(() => sortDeviceOverviewRows(devices.map(getDeviceOverviewRow)), []);
-  const filteredRows = useMemo(() => filterDeviceOverviewRows(rows, filter), [rows, filter]);
+  const filteredRows = useMemo(() => sortDeviceOverviewDetailRows(filterDeviceOverviewRows(rows, filter), detailSort), [rows, filter, detailSort]);
   const stats = useMemo(() => getDeviceOverviewStats(rows), [rows]);
   const attentionRows = useMemo(() => rows.filter(isDeviceNeedAttention), [rows]);
+  const visibleAttentionRows = showAllAttention ? attentionRows : attentionRows.slice(0, 4);
   const typeRows = useMemo(() => getDeviceTypeOverviewRows(rows), [rows]);
   const overviewText = useMemo(() => getDeviceOverviewSummaryText(rows, attentionRows), [rows, attentionRows]);
 
@@ -739,22 +751,25 @@ function DeviceOverviewPage({ onSelectDevice, selectedDeviceId }) {
         <section className="overview-subpanel attention-devices-panel">
           <div className="subsection-title">
             <strong>异常设备</strong>
-            <span>{attentionRows.length ? `${attentionRows.length} 台需关注` : '当前无异常设备'}</span>
           </div>
           {attentionRows.length ? (
             <div className="attention-device-list">
-              {attentionRows.map((row) => (
-                <button className="attention-device-row" key={row.id} type="button" onClick={() => onSelectDevice(row.id)}>
-                  <div>
-                    <strong>{row.id}</strong>
-                    <span>{row.type}</span>
-                  </div>
-                  <div>{row.problemSummary}</div>
-                  <div>{row.currentTask === '无' ? '无当前任务' : `影响 ${row.currentTask}`}</div>
-                  <div>{row.suggestion}</div>
-                  <span>查看详情</span>
+              {visibleAttentionRows.map((row, index) => (
+                <button className={`attention-device-row${index === 0 ? ' is-priority' : ''}`} key={row.id} type="button" onClick={() => onSelectDevice(row.id)}>
+                  <div className="attention-device-identity"><strong>{row.id}</strong><span>（{row.type}）</span></div>
+                  <StatusText value={row.coreStatus} />
+                  {index === 0 ? <span className="priority-label">优先处理</span> : <span className="priority-spacer" />}
+                  <div className="attention-device-summary">{row.problemSummary}</div>
+                  <div className="attention-device-task">{row.currentTask === '无' ? '无当前任务' : `影响 ${row.currentTask}`}</div>
+                  <div className="attention-device-suggestion">{row.suggestion}</div>
+                  <span className="attention-device-action">查看详情</span>
                 </button>
               ))}
+              {attentionRows.length > 4 && (
+                <button className="attention-expand-button" type="button" onClick={() => setShowAllAttention((value) => !value)}>
+                  {showAllAttention ? '收起异常设备' : '查看全部异常设备'}
+                </button>
+              )}
             </div>
           ) : (
             <div className="attachment-empty">暂无设备状态数据</div>
@@ -763,21 +778,32 @@ function DeviceOverviewPage({ onSelectDevice, selectedDeviceId }) {
         <section className="overview-subpanel device-type-overview-panel">
           <div className="subsection-title">
             <strong>设备类型概览</strong>
-            <span>按类型汇总</span>
           </div>
           <DataTable
             compact
-            columns={['设备类型', '设备数量', '运行中', '异常', '离线', '维护']}
+            columns={['设备类型', '数量', '运行', '异常', '离线']}
             rows={typeRows.map((row) => [
               row.type,
-              `${row.total} 台`,
-              `${row.running} 运行中`,
-              `${row.abnormal} 异常`,
-              `${row.offline} 离线`,
-              `${row.maintenance} 维护`,
+              row.total,
+              row.running,
+              row.abnormal,
+              row.offline,
             ])}
           />
         </section>
+      </div>
+      <div className="overview-detail-head">
+        <div>
+          <strong>全部设备明细</strong>
+        </div>
+        <label className="overview-sort-control">
+          <span>排序：</span>
+          <select value={detailSort} onChange={(event) => setDetailSort(event.target.value)}>
+            {DEVICE_OVERVIEW_SORT_OPTIONS.map((option) => (
+              <option key={option} value={option}>{option}</option>
+            ))}
+          </select>
+        </label>
       </div>
       <SegmentedFilter options={['全部', '异常', '离线', '运行中', '维护', '有任务']} value={filter} onChange={setFilter} />
       {filteredRows.length ? (
@@ -3051,6 +3077,7 @@ function getDeviceOverviewRow(device) {
     interlockStatus,
     keyAbnormalCount,
     collectStatus: mappingSummary.collectStatus,
+    coreStatus: getDeviceCoreStatus(device, { interlockStatus, keyAbnormalCount, mappingSummary }),
     lastHeartbeat: device.online === '离线' ? '超时' : device.updatedAt,
     updatedAt: device.updatedAt,
     problemSummary: getDeviceProblemSummary(device, { interlockStatus, keyAbnormalCount, mappingSummary }),
@@ -3084,15 +3111,56 @@ function sortDeviceOverviewRows(rows) {
   return [...rows].sort((left, right) => left.priority - right.priority || left.id.localeCompare(right.id));
 }
 
+function sortDeviceOverviewDetailRows(rows, sortMode) {
+  const sortedRows = [...rows];
+  const byUpdateDesc = (left, right) => getDeviceUpdatedTimeValue(right) - getDeviceUpdatedTimeValue(left);
+  const byAbnormal = (left, right) => getDeviceDetailAbnormalPriority(left) - getDeviceDetailAbnormalPriority(right) || byUpdateDesc(left, right);
+  const byNaturalId = (left, right) => left.id.localeCompare(right.id, 'zh-Hans-CN', { numeric: true });
+
+  if (sortMode === '影响任务优先') {
+    return sortedRows.sort((left, right) => Number(right.currentTask !== '无') - Number(left.currentTask !== '无') || byAbnormal(left, right));
+  }
+  if (sortMode === '离线优先') {
+    return sortedRows.sort((left, right) => Number(right.online === '离线') - Number(left.online === '离线') || Number(right.currentTask !== '无') - Number(left.currentTask !== '无') || byUpdateDesc(left, right));
+  }
+  if (sortMode === '报警数从高到低') {
+    return sortedRows.sort((left, right) => right.alarmCount - left.alarmCount || byAbnormal(left, right));
+  }
+  if (sortMode === '更新时间从新到旧') {
+    return sortedRows.sort((left, right) => byUpdateDesc(left, right) || byNaturalId(left, right));
+  }
+  if (sortMode === '设备编号升序') {
+    return sortedRows.sort(byNaturalId);
+  }
+  return sortedRows.sort(byAbnormal);
+}
+
+function getDeviceDetailAbnormalPriority(row) {
+  const hasTask = row.currentTask !== '无';
+  if (row.online === '离线' && hasTask) return 0;
+  if (row.interlockStatus === '不满足' && hasTask) return 1;
+  if (row.alarmCount > 0 && hasTask) return 2;
+  if (row.keyAbnormalCount > 0) return 3;
+  if (row.online === '离线') return 4;
+  if (row.interlockStatus === '不满足') return 5;
+  if (row.alarmCount > 0 || row.collectStatus === '需检查') return 6;
+  if (row.runStatus === '维护中' || row.runStatus === '待机') return 7;
+  return 8;
+}
+
+function getDeviceUpdatedTimeValue(row) {
+  const [hour = 0, minute = 0, second = 0] = String(row.updatedAt).split(':').map(Number);
+  return hour * 3600 + minute * 60 + second;
+}
+
 function isDeviceNeedAttention(row) {
   return row.online === '离线' || row.alarmCount > 0 || row.interlockStatus === '不满足' || row.keyAbnormalCount > 0 || row.collectStatus === '需检查';
 }
 
 function getDeviceOverviewSummaryText(rows, attentionRows) {
-  if (!attentionRows.length) return '当前设备整体正常，无需优先处理。';
-  const collectAbnormal = attentionRows.filter((row) => row.collectStatus === '需检查').length;
   const taskImpacted = attentionRows.filter((row) => row.currentTask !== '无').length;
-  return `当前 ${attentionRows.length} 台设备需关注，其中 ${collectAbnormal} 台存在采集异常，${taskImpacted} 台影响任务执行。`;
+  if (!attentionRows.length) return '状态结论：当前设备整体正常，无需优先处理。';
+  return `状态结论：${attentionRows.length} 台设备异常，其中 ${taskImpacted} 台影响任务执行，优先检查 ${attentionRows[0].id}。`;
 }
 
 function getDeviceTypeOverviewRows(rows) {
@@ -3112,11 +3180,23 @@ function getDeviceTypeOverviewRows(rows) {
 }
 
 function getDeviceAttentionPriority(device, context) {
-  if (device.online === '离线') return 0;
-  if (context.interlockStatus === '不满足') return 1;
-  if (device.alarmCount > 0 || context.keyAbnormalCount > 0 || context.mappingSummary.collectStatus === '需检查') return 2;
-  if (device.runStatus === '维护中') return 3;
-  return 4;
+  const hasTask = Boolean(getCurrentTaskForDevice(device.id));
+  if (device.online === '离线' && hasTask) return 0;
+  if (context.interlockStatus === '不满足' && hasTask) return 1;
+  if (device.alarmCount > 0) return 2;
+  if (context.keyAbnormalCount > 0) return 3;
+  if (context.mappingSummary.collectStatus === '需检查') return 4;
+  if (device.online === '离线') return 5;
+  if (context.interlockStatus === '不满足') return 6;
+  if (device.runStatus === '维护中' || device.runStatus === '待机') return 7;
+  return 8;
+}
+
+function getDeviceCoreStatus(device, context) {
+  if (device.online === '离线') return '离线';
+  if (context.interlockStatus === '不满足') return '互锁不满足';
+  if (device.alarmCount > 0 || context.keyAbnormalCount > 0 || context.mappingSummary.collectStatus === '需检查') return '异常';
+  return device.runStatus;
 }
 
 function getDeviceProblemSummary(device, context) {
@@ -3287,7 +3367,7 @@ function isProblemPoint(row) {
 }
 
 function getPointGroupSummary(rows) {
-  if (rows.some(isProblemPoint)) return '存在异常';
+  if (rows.some(isProblemPoint)) return '异常';
   if (rows.every((row) => row.enableStatus === '停用')) return '全部停用';
   return '采集正常';
 }
