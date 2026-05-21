@@ -106,6 +106,7 @@ function App() {
   const selectedTask = taskList.find((task) => task.id === selectedTaskId) ?? taskList[0];
   const selectedDevice = devices.find((device) => device.id === selectedDeviceId) ?? devices[0];
   const logRows = useMemo(() => [...accountLogs, ...allLogs].sort((a, b) => b.time.localeCompare(a.time)), [accountLogs]);
+  const topbarTitle = page === 'devices' ? `设备与点位 / ${deviceTabs.find((tab) => tab.key === activeDeviceTab)?.label ?? '设备详情'}` : pageTitle[page];
 
   const writeAccountLog = (user, content) => {
     setAccountLogs((rows) => [
@@ -171,7 +172,7 @@ function App() {
     <div className="app-shell">
       <Sidebar activeDeviceTab={activeDeviceTab} page={page} setActiveDeviceTab={setActiveDeviceTab} setPage={setPage} />
       <main className={`main ${page === 'overview' ? 'overview-main' : ''}`}>
-        <TopBar title={pageTitle[page]} currentUser={currentUser} onLoginRequest={() => setLoginModalOpen(true)} onLogout={handleLogout} onAccountSettings={() => setPage('settings')} />
+        <TopBar title={topbarTitle} currentUser={currentUser} onLoginRequest={() => setLoginModalOpen(true)} onLogout={handleLogout} onAccountSettings={() => setPage('settings')} />
         {page === 'overview' && (
           <OverviewPage
             selectedTask={selectedTask}
@@ -993,11 +994,11 @@ function DeviceDetailPage({
 
       <section className="panel point-workspace-panel">
         <div className="point-workspace-grid">
-          <div className="point-workspace-table">
+          <div className="point-workspace-table collapsible-section">
             <SectionTitle icon={Database} title={`${selectedDevice.id} 点位表`} />
             {points.length ? <PointTable points={points} selectedPointCode={selectedPointCode} onSelectPoint={setSelectedPointCode} /> : <div className="attachment-empty">暂无点位映射数据</div>}
           </div>
-          <div className="point-workspace-detail">
+          <div className="point-workspace-detail collapsible-section">
             <SectionTitle icon={Search} title={getPointDetailTitle(selectedPoint)} action={selectedPoint?.name ?? '-'} />
             <PointDetail point={selectedPoint} device={selectedDevice} />
           </div>
@@ -1015,7 +1016,14 @@ function DeviceDetailPage({
       </section>
       <section className="panel collect-log-panel">
         <SectionTitle icon={FileClock} title="采集日志" />
-        {relatedLogs.length ? <SimpleLogTable rows={relatedLogs} /> : <div className="attachment-empty">暂无采集日志</div>}
+        {relatedLogs.length ? (
+          <DataTable
+            columns={['时间', '对象', '类型', '内容']}
+            rows={relatedLogs.map((row) => [row.time, row.objectId ?? row.deviceId, row.logType, row.content])}
+          />
+        ) : (
+          <div className="attachment-empty">暂无采集日志</div>
+        )}
       </section>
     </div>
   );
@@ -1087,7 +1095,7 @@ function PointManagementTable({ rows, onDetail, onCopyCode }) {
     setExpandedGroups((current) => {
       const next = {};
       groups.forEach((group) => {
-        next[group.deviceId] = current[group.deviceId] ?? group.abnormalCount > 0;
+        next[group.deviceId] = current[group.deviceId] ?? true;
       });
       return next;
     });
@@ -1923,9 +1931,9 @@ function SectionTitle({ icon: Icon, title, action }) {
   const togglePanel = (event) => {
     const nextCollapsed = !collapsed;
     setCollapsed(nextCollapsed);
-    const panel = event.currentTarget.closest('.panel');
-    if (panel) {
-      panel.dataset.collapsed = String(nextCollapsed);
+    const collapsibleTarget = event.currentTarget.closest('.collapsible-section, .panel');
+    if (collapsibleTarget) {
+      collapsibleTarget.dataset.collapsed = String(nextCollapsed);
     }
   };
 
