@@ -26,16 +26,13 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 26.1.0
+          node-version: 22.x
 
       - name: Install dependencies
         run: npm install
 
       - name: Build
         run: npm run build
-
-      - name: Copy index to 404
-        run: cp dist/index.html dist/404.html
 
       - name: Stamp debug page
         run: |
