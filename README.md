@@ -1,6 +1,6 @@
-# 工业智能体数据平台 · 现场执行端
+# 机器人综合管理平台 · 现场管理端
 
-Vite + React 前端，部署到 GitHub Pages。
+Vite + React 前端，当前为前端 mock 演示版本。
 
 ## 部署
 
@@ -14,6 +14,6 @@ GitHub Pages 的 Source 应设置为 GitHub Actions，不直接发布 `main` 分
 
 ## 检查链接
 
-- 线上首页：https://han00000111.github.io/-/
-- 健康检查：https://han00000111.github.io/-/health.json
-- 静态快照：https://han00000111.github.io/-/snapshot.html
+- 线上首页：https://han00000111.github.io/机器人综合管理平台/
+- 健康检查：https://han00000111.github.io/机器人综合管理平台/health.json
+- 静态快照：https://han00000111.github.io/机器人综合管理平台/snapshot.html

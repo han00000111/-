@@ -1,6 +1,6 @@
 {
   "ok": true,
-  "app": "工业智能体数据平台 · 现场执行端",
+  "app": "机器人综合管理平台 · 现场管理端",
   "page": "overview",
   "deploy": "github-pages"
 }

@@ -29,11 +29,33 @@ import { DevicesPage as DevicesPageRoute } from './pages/devices/DevicesPage';
 import { TasksPage as TasksPageRoute } from './pages/tasks/TasksPage';
 import {
   alarms,
+  armActionLogs,
+  armActionSteps,
+  armActionTemplates,
+  armCommandReceipts,
+  armTeachingPoints,
+  armTemplateLogs,
   auditLogs,
+  mapAreas,
+  mapDoors,
+  mapNoGoAreas,
+  mapObstacles,
+  mapPoints,
+  mapRoutes,
+  mapVirtualWalls,
+  mapWalls,
+  mappingLogs,
+  mappingTasks,
+  maps,
+  robots,
+  robotArms,
+  robotStatus,
+  cameras,
   commandLogs,
   deviceAttachments,
   devicePoints,
   devices,
+  endEffectors,
   interlocks,
   navItems,
   settings,
@@ -41,9 +63,13 @@ import {
   stepsByTask,
   taskAttachments,
   taskPoints,
+  teachingPointLogs,
   tasks,
   telemetryLogs,
   trendSeries,
+  visionModels,
+  visionResults,
+  visionTasks,
 } from './mockData';
 import { buildExportFilename, exportRowsToCsv } from './utils/export';
 import { PERMISSIONS, can, getRoleLevel as getPermissionRoleLevel, permissionReason } from './utils/permissions';
@@ -51,6 +77,10 @@ import { getStatusTone, isProblemPoint as isProblemPointByStatus } from './utils
 
 const iconMap = {
   overview: Gauge,
+  'robot-monitor': MonitorCog,
+  'map-management': Database,
+  'arm-control': Cpu,
+  'vision-recognition': MonitorCog,
   devices: Cpu,
   tasks: ClipboardList,
   commands: TerminalSquare,
@@ -61,8 +91,12 @@ const iconMap = {
 
 const pageTitle = {
   overview: '总览',
+  'robot-monitor': '机器人监控',
+  'map-management': '地图管理',
+  'arm-control': '机械臂控制',
+  'vision-recognition': '视觉识别',
   devices: '设备与点位',
-  tasks: '任务执行',
+  tasks: '任务管理',
   commands: '指令回执',
   alarms: '报警互锁',
   logs: '日志审计',
@@ -76,6 +110,28 @@ const deviceTabs = [
   { key: 'history', label: '历史对比' },
 ];
 
+const mapTabs = [
+  { key: 'overview', label: '地图总览' },
+  { key: 'editor', label: '地图编辑' },
+  { key: 'routes', label: '路线管理' },
+  { key: 'mapping', label: '自动建图' },
+];
+
+const armTabs = [
+  { key: 'overview', label: '机械臂总览' },
+  { key: 'control', label: '动作控制' },
+  { key: 'teaching', label: '姿态示教' },
+  { key: 'tools', label: '末端工具' },
+  { key: 'templates', label: '动作模板' },
+];
+
+const visionTabs = [
+  { key: 'overview', label: '视觉总览' },
+  { key: 'cameras', label: '相机配置' },
+  { key: 'tasks', label: '识别任务' },
+  { key: 'results', label: '识别结果' },
+  { key: 'models', label: '模型管理' },
+];
 const DEVICE_OVERVIEW_SORT_OPTIONS = [
   '异常优先',
   '影响任务优先',
@@ -95,6 +151,13 @@ const allLogs = [
 function App() {
   const [page, setPage] = useState('overview');
   const [activeDeviceTab, setActiveDeviceTab] = useState('overview');
+  const [activeMapTab, setActiveMapTab] = useState('overview');
+  const [activeArmTab, setActiveArmTab] = useState('overview');
+  const [activeVisionTab, setActiveVisionTab] = useState('overview');
+  const [selectedArmId, setSelectedArmId] = useState('ARM-001');
+  const [selectedTeachingPointId, setSelectedTeachingPointId] = useState('TP-DOOR-001');
+  const [selectedArmTemplateId, setSelectedArmTemplateId] = useState('TPL-DOOR-001');
+  const [selectedVisionTaskId, setSelectedVisionTaskId] = useState('VT-001');
   const [selectedTaskId, setSelectedTaskId] = useState('TASK-001');
   const [selectedDeviceId, setSelectedDeviceId] = useState('CNC-001');
   const [logFilter, setLogFilter] = useState('');
@@ -103,6 +166,11 @@ function App() {
   const [currentUser, setCurrentUser] = useState(null);
   const [loginModalOpen, setLoginModalOpen] = useState(false);
   const [accountLogs, setAccountLogs] = useState([]);
+  const [armRuntimeCommands, setArmRuntimeCommands] = useState(armCommandReceipts);
+  const [armRuntimeLogs, setArmRuntimeLogs] = useState([]);
+  const [armRuntimeAlarms, setArmRuntimeAlarms] = useState([]);
+  const [selectedCommandId, setSelectedCommandId] = useState('');
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   const taskList = useMemo(
     () => tasks.map((task) => {
@@ -113,8 +181,16 @@ function App() {
   );
   const selectedTask = taskList.find((task) => task.id === selectedTaskId) ?? taskList[0];
   const selectedDevice = devices.find((device) => device.id === selectedDeviceId) ?? devices[0];
-  const logRows = useMemo(() => [...accountLogs, ...allLogs].sort((a, b) => b.time.localeCompare(a.time)), [accountLogs]);
-  const topbarTitle = page === 'devices' ? `设备与点位 / ${deviceTabs.find((tab) => tab.key === activeDeviceTab)?.label ?? '设备详情'}` : pageTitle[page];
+  const logRows = useMemo(() => [...armRuntimeLogs, ...accountLogs, ...allLogs].sort((a, b) => b.time.localeCompare(a.time)), [accountLogs, armRuntimeLogs]);
+  const topbarTitle = page === 'devices'
+    ? `设备与点位 / ${deviceTabs.find((tab) => tab.key === activeDeviceTab)?.label ?? '设备详情'}`
+    : page === 'map-management'
+      ? `地图管理 / ${mapTabs.find((tab) => tab.key === activeMapTab)?.label ?? '地图总览'}`
+      : page === 'arm-control'
+        ? `机械臂控制 / ${armTabs.find((tab) => tab.key === activeArmTab)?.label ?? '机械臂总览'}`
+        : page === 'vision-recognition'
+          ? `视觉识别 / ${visionTabs.find((tab) => tab.key === activeVisionTab)?.label ?? '视觉总览'}`
+          : pageTitle[page];
 
   const writeAccountLog = (user, content) => {
     setAccountLogs((rows) => [
@@ -181,8 +257,31 @@ function App() {
     navigateToAlarm: () => {
       setPage('alarms');
     },
-    navigateToCommand: () => {
+    navigateToCommand: (commandId = '') => {
+      if (commandId) setSelectedCommandId(commandId);
       setPage('commands');
+    },
+    navigateToArm: (armId = 'ARM-001') => {
+      if (armId) setSelectedArmId(armId);
+      setActiveArmTab('control');
+      setPage('arm-control');
+    },
+    navigateToTeachingPoint: (pointId = 'TP-DOOR-001') => {
+      if (pointId) setSelectedTeachingPointId(pointId);
+      setActiveArmTab('teaching');
+      setPage('arm-control');
+    },
+    navigateToArmTemplate: (templateId = 'TPL-DOOR-001') => {
+      if (templateId) setSelectedArmTemplateId(templateId);
+      setActiveArmTab('templates');
+      setPage('arm-control');
+    },
+    navigateToVision: (targetId = 'VT-001') => {
+      const target = String(targetId || 'VT-001');
+      const task = visionTasks.find((item) => item.visionTaskId === target) ?? visionTasks.find((item) => item.cameraId === target);
+      setSelectedVisionTaskId(task?.visionTaskId ?? target);
+      setActiveVisionTab(target.startsWith('CAM-') ? 'cameras' : 'tasks');
+      setPage('vision-recognition');
     },
   };
   const handleTaskAction = (task, action) => {
@@ -201,8 +300,8 @@ function App() {
   };
 
   return (
-    <div className="app-shell">
-      <Sidebar activeDeviceTab={activeDeviceTab} page={page} setActiveDeviceTab={setActiveDeviceTab} setPage={setPage} />
+    <div className={`app-shell ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
+      <Sidebar activeArmTab={activeArmTab} activeDeviceTab={activeDeviceTab} activeMapTab={activeMapTab} activeVisionTab={activeVisionTab} collapsed={sidebarCollapsed} onToggleCollapse={() => setSidebarCollapsed((value) => !value)} page={page} setActiveArmTab={setActiveArmTab} setActiveDeviceTab={setActiveDeviceTab} setActiveMapTab={setActiveMapTab} setActiveVisionTab={setActiveVisionTab} setPage={setPage} />
       <main className={`main ${page === 'overview' ? 'overview-main' : ''}`}>
         <TopBar title={topbarTitle} currentUser={currentUser} onLoginRequest={() => setLoginModalOpen(true)} onLogout={handleLogout} onAccountSettings={() => setPage('settings')} />
         {page === 'overview' && (
@@ -220,6 +319,53 @@ function App() {
             setLogFilter={setLogFilter}
             setLogTypeFilter={setLogTypeFilter}
             setSelectedDeviceId={setSelectedDeviceId}
+          />
+        )}
+        {page === 'robot-monitor' && (
+          <RobotMonitorPage
+            navigation={navigation}
+            setLogFilter={setLogFilter}
+            setLogTypeFilter={setLogTypeFilter}
+          />
+        )}
+        {page === 'map-management' && (
+          <MapManagementPage
+            activeMapTab={activeMapTab}
+            currentUser={currentUser}
+            navigation={navigation}
+            setActiveMapTab={setActiveMapTab}
+            setSelectedTaskId={setSelectedTaskId}
+          />
+        )}
+        {page === 'arm-control' && (
+          <ArmControlPage
+            activeArmTab={activeArmTab}
+            currentUser={currentUser}
+            navigation={navigation}
+            onArmActionEvent={({ command, log, alarm }) => {
+              if (command) {
+                setArmRuntimeCommands((rows) => [command, ...rows.filter((row) => row.id !== command.id)]);
+                setSelectedCommandId(command.id);
+              }
+              if (log) setArmRuntimeLogs((rows) => [log, ...rows]);
+              if (alarm) setArmRuntimeAlarms((rows) => [alarm, ...rows.filter((row) => !(row.name === alarm.name && row.device === alarm.device))]);
+            }}
+            selectedArmId={selectedArmId}
+            selectedArmTemplateId={selectedArmTemplateId}
+            selectedTeachingPointId={selectedTeachingPointId}
+            setActiveArmTab={setActiveArmTab}
+            setSelectedArmTemplateId={setSelectedArmTemplateId}
+            setSelectedArmId={setSelectedArmId}
+            setSelectedTeachingPointId={setSelectedTeachingPointId}
+          />
+        )}
+        {page === 'vision-recognition' && (
+          <VisionRecognitionPage
+            activeVisionTab={activeVisionTab}
+            currentUser={currentUser}
+            selectedVisionTaskId={selectedVisionTaskId}
+            setActiveVisionTab={setActiveVisionTab}
+            setSelectedVisionTaskId={setSelectedVisionTaskId}
           />
         )}
         {page === 'devices' && (
@@ -254,7 +400,9 @@ function App() {
         {page === 'commands' && (
           <CommandsPageRoute
             currentUser={currentUser}
+            externalCommandRows={armRuntimeCommands}
             implementation={CommandsPageImpl}
+            initialSelectedCommandId={selectedCommandId}
             navigation={navigation}
             setActiveDeviceTab={setActiveDeviceTab}
             setLogFilter={setLogFilter}
@@ -272,6 +420,8 @@ function App() {
             setLogFilter={setLogFilter}
             setLogTypeFilter={setLogTypeFilter}
             currentUser={currentUser}
+            extraAlarms={armRuntimeAlarms}
+            navigation={navigation}
           />
         )}
         {page === 'logs' && (
@@ -291,15 +441,19 @@ function App() {
   );
 }
 
-function Sidebar({ activeDeviceTab, page, setActiveDeviceTab, setPage }) {
+function Sidebar({ activeArmTab, activeDeviceTab, activeMapTab, activeVisionTab, collapsed, onToggleCollapse, page, setActiveArmTab, setActiveDeviceTab, setActiveMapTab, setActiveVisionTab, setPage }) {
   return (
     <aside className="sidebar">
+      <div className="sidebar-head">
       <div className="brand">
         <div className="brand-mark">AI</div>
         <div>
-          <div className="brand-title">工业智能体数据平台</div>
-          <div className="brand-subtitle">现场执行端</div>
+          <div className="brand-title">机器人综合管理平台</div>
         </div>
+      </div>
+        <button aria-label={collapsed ? '展开侧边导航' : '收起侧边导航'} className="sidebar-toggle" data-tooltip={collapsed ? '展开' : '收起'} onClick={onToggleCollapse} type="button">
+          <span />
+        </button>
       </div>
       <nav className="nav">
         {navItems.map((item) => {
@@ -310,13 +464,51 @@ function Sidebar({ activeDeviceTab, page, setActiveDeviceTab, setPage }) {
                 className={`nav-item ${page === item.key ? 'active' : ''}`}
                 onClick={() => {
                   if (item.key === 'devices') setActiveDeviceTab('overview');
+                  if (item.key === 'map-management') setActiveMapTab('overview');
+                  if (item.key === 'arm-control') setActiveArmTab('overview');
+                  if (item.key === 'vision-recognition') setActiveVisionTab('overview');
                   setPage(item.key);
                 }}
+                title={collapsed ? item.label : undefined}
                 type="button"
               >
                 <Icon size={17} />
                 <span>{item.label}</span>
               </button>
+              {item.key === 'map-management' && page === 'map-management' && (
+                <div className="nav-subtabs" role="tablist" aria-label="地图管理二级页签">
+                  {mapTabs.map((tab) => (
+                    <button
+                      aria-selected={activeMapTab === tab.key}
+                      className={activeMapTab === tab.key ? 'active' : ''}
+                      key={tab.key}
+                      onClick={() => setActiveMapTab(tab.key)}
+                      role="tab"
+                      type="button"
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+              {item.key === 'arm-control' && page === 'arm-control' && (
+                <div className="nav-subtabs" role="tablist" aria-label="机械臂控制二级页签">
+                  {armTabs.map((tab) => (
+                    <button aria-selected={activeArmTab === tab.key} className={activeArmTab === tab.key ? 'active' : ''} key={tab.key} onClick={() => setActiveArmTab(tab.key)} role="tab" type="button">
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+              {item.key === 'vision-recognition' && page === 'vision-recognition' && (
+                <div className="nav-subtabs" role="tablist" aria-label="视觉识别二级页签">
+                  {visionTabs.map((tab) => (
+                    <button aria-selected={activeVisionTab === tab.key} className={activeVisionTab === tab.key ? 'active' : ''} key={tab.key} onClick={() => setActiveVisionTab(tab.key)} role="tab" type="button">
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+              )}
               {item.key === 'devices' && page === 'devices' && (
                 <div className="nav-subtabs" role="tablist" aria-label="设备与点位二级页签">
                   {deviceTabs.map((tab) => (
@@ -357,7 +549,6 @@ function TopBar({ title, currentUser, onLoginRequest, onLogout, onAccountSetting
     <header className="topbar">
       <div>
         <h1>{title}</h1>
-        <p>工业智能体数据平台 · 现场执行端</p>
       </div>
       <div className="link-status">
         <StatusBadge label="工位" status="WS-001" tone="neutral" />
@@ -510,6 +701,10 @@ function OverviewPage({
       setPage('logs');
       return;
     }
+    if (['robot-monitor', 'map-management', 'arm-control', 'vision-recognition'].includes(alarm.jumpTarget)) {
+      setPage(alarm.jumpTarget);
+      return;
+    }
     if (alarm.jumpTarget === 'devices') {
       setSelectedDeviceId(alarm.device);
       setPage('devices');
@@ -536,7 +731,7 @@ function OverviewPage({
 
       <div className="overview-column">
         <section className="panel task-panel">
-          <SectionTitle icon={ClipboardList} title="任务执行总览" />
+          <SectionTitle icon={ClipboardList} title="任务管理总览" />
           <TaskOverviewModule
             taskList={taskList}
             selectedTask={selectedTask}
@@ -644,7 +839,7 @@ function TaskOverviewModule({
         onChange={setQuery}
         selectValue={scope}
         onSelectChange={setScope}
-        options={['全部', '运行中', '排队中', '暂停', '失败', '已中止', '有报警']}
+        options={['全部', '生产任务', '巡检任务', '搬运任务', '上下料任务', '视觉检测任务', '建图任务', '运行中', '排队中', '暂停', '失败', '已中止', '有报警']}
         placeholder="搜索任务编号/设备/状态"
       />
       <div className="task-overview-layout">
@@ -1654,6 +1849,7 @@ function TasksPageImpl({
   const [query, setQuery] = useState('');
   const [scope, setScope] = useState('全部');
   const [recordScope, setRecordScope] = useState('当前任务');
+  const [activeTaskTab, setActiveTaskTab] = useState('任务总览');
   const filteredTasks = useMemo(() => filterTasks(taskList, query, scope), [taskList, query, scope]);
   const visibleSelectedTask = filteredTasks.some((task) => task.id === selectedTaskId) ? selectedTaskId : undefined;
   const currentStepDetail = getTaskCurrentStepDetail(selectedTask);
@@ -1665,6 +1861,7 @@ function TasksPageImpl({
   const selectSummaryScope = (nextScope) => {
     setScope(nextScope);
     setQuery('');
+    setActiveTaskTab('任务队列');
   };
   const openSelectedDevice = () => {
     const deviceId = selectedTask.devices.split(',').map((item) => item.trim()).filter(Boolean)[0];
@@ -1673,11 +1870,34 @@ function TasksPageImpl({
   const openSelectedAlarms = () => {
     navigation?.navigateToAlarm();
   };
+  const sharedTaskProps = {
+    currentStepDetail,
+    currentUser,
+    filteredTasks,
+    navigation,
+    onAlarms: openSelectedAlarms,
+    onDevice: openSelectedDevice,
+    onLogs: openTaskLogs,
+    onTaskAction,
+    query,
+    recordScope,
+    scope,
+    selectedTask,
+    selectedTaskId: visibleSelectedTask,
+    setPreviewAttachment,
+    setQuery,
+    setRecordScope,
+    setScope,
+    setSelectedTaskId,
+    stats,
+    taskList,
+    visibleLogs,
+  };
 
   return (
-    <div className="page-grid tasks-grid">
+    <div className="page-grid tasks-grid task-management-grid">
       <section className="panel task-summary-panel">
-        <SectionTitle icon={ClipboardList} title="任务状态总览" />
+        <SectionTitle icon={ClipboardList} title="任务管理总览" />
         <SummaryStrip
           items={[
             { label: '任务总数', value: stats.total, active: scope === '全部', onClick: () => selectSummaryScope('全部') },
@@ -1689,56 +1909,249 @@ function TasksPageImpl({
           ]}
         />
       </section>
-      <section className="panel task-queue-panel">
+      <section className="panel task-management-tabs-panel">
+        <SegmentedFilter
+          options={['任务总览', '任务队列', '任务详情', '任务配置', '人工接管', '任务记录']}
+          value={activeTaskTab}
+          onChange={setActiveTaskTab}
+        />
+      </section>
+      {activeTaskTab === '任务总览' && <TaskOverviewSection {...sharedTaskProps} />}
+      {activeTaskTab === '任务队列' && <TaskQueueSection {...sharedTaskProps} />}
+      {activeTaskTab === '任务详情' && <TaskDetailSection {...sharedTaskProps} />}
+      {activeTaskTab === '任务配置' && <TaskConfigSection selectedTask={selectedTask} />}
+      {activeTaskTab === '人工接管' && <TaskHandoverSection {...sharedTaskProps} />}
+      {activeTaskTab === '任务记录' && <TaskRecordsSection {...sharedTaskProps} />}
+      {previewAttachment && <AttachmentPreview attachment={previewAttachment} onClose={() => setPreviewAttachment(null)} />}
+    </div>
+  );
+}
+
+function TaskOverviewSection({ currentStepDetail, filteredTasks, selectedTask, setSelectedTaskId, stats, taskList }) {
+  const handoverCount = taskList.filter((task) => ['待人工接管', '异常处理中', '待确认'].includes(task.processStatus) || ['暂停', '失败'].includes(task.status)).length;
+  return (
+    <div className="task-management-layout">
+      <section className="panel task-overview-main-panel">
+        <SectionTitle icon={ClipboardList} title="任务总览" />
+        <div className="detail-list dense task-overview-detail">
+          <Info label="当前任务" value={`${selectedTask.id} / ${selectedTask.orderNo ?? '-'}`} />
+          <Info label="目标设备" value={selectedTask.targetDevice ?? getTaskPrimaryDevice(selectedTask)} />
+          <Info label="当前步骤" value={`${currentStepDetail.stepLabel}｜${currentStepDetail.command}`} />
+          <Info label="任务状态" value={<StatusText value={selectedTask.status} />} />
+          <Info label="处理状态" value={<StatusText value={selectedTask.processStatus ?? '待处理'} />} />
+          <Info label="更新时间" value={selectedTask.updatedAt} />
+        </div>
+      </section>
+      <section className="panel task-overview-main-panel">
+        <SectionTitle icon={ShieldCheck} title="处理概况" />
+        <SummaryStrip
+          items={[
+            { label: '待处理', value: taskList.filter((task) => task.processStatus === '待处理').length, tone: 'warn' },
+            { label: '待确认', value: taskList.filter((task) => task.processStatus === '待确认').length, tone: 'warn' },
+            { label: '人工接管', value: handoverCount, tone: handoverCount ? 'bad' : 'ok' },
+            { label: '正常处理', value: taskList.filter((task) => task.processStatus === '正常处理').length, tone: 'ok' },
+          ]}
+        />
+      </section>
+      <section className="panel task-overview-list-panel">
+        <SectionTitle icon={ClipboardList} title="近期任务" />
+        <TaskQueue taskList={filteredTasks.slice(0, 6)} selectedTaskId={selectedTask.id} setSelectedTaskId={setSelectedTaskId} />
+      </section>
+    </div>
+  );
+}
+
+function TaskQueueSection({ currentUser, filteredTasks, query, scope, selectedTaskId, setQuery, setScope, setSelectedTaskId }) {
+  return (
+    <div className="task-management-layout">
+      <section className="panel task-queue-panel task-queue-full-panel">
         <SectionTitle
           icon={ClipboardList}
           title="任务队列"
-          action={<ExportButton pageName="任务执行" columns={taskExportColumns} getRows={() => filteredTasks.map((task) => buildTaskExportRow(task))} currentUser={currentUser} />}
+          action={<ExportButton pageName="任务管理" columns={taskExportColumns} getRows={() => filteredTasks.map((task) => buildTaskExportRow(task))} currentUser={currentUser} />}
         />
         <SearchSelect
           value={query}
           onChange={setQuery}
           selectValue={scope}
           onSelectChange={setScope}
-          options={['全部', '运行中', '排队中', '暂停', '失败', '已中止', '有报警']}
-          placeholder="搜索任务编号/设备/状态"
+          options={['全部', '生产任务', '巡检任务', '搬运任务', '上下料任务', '视觉检测任务', '建图任务', '运行中', '排队中', '暂停', '失败', '已中止', '有报警']}
+          placeholder="搜索订单编号/任务类型/目标设备/处理状态"
         />
-        <TaskQueue taskList={filteredTasks} selectedTaskId={visibleSelectedTask} setSelectedTaskId={setSelectedTaskId} />
+        <TaskQueue taskList={filteredTasks} selectedTaskId={selectedTaskId} setSelectedTaskId={setSelectedTaskId} />
       </section>
-      <section className="panel task-workbench-panel">
-        <SectionTitle icon={MonitorCog} title="当前任务执行" />
-        <TaskExecutionWorkbench
-          currentStepDetail={currentStepDetail}
-          currentUser={currentUser}
-          onAlarms={openSelectedAlarms}
-          onDevice={openSelectedDevice}
-          onLogs={openTaskLogs}
-          onTaskAction={onTaskAction}
-          task={selectedTask}
-        />
-      </section>
-      <section className="panel task-record-panel">
-        <SectionTitle icon={History} title="操作记录" action={<SegmentedFilter options={['当前任务', '全部']} value={recordScope} onChange={setRecordScope} />} />
-        {visibleLogs.length ? (
-          <DataTable
-            className="task-record-table"
-            columns={['时间', '对象', '类型', '内容', '状态']}
-            rows={visibleLogs.map((row) => [row.time, row.objectId ?? row.deviceId, row.logType, row.content, <StatusText value={row.status} />])}
-          />
-        ) : (
-          <div className="attachment-empty">暂无当前任务操作记录</div>
-        )}
-      </section>
-      <section className="panel task-attachment-panel">
-        <SectionTitle icon={FileClock} title="任务附件" />
-        <AttachmentList compact emptyText="当前任务暂无附件" items={taskAttachments[selectedTask.id] ?? []} onPreview={setPreviewAttachment} showAdd={false} />
-      </section>
-      {previewAttachment && <AttachmentPreview attachment={previewAttachment} onClose={() => setPreviewAttachment(null)} />}
     </div>
   );
 }
 
-function TaskExecutionWorkbench({ currentStepDetail, currentUser, onAlarms, onDevice, onLogs, onTaskAction, task }) {
+function TaskDetailSection({ currentStepDetail, currentUser, navigation, onAlarms, onDevice, onLogs, onTaskAction, selectedTask, setPreviewAttachment }) {
+  const visionRows = visionResults.filter((row) => row.relatedTask === selectedTask.id || row.visionTaskId === selectedTask.visionTaskId);
+  const taskAlarms = alarms.filter((alarm) => alarm.relatedTask === selectedTask.id || selectedTask.devices.includes(alarm.device));
+  return (
+    <div className="task-management-layout">
+      <section className="panel task-detail-info-panel">
+        <SectionTitle icon={ClipboardList} title="基础信息" />
+        <div className="detail-list dense">
+          <Info label="任务编号" value={selectedTask.id} />
+          <Info label="订单编号" value={selectedTask.orderNo ?? '-'} />
+          <Info label="任务类型" value={selectedTask.taskType ?? '生产任务'} />
+          <Info label="目标设备" value={selectedTask.targetDevice ?? getTaskPrimaryDevice(selectedTask)} />
+          <Info label="处理状态" value={<StatusText value={selectedTask.processStatus ?? '待处理'} />} />
+          <Info label="开始时间" value={selectedTask.startedAt} />
+        </div>
+      </section>
+      <section className="panel task-detail-info-panel">
+        <SectionTitle icon={MonitorCog} title="定位信息" />
+        <div className="detail-list dense">
+          <Info label="目标地图" value={selectedTask.targetMap ?? '-'} />
+          <Info label="目标路线" value={selectedTask.targetRoute ?? '-'} />
+          <Info label="目标点位" value={selectedTask.targetPoint ?? selectedTask.actionPoint ?? '-'} />
+          <Info label="取料工位" value={selectedTask.pickupStation ?? '-'} />
+          <Info label="放料方案" value={selectedTask.placementPlan ?? '-'} />
+          <Info label="开门方式" value={selectedTask.doorMode ?? '-'} />
+        </div>
+      </section>
+      <section className="panel task-workbench-panel task-detail-progress-panel">
+        <SectionTitle icon={MonitorCog} title="动作进度" />
+        <TaskExecutionWorkbench
+          currentStepDetail={currentStepDetail}
+          currentUser={currentUser}
+          onAlarms={onAlarms}
+          onDevice={onDevice}
+          onLogs={onLogs}
+          onTaskAction={onTaskAction}
+          navigation={navigation}
+          task={selectedTask}
+        />
+      </section>
+      <section className="panel task-detail-result-panel">
+        <SectionTitle icon={MonitorCog} title="视觉结果" />
+        {visionRows.length ? (
+          <DataTable
+            compact
+            columns={['时间', '相机', '对象', '结果', '置信度', '处理状态']}
+            rows={visionRows.map((row) => [row.time, row.cameraId, row.object, <StatusText value={row.result} />, row.confidence, <StatusText value={row.processStatus} />])}
+          />
+        ) : (
+          <div className="attachment-empty">当前任务暂无视觉结果</div>
+        )}
+      </section>
+      <section className="panel task-detail-result-panel">
+        <SectionTitle icon={Cpu} title="机械臂执行结果" />
+        <div className="detail-list dense">
+          <Info label="机械臂" value={selectedTask.armId ?? '-'} />
+          <Info label="动作点位" value={selectedTask.actionPoint ?? '-'} />
+          <Info label="当前动作" value={currentStepDetail.command} />
+          <Info label="执行状态" value={<StatusText value={selectedTask.status} />} />
+          <Info label="回执状态" value={currentStepDetail.receiptStatus} />
+        </div>
+      </section>
+      <section className="panel task-detail-result-panel">
+        <SectionTitle icon={AlertTriangle} title="异常与处理" />
+        <DataTable
+          compact
+          columns={['异常对象', '类型', '状态', '处理建议']}
+          rows={(taskAlarms.length ? taskAlarms : [{ device: selectedTask.targetDevice ?? '-', type: '任务状态', status: selectedTask.processStatus ?? '正常处理' }]).map((row) => [
+            row.device,
+            row.type,
+            <StatusText value={row.status} />,
+            selectedTask.alarmCount > 0 ? '进入人工接管处理' : '继续自动执行',
+          ])}
+        />
+      </section>
+      <section className="panel task-detail-result-panel">
+        <SectionTitle icon={History} title="复测记录" />
+        <DataTable
+          compact
+          columns={['复测项', '结果', '时间']}
+          rows={[
+            ['视觉复核', visionRows.some((row) => row.processStatus === '待复核') ? <StatusText value="待复核" /> : <StatusText value="通过" />, selectedTask.updatedAt],
+            ['动作复核', selectedTask.status === '失败' ? <StatusText value="未通过" /> : <StatusText value="通过" />, selectedTask.updatedAt],
+          ]}
+        />
+      </section>
+      <section className="panel task-attachment-panel task-detail-attachment-panel">
+        <SectionTitle icon={FileClock} title="任务附件" />
+        <AttachmentList compact emptyText="当前任务暂无附件" items={taskAttachments[selectedTask.id] ?? []} onPreview={setPreviewAttachment} showAdd={false} />
+      </section>
+    </div>
+  );
+}
+
+function TaskConfigSection({ selectedTask }) {
+  return (
+    <div className="task-management-layout">
+      <section className="panel task-config-panel">
+        <SectionTitle icon={Settings} title="任务配置" />
+        <DataTable
+          columns={['配置项', '当前配置', '状态', '更新时间']}
+          rows={[
+            ['任务方案', selectedTask.taskPlan ?? selectedTask.executionMode ?? '标准任务方案', <StatusText value="启用" />, selectedTask.updatedAt],
+            ['视觉标识', selectedTask.visionMark ?? selectedTask.visionTaskId ?? '-', <StatusText value={selectedTask.visionTaskId ? '启用' : '未绑定'} />, selectedTask.updatedAt],
+            ['动作点位', selectedTask.actionPoint ?? selectedTask.targetPoint ?? '-', <StatusText value="启用" />, selectedTask.updatedAt],
+            ['开门方式', selectedTask.doorMode ?? '-', <StatusText value="启用" />, selectedTask.updatedAt],
+            ['物料规则', selectedTask.materialRule ?? '按任务类型校验', <StatusText value="启用" />, selectedTask.updatedAt],
+            ['放料方案', selectedTask.placementPlan ?? '-', <StatusText value="启用" />, selectedTask.updatedAt],
+            ['复核规则', selectedTask.reviewRule ?? '完成后自动复核', <StatusText value="启用" />, selectedTask.updatedAt],
+          ]}
+        />
+      </section>
+    </div>
+  );
+}
+
+function TaskHandoverSection({ currentUser, onAlarms, onDevice, onLogs, onTaskAction, selectedTask, setSelectedTaskId, taskList }) {
+  const handoverTasks = taskList.filter((task) => task.alarmCount > 0 || ['待确认', '异常处理中', '待人工接管'].includes(task.processStatus) || ['暂停', '失败'].includes(task.status));
+  return (
+    <div className="task-management-layout">
+      <section className="panel task-handover-list-panel">
+        <SectionTitle icon={ShieldCheck} title="人工接管" />
+        <DataTable
+          columns={['订单编号', '任务类型', '目标设备', '异常/确认项', '任务状态', '处理状态']}
+          rows={handoverTasks.map((task) => [
+            task.orderNo ?? task.id,
+            task.taskType ?? '生产任务',
+            task.targetDevice ?? getTaskPrimaryDevice(task),
+            task.alarmCount > 0 ? `${task.alarmCount} 条异常` : task.command,
+            <StatusText value={task.status} />,
+            <StatusText value={task.processStatus ?? '待处理'} />,
+          ])}
+          rowKeys={handoverTasks.map((task) => task.id)}
+          selectedKey={selectedTask.id}
+          onRowClick={setSelectedTaskId}
+        />
+      </section>
+      <section className="panel task-handover-action-panel">
+        <SectionTitle icon={MonitorCog} title="接管处理" />
+        <TaskWorkbenchActions
+          currentUser={currentUser}
+          onAlarms={onAlarms}
+          onDevice={onDevice}
+          onLogs={onLogs}
+          onTaskAction={onTaskAction}
+          task={selectedTask}
+        />
+      </section>
+    </div>
+  );
+}
+
+function TaskRecordsSection({ recordScope, selectedTask, setRecordScope, visibleLogs }) {
+  const rows = getTaskManagementRecordRows(selectedTask, visibleLogs);
+  return (
+    <div className="task-management-layout">
+      <section className="panel task-record-panel task-record-full-panel">
+        <SectionTitle icon={History} title="任务记录" action={<SegmentedFilter options={['当前任务', '全部']} value={recordScope} onChange={setRecordScope} />} />
+        <DataTable
+          className="task-record-table"
+          columns={['时间', '记录分类', '对象', '内容', '状态']}
+          rows={rows.map((row) => [row.time, row.category, row.objectId, row.content, <StatusText value={row.status} />])}
+        />
+      </section>
+    </div>
+  );
+}
+function TaskExecutionWorkbench({ currentStepDetail, currentUser, navigation, onAlarms, onDevice, onLogs, onTaskAction, task }) {
   const stepSummary = getTaskProgressSummary(task);
   return (
     <div className="task-workbench">
@@ -1749,13 +2162,13 @@ function TaskExecutionWorkbench({ currentStepDetail, currentUser, onAlarms, onDe
           <span>{stepSummary}｜{currentStepDetail.command}</span>
         </div>
         <p>
-          关联设备：{task.devices.replaceAll(',', '、')}｜报警 {task.alarmCount} 条｜下发 {currentStepDetail.dispatchStatus}｜回执 {currentStepDetail.receiptStatus}
+          类型：{task.taskType ?? '生产任务'}｜机器人：{task.robotId ?? '-'}｜目标：{[task.targetMap, task.targetRoute, task.targetPoint].filter((item) => item && item !== '-').join(' / ') || '-'}｜关联设备：{task.devices.replaceAll(',', '、')}｜报警 {task.alarmCount} 条｜下发 {currentStepDetail.dispatchStatus}｜回执 {currentStepDetail.receiptStatus}
         </p>
       </div>
       <div className="task-workbench-body">
         <div className="task-progress-panel">
           <h3>工序进度</h3>
-          <StepList task={task} />
+          <StepList task={task} onStepNavigate={navigation} />
         </div>
         <TaskWorkbenchActions
           currentUser={currentUser}
@@ -1837,7 +2250,7 @@ function TaskWorkbenchActions({ currentUser, onAlarms, onDevice, onLogs, onTaskA
   );
 }
 
-function CommandsPageImpl({ currentUser, navigation, setActiveDeviceTab, setLogFilter, setLogTypeFilter, setPage, setSelectedDeviceId, setSelectedTaskId }) {
+function CommandsPageImpl({ currentUser, externalCommandRows = [], initialSelectedCommandId = '', navigation, setActiveDeviceTab, setLogFilter, setLogTypeFilter, setPage, setSelectedDeviceId, setSelectedTaskId }) {
   const [commands, setCommands] = useState(() => getInitialCommandWorkbenchRows());
   const [records, setRecords] = useState(() => getInitialCommandReceiptRecords());
   const [keyword, setKeyword] = useState('');
@@ -1855,6 +2268,18 @@ function CommandsPageImpl({ currentUser, navigation, setActiveDeviceTab, setLogF
     () => filterCommandReceiptRecords(records, recordFilter),
     [records, recordFilter],
   );
+
+  useEffect(() => {
+    if (!externalCommandRows.length) return;
+    setCommands((rows) => mergeRowsById(externalCommandRows, rows));
+    setRecords((rows) => mergeRowsById(getInitialCommandReceiptRecords(externalCommandRows), rows));
+  }, [externalCommandRows]);
+
+  useEffect(() => {
+    if (initialSelectedCommandId && commands.some((row) => row.id === initialSelectedCommandId)) {
+      setSelectedCommandId(initialSelectedCommandId);
+    }
+  }, [commands, initialSelectedCommandId]);
 
   useEffect(() => {
     if (filteredCommands.length && !filteredCommands.some((row) => row.id === selectedCommandId)) {
@@ -1923,6 +2348,15 @@ function CommandsPageImpl({ currentUser, navigation, setActiveDeviceTab, setLogF
 
   const openDevice = () => {
     if (!selectedCommand) return;
+    if (isArmCommandDevice(selectedCommand.deviceId, selectedCommand.commandName)) {
+      navigation?.navigateToArm?.(getCommandTargetArm(selectedCommand));
+      return;
+    }
+    if (isVisionCommandDevice(selectedCommand.deviceId, selectedCommand.commandName)) {
+      const targetCamera = getCommandTargetCamera(selectedCommand);
+      navigation?.navigateToVision?.(targetCamera !== '-' ? targetCamera : selectedCommand.objectId);
+      return;
+    }
     if (navigation?.navigateToDevice) {
       navigation.navigateToDevice(selectedCommand.deviceId);
       return;
@@ -2078,6 +2512,12 @@ function CommandDetailPanel({ command, currentUser, onLogs, onMarkHandled, onOpe
         <div className="command-detail-grid">
           <Info label="指令编号" value={command.id} />
           <Info label="目标设备" value={command.deviceId} />
+          <Info label="目标机器人" value={getCommandTargetRobot(command)} />
+          <Info label="目标机械臂" value={getCommandTargetArm(command)} />
+          <Info label="目标相机" value={getCommandTargetCamera(command)} />
+          <Info label="目标模型" value={getCommandTargetModel(command)} />
+          <Info label="目标地图" value={getCommandTargetMap(command)} />
+          <Info label="目标路线" value={getCommandTargetRoute(command)} />
           <Info label="指令名称" value={command.commandName} />
           <Info label="参数" value={command.params} />
           <Info label="关联任务" value={command.relatedTask} />
@@ -2123,12 +2563,75 @@ function CommandDetailPanel({ command, currentUser, onLogs, onMarkHandled, onOpe
   );
 }
 
+function isRobotCommandDevice(deviceId = '') {
+  return /^(AMR|ROBOT|CHASSIS|LIDAR|MAP-SVC|NAV-SVC|CHARGE)-/.test(String(deviceId));
+}
+
+function isArmCommandDevice(deviceId = '', commandName = '') {
+  return /^(ARM|GRIPPER|SUCTION)-/.test(String(deviceId)) || /机械臂|夹爪|吸盘|动作模板/.test(String(commandName));
+}
+
+function isVisionCommandDevice(deviceId = '', commandName = '') {
+  return /^(CAM|LGT|VISION)-/.test(String(deviceId)) || /相机|识别|模型/.test(String(commandName));
+}
+
+function getCommandRelatedTask(command) {
+  const taskId = command?.relatedTask || command?.taskId;
+  return tasks.find((task) => task.id === taskId);
+}
+
+function getCommandTargetRobot(command) {
+  if (command?.targetRobot) return command.targetRobot;
+  if (String(command?.deviceId ?? '').startsWith('AMR-') || String(command?.deviceId ?? '').startsWith('ROBOT-')) return command.deviceId;
+  return getCommandRelatedTask(command)?.robotId ?? '-';
+}
+
+function getCommandTargetArm(command) {
+  if (command?.targetArm) return command.targetArm;
+  const deviceId = String(command?.deviceId ?? '');
+  if (deviceId.startsWith('ARM-')) return deviceId;
+  const tool = endEffectors.find((item) => item.toolId === command?.objectId || item.toolId === deviceId.replace('GRIPPER', 'TOOL').replace('SUCTION', 'TOOL'));
+  return tool?.armId ?? getCommandRelatedTask(command)?.armId ?? '-';
+}
+
+function getCommandTargetCamera(command) {
+  if (command?.targetCamera) return command.targetCamera;
+  const deviceId = String(command?.deviceId ?? '');
+  if (deviceId.startsWith('CAM-')) return deviceId;
+  const taskId = String(command?.objectId ?? command?.params ?? '');
+  const visionTask = visionTasks.find((task) => task.visionTaskId === taskId || taskId.includes(task.visionTaskId)) ?? visionTasks.find((task) => task.relatedRobotTask === command?.relatedTask);
+  return visionTask?.cameraId ?? '-';
+}
+
+function getCommandTargetModel(command) {
+  if (command?.targetModel) return command.targetModel;
+  const text = `${command?.params ?? ''} ${command?.objectId ?? ''}`;
+  const model = visionModels.find((item) => text.includes(item.version));
+  const visionTask = visionTasks.find((task) => task.visionTaskId === command?.objectId || task.relatedRobotTask === command?.relatedTask);
+  return model?.version ?? visionTask?.modelVersion ?? '-';
+}
+
+function getCommandTargetMap(command) {
+  if (command?.targetMap) return command.targetMap;
+  const mapParam = String(command?.params ?? '').match(/map=([^\s]+)/)?.[1];
+  if (mapParam) return maps.find((map) => map.mapId === mapParam)?.mapName ?? mapParam;
+  return getCommandRelatedTask(command)?.targetMap ?? '-';
+}
+
+function getCommandTargetRoute(command) {
+  if (command?.targetRoute) return command.targetRoute;
+  const routeParam = String(command?.params ?? '').match(/route=([^\s]+)/)?.[1];
+  if (routeParam) return mapRoutes.find((route) => route.routeId === routeParam)?.routeName ?? routeParam;
+  return getCommandRelatedTask(command)?.targetRoute ?? '-';
+}
 function getInitialCommandWorkbenchRows() {
   const baseRows = commandLogs.map((row, index) => ({
     id: `CMD-${String(index + 1).padStart(3, '0')}`,
     commandId: `CMD-${String(index + 1).padStart(3, '0')}`,
     deviceId: row.deviceId,
     deviceType: devices.find((device) => device.id === row.deviceId)?.type ?? '-',
+    objectType: row.objectType,
+    objectId: row.objectId,
     commandName: row.content,
     params: row.params,
     sendResult: row.result,
@@ -2146,16 +2649,16 @@ function getInitialCommandWorkbenchRows() {
   }));
   return [
     ...baseRows,
-    { id: 'CMD-004', commandId: 'CMD-004', deviceId: 'ROBOT-001', deviceType: '工业机器人', commandName: '机器人搬运', params: 'A区→B区', sendResult: '下发失败', receiptStatus: '失败', stage: '异常待处理', relatedTask: 'TASK-002', sender: 'operator01', sendTime: '09:09:45', receiptTime: '-', duration: '-', failReason: '设备不在安全区', suggestion: '下发失败，建议检查参数和设备状态后重新下发。', handledBy: '-', handledAt: '-' },
-    { id: 'CMD-005', commandId: 'CMD-005', deviceId: 'CNC-003', deviceType: '数控机床', commandName: '程序装载', params: 'O3007', sendResult: '已下发', receiptStatus: '超时', stage: '异常待处理', relatedTask: 'TASK-004', sender: 'system', sendTime: '09:08:20', receiptTime: '-', duration: '-', failReason: '设备离线，回执超时', suggestion: '回执超时，建议检查设备连接后重新下发。', handledBy: '-', handledAt: '-' },
-    { id: 'CMD-006', commandId: 'CMD-006', deviceId: 'PLC-002', deviceType: '控制器', commandName: '防护门复位', params: 'reset=true', sendResult: '已下发', receiptStatus: '已处理', stage: '已处理', relatedTask: 'TASK-003', sender: 'engineer01', sendTime: '09:07:42', receiptTime: '09:08:10', duration: '28.0s', failReason: '-', suggestion: '异常回执已处理，可继续观察后续指令。', handledBy: 'engineer01', handledAt: '09:08:10' },
-    { id: 'CMD-007', commandId: 'CMD-007', deviceId: 'CNC-004', deviceType: '数控机床', commandName: '启动加工', params: 'O4001', sendResult: '已下发', receiptStatus: '待回执', stage: '等待回执', relatedTask: 'TASK-001', sender: 'system', sendTime: '09:06:58', receiptTime: '-', duration: '-', failReason: '-', suggestion: '等待设备回执，如超过阈值请检查设备连接。', handledBy: '-', handledAt: '-' },
-    { id: 'CMD-008', commandId: 'CMD-008', deviceId: 'ROBOT-002', deviceType: '工业机器人', commandName: '回原点', params: 'home', sendResult: '已下发', receiptStatus: '待回执', stage: '等待回执', relatedTask: 'TASK-002', sender: 'operator01', sendTime: '09:06:20', receiptTime: '-', duration: '-', failReason: '-', suggestion: '等待设备回执，如超过阈值请检查设备连接。', handledBy: '-', handledAt: '-' },
+    { id: 'CMD-901', commandId: 'CMD-901', deviceId: 'ROBOT-001', deviceType: '工业机器人', commandName: '机器人搬运', params: 'A区→B区', sendResult: '下发失败', receiptStatus: '失败', stage: '异常待处理', relatedTask: 'TASK-002', sender: 'operator01', sendTime: '09:09:45', receiptTime: '-', duration: '-', failReason: '设备不在安全区', suggestion: '下发失败，建议检查参数和设备状态后重新下发。', handledBy: '-', handledAt: '-' },
+    { id: 'CMD-902', commandId: 'CMD-902', deviceId: 'CNC-003', deviceType: '数控机床', commandName: '程序装载', params: 'O3007', sendResult: '已下发', receiptStatus: '超时', stage: '异常待处理', relatedTask: 'TASK-004', sender: 'system', sendTime: '09:08:20', receiptTime: '-', duration: '-', failReason: '设备离线，回执超时', suggestion: '回执超时，建议检查设备连接后重新下发。', handledBy: '-', handledAt: '-' },
+    { id: 'CMD-903', commandId: 'CMD-903', deviceId: 'PLC-002', deviceType: '控制器', commandName: '防护门复位', params: 'reset=true', sendResult: '已下发', receiptStatus: '已处理', stage: '已处理', relatedTask: 'TASK-003', sender: 'engineer01', sendTime: '09:07:42', receiptTime: '09:08:10', duration: '28.0s', failReason: '-', suggestion: '异常回执已处理，可继续观察后续指令。', handledBy: 'engineer01', handledAt: '09:08:10' },
+    { id: 'CMD-904', commandId: 'CMD-904', deviceId: 'CNC-004', deviceType: '数控机床', commandName: '启动加工', params: 'O4001', sendResult: '已下发', receiptStatus: '待回执', stage: '等待回执', relatedTask: 'TASK-001', sender: 'system', sendTime: '09:06:58', receiptTime: '-', duration: '-', failReason: '-', suggestion: '等待设备回执，如超过阈值请检查设备连接。', handledBy: '-', handledAt: '-' },
+    { id: 'CMD-905', commandId: 'CMD-905', deviceId: 'ROBOT-002', deviceType: '工业机器人', commandName: '回原点', params: 'home', sendResult: '已下发', receiptStatus: '待回执', stage: '等待回执', relatedTask: 'TASK-002', sender: 'operator01', sendTime: '09:06:20', receiptTime: '-', duration: '-', failReason: '-', suggestion: '等待设备回执，如超过阈值请检查设备连接。', handledBy: '-', handledAt: '-' },
   ];
 }
 
-function getInitialCommandReceiptRecords() {
-  return getInitialCommandWorkbenchRows()
+function getInitialCommandReceiptRecords(commandRows = getInitialCommandWorkbenchRows()) {
+  return commandRows
     .flatMap((command) => {
       const records = [{
         id: `${command.id}-send`,
@@ -2183,6 +2686,16 @@ function getInitialCommandReceiptRecords() {
       return records;
     })
     .sort((a, b) => b.time.localeCompare(a.time));
+}
+
+function mergeRowsById(incoming, existing) {
+  const seen = new Set();
+  return [...incoming, ...existing].filter((row) => {
+    const id = row.id;
+    if (seen.has(id)) return false;
+    seen.add(id);
+    return true;
+  });
 }
 
 function getCommandWorkbenchStats(rows) {
@@ -2242,15 +2755,15 @@ function addSecondsToTime(time, seconds) {
   return `${hour}:${minute}:${String(nextSecond).padStart(2, '0')}`;
 }
 
-function AlarmsPage({ setPage, setSelectedTaskId, setSelectedDeviceId, setLogFilter, setLogTypeFilter, currentUser }) {
+function AlarmsPage({ setPage, setSelectedTaskId, setSelectedDeviceId, setLogFilter, setLogTypeFilter, currentUser, extraAlarms = [], navigation }) {
   const [selectedAlarmName, setSelectedAlarmName] = useState(alarms[0]?.name ?? '');
   const [alarmFilter, setAlarmFilter] = useState('当前待办');
   const [recordFilter, setRecordFilter] = useState('全部');
   const [alarmStatusOverrides, setAlarmStatusOverrides] = useState({});
   const [handlingRecords, setHandlingRecords] = useState([]);
   const alarmRows = useMemo(
-    () => alarms.map((alarm) => ({ ...alarm, status: alarmStatusOverrides[alarm.name] ?? alarm.status })),
-    [alarmStatusOverrides],
+    () => [...extraAlarms, ...alarms].map((alarm) => ({ ...alarm, status: alarmStatusOverrides[alarm.name] ?? alarm.status })),
+    [alarmStatusOverrides, extraAlarms],
   );
   const filteredAlarms = useMemo(() => filterAlarms(alarmRows, alarmFilter), [alarmRows, alarmFilter]);
   const selectedAlarm = filteredAlarms.find((alarm) => alarm.name === selectedAlarmName) ?? filteredAlarms[0] ?? null;
@@ -2299,6 +2812,18 @@ function AlarmsPage({ setPage, setSelectedTaskId, setSelectedDeviceId, setLogFil
               setSelectedDeviceId(payload);
               setPage('devices');
             }
+            if (target === 'robot-monitor') {
+              setPage('robot-monitor');
+            }
+            if (target === 'map-management') {
+              setPage('map-management');
+            }
+            if (target === 'arm-control') {
+              navigation?.navigateToArm?.(payload);
+            }
+            if (target === 'vision-recognition') {
+              navigation?.navigateToVision?.(payload);
+            }
             if (target === 'logs') {
               setLogFilter(payload);
               setLogTypeFilter('全部');
@@ -2338,7 +2863,7 @@ function LogsPage({ filter, setFilter, typeFilter, setTypeFilter, rows = allLogs
         title="日志审计"
         action={<ExportButton pageName="日志审计" columns={logExportColumns} getRows={() => filtered.map(buildLogExportRow)} currentUser={currentUser} />}
       />
-      <SegmentedFilter options={['全部', '指令', '报警', '任务', '审计', '设备']} value={typeFilter} onChange={setTypeFilter} />
+      <SegmentedFilter options={['全部', '指令', '报警', '任务', '审计', '设备', '机器人', '地图', '路线', '建图', '巡检', '底盘', '机械臂', '末端工具', '视觉识别', '相机', '模型']} value={typeFilter} onChange={setTypeFilter} />
       <div className="filterbar">
         <Search size={17} />
         <input value={filter} onChange={(event) => setFilter(event.target.value)} placeholder="输入任务、设备、状态筛选" />
@@ -2350,6 +2875,1368 @@ function LogsPage({ filter, setFilter, typeFilter, setTypeFilter, rows = allLogs
       </div>
       <LogTable rows={filtered} />
     </section>
+  );
+}
+
+function ArmControlPage({ activeArmTab, currentUser, navigation, onArmActionEvent, selectedArmId, selectedArmTemplateId, selectedTeachingPointId, setActiveArmTab, setSelectedArmId, setSelectedArmTemplateId, setSelectedTeachingPointId }) {
+  const [arms, setArms] = useState(robotArms);
+  const [records, setRecords] = useState(armActionLogs);
+  const [receipts, setReceipts] = useState(armCommandReceipts);
+  const [teachingPoints, setTeachingPoints] = useState(armTeachingPoints);
+  const [teachingLogs, setTeachingLogs] = useState(teachingPointLogs);
+  const [templateRows, setTemplateRows] = useState(armActionTemplates);
+  const [templateLogs, setTemplateLogs] = useState(armTemplateLogs);
+  const [notice, setNotice] = useState('');
+  const selectedArm = arms.find((arm) => arm.armId === selectedArmId) ?? arms[0];
+  const runArmAction = (action, safetyRows = []) => {
+    const blockedReason = getArmActionBlockedReason(currentUser, selectedArm, safetyRows);
+    if (blockedReason) {
+      setNotice(blockedReason);
+      window.setTimeout(() => setNotice(''), 1800);
+      return null;
+    }
+    const now = formatNowTime();
+    const commandId = `CMD-ARM-${Date.now().toString().slice(-6)}`;
+    const targetPoint = getArmActionTargetPoint(action);
+    const nextStatus = action === '停止' ? '待机' : action === '暂停' ? '暂停' : action === '复位' || action === '回零' ? '待机' : '运行中';
+    const nextToolStatus = action === '打开夹爪'
+      ? selectedArm.toolStatus.replace('已关闭', '已打开')
+      : action === '关闭夹爪'
+        ? selectedArm.toolStatus.replace('已打开', '已关闭')
+        : selectedArm.toolStatus;
+    const command = {
+      id: commandId,
+      commandId,
+      deviceId: selectedArm.armId,
+      objectType: action.includes('夹爪') ? 'tool' : 'arm',
+      objectId: action.includes('夹爪') ? selectedArm.toolId : selectedArm.armId,
+      commandName: action,
+      params: targetPoint === '-' ? 'mock=true' : `target=${targetPoint}`,
+      sendResult: '已下发',
+      receiptStatus: '已确认',
+      stage: '设备已确认',
+      relatedTask: selectedArm.currentTask || '无',
+      sender: currentUser?.username ?? 'admin',
+      sendTime: now,
+      receiptTime: addSecondsToTime(now, 2),
+      duration: '2.1s',
+      failReason: '-',
+      suggestion: '机械臂 mock 指令已确认执行。',
+      handledBy: '-',
+      handledAt: '-',
+      targetArm: selectedArm.armId,
+    };
+    const record = {
+      time: now,
+      armId: selectedArm.armId,
+      actionName: action,
+      action,
+      targetPoint,
+      result: '成功',
+      receiptStatus: '已确认',
+      relatedTask: selectedArm.currentTask || '无',
+      taskId: selectedArm.currentTask || '无',
+      operator: currentUser?.username ?? 'admin',
+    };
+    const log = {
+      time: now,
+      objectType: command.objectType,
+      objectId: command.objectId,
+      deviceId: selectedArm.armId,
+      taskId: selectedArm.currentTask || '无',
+      logType: action.includes('夹爪') ? '末端工具' : '机械臂',
+      content: `机械臂动作：${action}`,
+      params: targetPoint,
+      status: '成功',
+      operator: currentUser?.username ?? 'admin',
+    };
+    setArms((rows) => rows.map((arm) => arm.armId === selectedArm.armId ? { ...arm, runStatus: nextStatus, currentAction: action, toolStatus: nextToolStatus, updatedAt: now } : arm));
+    setRecords((rows) => [record, ...rows]);
+    setReceipts((rows) => [command, ...rows]);
+    onArmActionEvent?.({ command, log });
+    setNotice(`${action}：${selectedArm.armId}（前端模拟）`);
+    window.setTimeout(() => setNotice(''), 1800);
+    return command;
+  };
+
+  const executeTemplate = (template) => {
+    const arm = arms.find((item) => template.armId.includes(item.armId)) ?? selectedArm;
+    const safetyRows = getTemplateSafetyRows(template, teachingPoints, arm);
+    const blockedReason = getTemplateBlockedReason(currentUser, template, safetyRows, arm);
+    if (blockedReason) {
+      setNotice(blockedReason);
+      window.setTimeout(() => setNotice(''), 1800);
+      return null;
+    }
+    const now = formatNowTime();
+    const commandId = `CMD-TPL-${Date.now().toString().slice(-6)}`;
+    const command = {
+      id: commandId,
+      commandId,
+      deviceId: arm.armId,
+      objectType: 'arm-template',
+      objectId: template.templateId,
+      commandName: '执行动作模板',
+      params: `template=${template.templateId}`,
+      sendResult: '已下发',
+      receiptStatus: '已确认',
+      stage: '设备已确认',
+      relatedTask: arm.currentTask || 'TASK-001',
+      sender: currentUser?.username ?? 'admin',
+      sendTime: now,
+      receiptTime: addSecondsToTime(now, 12),
+      duration: '12.4s',
+      failReason: '-',
+      suggestion: '动作模板已按前端 mock 执行完成。',
+      handledBy: '-',
+      handledAt: '-',
+      targetArm: arm.armId,
+    };
+    const log = {
+      time: now,
+      objectType: 'arm-template',
+      objectId: template.templateId,
+      deviceId: arm.armId,
+      taskId: arm.currentTask || 'TASK-001',
+      logType: '机械臂',
+      content: `执行动作模板：${template.templateName}`,
+      params: template.templateId,
+      status: '成功',
+      operator: currentUser?.username ?? 'admin',
+    };
+    const record = {
+      time: now,
+      templateId: template.templateId,
+      templateName: template.templateName,
+      armId: arm.armId,
+      relatedTask: arm.currentTask || 'TASK-001',
+      result: '成功',
+      receiptStatus: '已确认',
+      duration: '12.4s',
+      operator: currentUser?.username ?? 'admin',
+    };
+    setReceipts((rows) => [command, ...rows]);
+    setTemplateLogs((rows) => [record, ...rows]);
+    onArmActionEvent?.({ command, log });
+    setNotice(`执行动作模板：${template.templateName}（前端模拟）`);
+    window.setTimeout(() => setNotice(''), 1800);
+    return command;
+  };
+
+  if (activeArmTab === 'control') return <ArmActionControlPage arms={arms} currentUser={currentUser} navigation={navigation} records={records} receipts={receipts} runArmAction={runArmAction} selectedArm={selectedArm} setSelectedArmId={setSelectedArmId} notice={notice} />;
+  if (activeArmTab === 'teaching') return <ArmTeachingPage currentUser={currentUser} logs={teachingLogs} points={teachingPoints} selectedPointId={selectedTeachingPointId} setLogs={setTeachingLogs} setPoints={setTeachingPoints} setSelectedPointId={setSelectedTeachingPointId} templates={templateRows} notice={notice} setNotice={setNotice} />;
+  if (activeArmTab === 'tools') return <EndEffectorPage />;
+  if (activeArmTab === 'templates') return <ArmTemplatePage arms={arms} currentUser={currentUser} executeTemplate={executeTemplate} logs={templateLogs} navigation={navigation} notice={notice} points={teachingPoints} selectedTemplateId={selectedArmTemplateId} setActiveArmTab={setActiveArmTab} setSelectedTeachingPointId={setSelectedTeachingPointId} setSelectedTemplateId={setSelectedArmTemplateId} setTemplates={setTemplateRows} templates={templateRows} />;
+  return <ArmOverviewPage arms={arms} navigation={navigation} records={records} setActiveArmTab={setActiveArmTab} setSelectedArmId={setSelectedArmId} />;
+}
+
+function ArmOverviewPage({ arms, navigation, records, setActiveArmTab, setSelectedArmId }) {
+  const stats = getArmStats(arms);
+  const abnormalArms = arms.filter((arm) => arm.alarmStatus !== '无报警' || arm.runStatus === '异常' || arm.emergencyStatus === '已触发');
+  const openControl = (armId) => {
+    setSelectedArmId(armId);
+    setActiveArmTab('control');
+  };
+  const openRecords = (armId) => {
+    navigation?.navigateToLogs?.(armId, '全部');
+  };
+  return (
+    <div className="arm-overview-workspace">
+      <section className="panel arm-overview-summary">
+        <SectionTitle icon={Cpu} title="机械臂状态总览" action="前端 mock" />
+        <ArmSummaryStrip stats={stats} />
+      </section>
+      <section className="panel arm-overview-list">
+        <SectionTitle icon={TerminalSquare} title="机械臂状态列表" />
+        <DataTable
+          columns={['机械臂编号', '类型', '在线状态', '运行状态', '当前任务', '末端工具', '急停状态', '报警数', '更新时间', '操作']}
+          rows={arms.map((arm) => [
+            arm.armId,
+            arm.type,
+            <StatusText value={arm.onlineStatus ?? arm.online} />,
+            <StatusText value={arm.runStatus} />,
+            arm.currentTask,
+            getArmToolLabel(arm),
+            <StatusText value={arm.emergencyStatus} />,
+            arm.alarmStatus === '无报警' ? 0 : 1,
+            arm.updatedAt,
+            <div className="table-actions"><button type="button" onClick={(event) => { event.stopPropagation(); openControl(arm.armId); }}>查看控制</button><button type="button" onClick={(event) => { event.stopPropagation(); openRecords(arm.armId); }}>查看记录</button></div>,
+          ])}
+          rowKeys={arms.map((arm) => arm.armId)}
+          onRowClick={openControl}
+        />
+      </section>
+      <section className="panel arm-overview-exception">
+        <SectionTitle icon={AlertTriangle} title="异常机械臂" />
+        {abnormalArms.length ? (
+          <div className="arm-exception-list">
+            {abnormalArms.map((arm) => <ArmMiniCard arm={arm} key={arm.armId} onSelect={() => openControl(arm.armId)} />)}
+          </div>
+        ) : <div className="arm-empty-state">暂无异常机械臂</div>}
+      </section>
+      <section className="panel arm-overview-records">
+        <SectionTitle icon={History} title="最近动作记录" />
+        <ArmRecordTable rows={records.slice(0, 6)} />
+      </section>
+    </div>
+  );
+}
+
+function ArmActionControlPage({ arms, currentUser, navigation, records, receipts, runArmAction, selectedArm, setSelectedArmId, notice }) {
+  const safetyRows = getArmSafetyRows(selectedArm);
+  const blockedReason = getArmActionBlockedReason(currentUser, selectedArm, safetyRows);
+  const permissionStatus = getArmPermissionStatus(currentUser);
+  const safeCount = safetyRows.filter((row) => row.status === '满足').length;
+  const chainRows = armActionSteps.filter((step) => step.armId === selectedArm.armId);
+  const visibleRecords = records.filter((row) => row.armId === selectedArm.armId);
+  const latestReceipt = receipts.find((row) => row.targetArm === selectedArm.armId || row.deviceId === selectedArm.armId) ?? receipts[0];
+  return (
+    <div className="arm-workbench">
+      <section className="panel arm-workbench-summary">
+        <ArmControlSummary arm={selectedArm} safeCount={safeCount} totalCount={safetyRows.length} />
+      </section>
+      <section className="panel arm-workbench-list">
+        <SectionTitle icon={Cpu} title="机械臂列表" action={`${arms.length} 台`} />
+        <div className="arm-card-list">
+          {arms.map((arm) => <ArmListCard arm={arm} key={arm.armId} selected={arm.armId === selectedArm.armId} onSelect={() => setSelectedArmId(arm.armId)} />)}
+        </div>
+      </section>
+      <section className="panel arm-workbench-state">
+        <SectionTitle icon={TerminalSquare} title="当前机械臂状态" action={selectedArm.armId} />
+        <ArmCurrentStatusGroups arm={selectedArm} />
+        <div className="arm-action-chain">
+          <div className="arm-block-title">动作链</div>
+          <div className="arm-chain-list">
+            {chainRows.map((step) => <ArmActionStepRow key={`${step.armId}-${step.stepNo}`} step={step} />)}
+          </div>
+        </div>
+      </section>
+      <section className="panel arm-workbench-side">
+        <SectionTitle icon={ShieldCheck} title="权限状态" />
+        <div className={`arm-permission-result ${permissionStatus.ok ? 'ok' : 'blocked'}`}>{permissionStatus.message}</div>
+        <div className="arm-block-title arm-safety-title">安全条件</div>
+        <div className={`arm-safety-result ${safeCount === safetyRows.length ? 'ok' : 'blocked'}`}>
+          {safeCount === safetyRows.length ? '当前满足执行条件' : `不可执行：${safetyRows.find((row) => row.status !== '满足')?.label ?? '安全条件'} 不满足`}
+        </div>
+        <div className="arm-safety-list">
+          {safetyRows.map((row) => (
+            <div className="arm-safety-row" key={row.label}>
+              <span>{row.label}</span>
+              <StatusText value={row.status} />
+            </div>
+          ))}
+        </div>
+        <ArmOperationPanel blockedReason={blockedReason} onAction={(action) => runArmAction(action, safetyRows)} />
+        {notice && <div className="inline-feedback">{notice}</div>}
+        <ArmReceiptPanel receipt={latestReceipt} onOpen={() => navigation?.navigateToCommand?.(latestReceipt?.id)} />
+      </section>
+      <section className="panel arm-workbench-records">
+        <SectionTitle
+          icon={History}
+          title="当前机械臂动作记录"
+          action={<ExportButton pageName={`${selectedArm.armId}动作记录`} columns={armCurrentActionRecordExportColumns} getRows={() => visibleRecords.map(buildArmCurrentActionRecordExportRow)} currentUser={currentUser} />}
+        />
+        <ArmCurrentRecordTable rows={visibleRecords} />
+      </section>
+    </div>
+  );
+}
+
+function ArmTeachingPage({ currentUser, logs, notice, points, selectedPointId, setLogs, setNotice, setPoints, setSelectedPointId, templates }) {
+  const [summaryFilter, setSummaryFilter] = useState('全部');
+  const [keyword, setKeyword] = useState('');
+  const selectedPoint = points.find((point) => point.pointId === selectedPointId) ?? points[0];
+  const stats = getTeachingPointStats(points);
+  const filteredPoints = filterTeachingPoints(points, summaryFilter, keyword);
+  const relatedTemplates = getTemplatesUsingPoint(templates, selectedPoint?.pointId);
+  const actionDisabled = !can(currentUser, PERMISSIONS.TASK_ACTION);
+  const actionReason = actionDisabled ? permissionReason(currentUser, '示教点维护') : '';
+
+  const recordLog = (point, operation, content, status = '成功') => {
+    const row = {
+      time: formatNowTime(),
+      pointId: point.pointId,
+      operation,
+      content,
+      operator: currentUser?.username ?? 'admin',
+      impactScope: relatedTemplates.map((item) => item.templateName).join('、') || '未关联模板',
+      status,
+    };
+    setLogs((rows) => [row, ...rows]);
+    setNotice(`${operation}：${point.pointId}（前端模拟）`);
+    window.setTimeout(() => setNotice(''), 1600);
+  };
+
+  const updatePoint = (patch, operation, content) => {
+    setPoints((rows) => rows.map((point) => point.pointId === selectedPoint.pointId ? { ...point, ...patch, updatedAt: formatNowTime() } : point));
+    recordLog({ ...selectedPoint, ...patch }, operation, content);
+  };
+
+  const deletePoint = () => {
+    if (!selectedPoint || actionDisabled) return;
+    if (selectedPoint.enabled && relatedTemplates.length && !window.confirm('该示教点已被动作模板引用，确认删除？')) return;
+    setPoints((rows) => rows.filter((point) => point.pointId !== selectedPoint.pointId));
+    setSelectedPointId(points.find((point) => point.pointId !== selectedPoint.pointId)?.pointId ?? '');
+    recordLog(selectedPoint, '删除', '删除示教点');
+  };
+
+  if (!selectedPoint) return <section className="panel page-full"><div className="arm-empty-state">暂无示教点数据</div></section>;
+
+  return (
+    <div className="arm-teaching-workspace">
+      <section className="panel arm-teaching-summary">
+        <SectionTitle icon={ClipboardList} title="示教点状态总览" action="点击统计筛选左侧列表" />
+        <TeachingSummaryStrip activeFilter={summaryFilter} stats={stats} onSelect={setSummaryFilter} />
+      </section>
+      <section className="panel arm-teaching-list">
+        <SectionTitle icon={Search} title="示教点列表" action={`${filteredPoints.length} 个`} />
+        <div className="filterbar arm-workbench-filter">
+          <Search size={16} />
+          <input value={keyword} onChange={(event) => setKeyword(event.target.value)} placeholder="搜索编号 / 名称 / 机械臂 / 设备 / 类型" />
+        </div>
+        <SegmentedFilter options={['全部', '开门点', '抓取点', '放料点', '复位点', '已启用', '未校验']} value={summaryFilter} onChange={setSummaryFilter} />
+        <div className="arm-card-list">
+          {filteredPoints.map((point) => <TeachingPointCard key={point.pointId} point={point} selected={point.pointId === selectedPoint.pointId} onSelect={() => setSelectedPointId(point.pointId)} />)}
+        </div>
+      </section>
+      <section className="panel arm-teaching-detail">
+        <SectionTitle icon={TerminalSquare} title="当前示教点详情" action={selectedPoint.pointId} />
+        <div className="arm-state-matrix">
+          <Info label="示教点编号" value={selectedPoint.pointId} />
+          <Info label="示教点名称" value={selectedPoint.pointName} />
+          <Info label="动作类型" value={selectedPoint.pointType} />
+          <Info label="所属机械臂" value={selectedPoint.armId} />
+          <Info label="关联设备 / 工位" value={`${selectedPoint.relatedDevice} / ${selectedPoint.relatedWorkstation}`} />
+          <Info label="关联地图点位" value={selectedPoint.relatedMapPoint} />
+          <Info label="关联任务步骤" value={selectedPoint.relatedTaskStep} />
+          <Info label="启用状态" value={<StatusText value={selectedPoint.enabled ? '已启用' : '未启用'} />} />
+          <Info label="校验状态" value={<StatusText value={selectedPoint.verified ? '已校验' : '未校验'} />} />
+          <Info label="更新时间" value={selectedPoint.updatedAt} />
+          <Info label="备注" value={selectedPoint.remark} />
+        </div>
+        <div className="arm-action-chain">
+          <div className="arm-block-title">姿态参数</div>
+          <div className="pose-param-grid">
+            {getTeachingPoseParams(selectedPoint).map((item) => (
+              <div className="pose-param-card" key={item.label}>
+                <span>{item.label}</span>
+                <strong>{item.value}</strong>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+      <section className="panel arm-teaching-side">
+        <SectionTitle icon={ShieldCheck} title="点位关联与操作" />
+        <div className="arm-block-title">关联信息</div>
+        <div className="detail-list dense">
+          <Info label="关联动作模板" value={relatedTemplates.map((item) => item.templateName).join('、') || '-'} />
+          <Info label="关联任务步骤" value={selectedPoint.relatedTaskStep} />
+          <Info label="关联视觉标识" value={selectedPoint.relatedVisionMarker} />
+          <Info label="关联地图点位" value={selectedPoint.relatedMapPoint} />
+          <Info label="影响范围" value={relatedTemplates.length ? `${relatedTemplates.length} 个模板` : '未引用'} />
+        </div>
+        <div className="arm-operation-panel">
+          <div className="arm-block-title">操作按钮</div>
+          <div className="button-row arm-operation-buttons">
+            <button type="button" disabled={actionDisabled} title={actionReason} onClick={() => updatePoint({}, '保存', '保存当前位置')}>保存当前位置</button>
+            <button type="button" disabled={actionDisabled} title={actionReason} onClick={() => updatePoint({}, '编辑', '编辑点位参数')}>编辑点位</button>
+            <button type="button" disabled={actionDisabled} title={actionReason} onClick={() => {
+              const clone = { ...selectedPoint, pointId: `${selectedPoint.pointId}-COPY`, pointName: `${selectedPoint.pointName}副本`, enabled: false, verified: false, updatedAt: formatNowTime(), usedByTemplates: [] };
+              setPoints((rows) => [clone, ...rows]);
+              setSelectedPointId(clone.pointId);
+              recordLog(clone, '复制', '复制示教点');
+            }}>复制点位</button>
+            <button className="danger" type="button" disabled={actionDisabled} title={actionReason} onClick={deletePoint}>删除点位</button>
+            <button type="button" onClick={() => recordLog(selectedPoint, '预览', '动作预览')}>动作预览</button>
+            <button type="button" disabled={actionDisabled} title={actionReason} onClick={() => updatePoint({ verified: true, enabled: true }, '校验', '校验通过')}>校验点位</button>
+            <button type="button" disabled={actionDisabled} title={actionReason} onClick={() => recordLog(selectedPoint, '关联', '关联任务步骤')}>关联任务步骤</button>
+          </div>
+          {actionDisabled && <div className="action-disabled-reason">{actionReason}</div>}
+        </div>
+        <TeachingSafetyTips point={selectedPoint} relatedTemplates={relatedTemplates} />
+        {notice && <div className="inline-feedback">{notice}</div>}
+      </section>
+      <section className="panel arm-teaching-records">
+        <SectionTitle icon={History} title="示教修改记录" />
+        <DataTable
+          columns={['时间', '示教点', '操作类型', '修改内容', '操作人', '影响范围', '状态']}
+          rows={logs.map((row) => [row.time, row.pointId, row.operation, row.content, row.operator, row.impactScope, <StatusText value={row.status} />])}
+          className="arm-record-table"
+        />
+      </section>
+    </div>
+  );
+}
+
+function EndEffectorPage() {
+  return (
+    <section className="panel page-full end-effector-page">
+      <SectionTitle icon={Cpu} title="末端工具" />
+      <DataTable columns={['工具编号', '工具类型', '关联机械臂', '安装状态', '开合状态', '吸附状态', '压力 / 真空值', '报警状态', '更新时间', '操作']} rows={endEffectors.map((tool) => [tool.toolId, tool.toolType, tool.armId, tool.installStatus, tool.openCloseStatus, tool.suctionStatus ?? tool.adsorbStatus, tool.pressure, <StatusText value={tool.alarmStatus} />, tool.updatedAt, <div className="table-actions"><button type="button">查看</button><button type="button">测试</button><button type="button">复位</button></div>])} />
+    </section>
+  );
+}
+
+function ArmTemplatePage({ arms, currentUser, executeTemplate, logs, navigation, notice, points, selectedTemplateId, setActiveArmTab, setSelectedTeachingPointId, setSelectedTemplateId, setTemplates, templates }) {
+  const [summaryFilter, setSummaryFilter] = useState('全部');
+  const [keyword, setKeyword] = useState('');
+  const selectedTemplate = templates.find((template) => template.templateId === selectedTemplateId) ?? templates[0];
+  const stats = getTemplateStats(templates, points);
+  const filteredTemplates = filterTemplates(templates, points, summaryFilter, keyword);
+  const arm = arms.find((item) => selectedTemplate?.armId.includes(item.armId)) ?? arms[0];
+  const safetyRows = getTemplateSafetyRows(selectedTemplate, points, arm);
+  const blockedReason = getTemplateBlockedReason(currentUser, selectedTemplate, safetyRows, arm);
+
+  const updateTemplate = (patch) => {
+    setTemplates((rows) => rows.map((template) => template.templateId === selectedTemplate.templateId ? { ...template, ...patch, updatedAt: formatNowTime() } : template));
+  };
+
+  if (!selectedTemplate) return <section className="panel page-full"><div className="arm-empty-state">暂无动作模板数据</div></section>;
+
+  return (
+    <div className="arm-template-workspace">
+      <section className="panel arm-template-summary">
+        <SectionTitle icon={ClipboardList} title="模板状态总览" action="点击统计筛选左侧列表" />
+        <TemplateSummaryStrip activeFilter={summaryFilter} stats={stats} onSelect={setSummaryFilter} />
+      </section>
+      <section className="panel arm-template-list">
+        <SectionTitle icon={Search} title="模板列表" action={`${filteredTemplates.length} 个`} />
+        <div className="filterbar arm-workbench-filter">
+          <Search size={16} />
+          <input value={keyword} onChange={(event) => setKeyword(event.target.value)} placeholder="搜索编号 / 名称 / 机械臂 / 类型 / 任务" />
+        </div>
+        <SegmentedFilter options={['全部', '开门', '抓取', '放料', '复位', '已启用', '未启用', '异常']} value={summaryFilter} onChange={setSummaryFilter} />
+        <div className="arm-card-list">
+          {filteredTemplates.map((template) => <TemplateCard key={template.templateId} points={points} selected={template.templateId === selectedTemplate.templateId} template={template} onSelect={() => setSelectedTemplateId(template.templateId)} />)}
+        </div>
+      </section>
+      <section className="panel arm-template-steps">
+        <SectionTitle icon={TerminalSquare} title="当前模板步骤" action={selectedTemplate.templateId} />
+        <div className="template-step-list">
+          {selectedTemplate.steps.map((step, index) => (
+            <div className={`template-step-row ${index === 1 ? 'active' : ''}`} key={step.stepId}>
+              <div><span>第 {index + 1} 步</span><strong>{step.stepName}</strong></div>
+              <StatusText value={getStepConfigStatus(step, points)} />
+              <small>{step.actionType}</small>
+              <button type="button" disabled={step.targetTeachingPoint === '-'} onClick={() => { setSelectedTeachingPointId(step.targetTeachingPoint); setActiveArmTab('teaching'); }}>{step.targetTeachingPoint}</button>
+              <button type="button" disabled={step.relatedVisionMarker === '-'} onClick={() => navigation?.navigateToVision?.('VT-001')}>{step.relatedVisionMarker}</button>
+              <span>{step.condition}</span>
+              <span>{step.timeout}</span>
+              <span>{step.failurePolicy}</span>
+            </div>
+          ))}
+        </div>
+      </section>
+      <section className="panel arm-template-side">
+        <SectionTitle icon={ShieldCheck} title="模板详情与操作" />
+        <div className="arm-block-title">模板基础信息</div>
+        <div className="detail-list dense">
+          <Info label="模板编号" value={selectedTemplate.templateId} />
+          <Info label="模板名称" value={selectedTemplate.templateName} />
+          <Info label="动作类型" value={selectedTemplate.actionType} />
+          <Info label="适用机械臂" value={selectedTemplate.armId} />
+          <Info label="关联任务类型" value={selectedTemplate.relatedTaskType} />
+          <Info label="步骤数量" value={`${selectedTemplate.stepCount} 步`} />
+          <Info label="启用状态" value={<StatusText value={selectedTemplate.enabled ? '已启用' : '未启用'} />} />
+          <Info label="更新时间" value={selectedTemplate.updatedAt} />
+          <Info label="备注" value={selectedTemplate.remark} />
+        </div>
+        <div className="arm-block-title">模板安全条件</div>
+        <div className="arm-safety-list">
+          {safetyRows.map((row) => <div className="arm-safety-row" key={row.label}><span>{row.label}</span><StatusText value={row.status} /></div>)}
+        </div>
+        <div className="arm-operation-panel">
+          <div className="arm-block-title">模板操作</div>
+          <div className="button-row arm-operation-buttons">
+            <button type="button" disabled={!can(currentUser, PERMISSIONS.TASK_ACTION)} title={!can(currentUser, PERMISSIONS.TASK_ACTION) ? permissionReason(currentUser, '模板编辑') : undefined}>新增步骤</button>
+            <button type="button" disabled={!can(currentUser, PERMISSIONS.TASK_ACTION)} title={!can(currentUser, PERMISSIONS.TASK_ACTION) ? permissionReason(currentUser, '模板编辑') : undefined}>编辑模板</button>
+            <button type="button" disabled={!can(currentUser, PERMISSIONS.TASK_ACTION)} onClick={() => {
+              const clone = { ...selectedTemplate, templateId: `${selectedTemplate.templateId}-COPY`, templateName: `${selectedTemplate.templateName}副本`, enabled: false, updatedAt: formatNowTime() };
+              setTemplates((rows) => [clone, ...rows]);
+              setSelectedTemplateId(clone.templateId);
+            }}>复制模板</button>
+            <button type="button" disabled={!can(currentUser, PERMISSIONS.TASK_ACTION) || (getTemplateHasConfigIssue(selectedTemplate, points) && !selectedTemplate.enabled)} title={getTemplateHasConfigIssue(selectedTemplate, points) ? '模板存在未校验点位或未配置视觉标识' : undefined} onClick={() => updateTemplate({ enabled: !selectedTemplate.enabled })}>{selectedTemplate.enabled ? '停用' : '启用'}</button>
+            <button type="button" disabled={Boolean(blockedReason)} title={blockedReason || undefined} onClick={() => executeTemplate(selectedTemplate)}>执行模板</button>
+            <button type="button" onClick={() => navigation?.navigateToTask?.('TASK-001')}>查看引用任务</button>
+            <button type="button">查看执行记录</button>
+          </div>
+          {blockedReason && <div className="action-disabled-reason">{blockedReason}</div>}
+        </div>
+        {notice && <div className="inline-feedback">{notice}</div>}
+      </section>
+      <section className="panel arm-template-records">
+        <SectionTitle icon={History} title="模板执行记录" />
+        <DataTable
+          columns={['时间', '模板编号', '模板名称', '机械臂', '关联任务', '执行结果', '回执状态', '耗时', '操作人']}
+          rows={logs.map((row) => [row.time, row.templateId, row.templateName, row.armId, row.relatedTask, <StatusText value={row.result} />, <StatusText value={row.receiptStatus} />, row.duration, row.operator])}
+          className="arm-record-table"
+        />
+      </section>
+    </div>
+  );
+}
+
+function TeachingSummaryStrip({ activeFilter, stats, onSelect }) {
+  const items = [
+    { label: '示教点总数', value: stats.total, filter: '全部' },
+    { label: '开门点', value: stats.door, filter: '开门点', tone: 'info' },
+    { label: '抓取点', value: stats.pick, filter: '抓取点' },
+    { label: '放料点', value: stats.place, filter: '放料点' },
+    { label: '复位点', value: stats.reset, filter: '复位点' },
+    { label: '未校验', value: stats.unverified, filter: '未校验', tone: stats.unverified ? 'warn' : 'ok' },
+    { label: '已启用', value: stats.enabled, filter: '已启用', tone: 'ok' },
+  ];
+  return <SummaryStrip items={items.map((item) => ({ ...item, active: activeFilter === item.filter, onClick: () => onSelect(item.filter) }))} />;
+}
+
+function TeachingPointCard({ point, selected, onSelect }) {
+  return (
+    <button className={`arm-list-card ${selected ? 'selected' : ''}`} type="button" onClick={onSelect}>
+      <div className="arm-list-card-head"><strong>{point.pointId}</strong><StatusText value={point.verified ? '已校验' : '未校验'} /></div>
+      <div className="arm-list-card-type">{point.pointName}｜{point.pointType}</div>
+      <div className="arm-list-card-status"><StatusText value={point.enabled ? '已启用' : '未启用'} /><span>{point.armId}</span></div>
+      <div className="arm-list-card-meta"><span>{point.relatedDevice}</span><time>{point.updatedAt}</time></div>
+    </button>
+  );
+}
+
+function TeachingSafetyTips({ point, relatedTemplates }) {
+  const tips = [];
+  if (relatedTemplates.length) tips.push(`当前点位已被“${relatedTemplates.map((item) => item.templateName).join('、')}”引用，修改后会影响 ${point.relatedTaskStep}。`);
+  if (!point.verified) tips.push('当前点位未校验，不能用于正式任务。');
+  const arm = robotArms.find((item) => item.armId === point.armId);
+  if ((arm?.onlineStatus ?? arm?.online) !== '在线') tips.push('当前机械臂离线，无法执行动作预览。');
+  return (
+    <div className="arm-action-chain">
+      <div className="arm-block-title">安全提示</div>
+      <div className="arm-safety-list">
+        {(tips.length ? tips : ['当前点位已校验，可用于动作模板。']).map((tip) => <div className="arm-safety-row" key={tip}><span>{tip}</span></div>)}
+      </div>
+    </div>
+  );
+}
+
+function TemplateSummaryStrip({ activeFilter, stats, onSelect }) {
+  const items = [
+    { label: '模板总数', value: stats.total, filter: '全部' },
+    { label: '已启用', value: stats.enabled, filter: '已启用', tone: 'ok' },
+    { label: '未启用', value: stats.disabled, filter: '未启用' },
+    { label: '开门模板', value: stats.door, filter: '开门', tone: 'info' },
+    { label: '抓取模板', value: stats.pick, filter: '抓取' },
+    { label: '放料模板', value: stats.place, filter: '放料' },
+    { label: '异常模板', value: stats.bad, filter: '异常', tone: stats.bad ? 'bad' : 'ok' },
+  ];
+  return <SummaryStrip items={items.map((item) => ({ ...item, active: activeFilter === item.filter, onClick: () => onSelect(item.filter) }))} />;
+}
+
+function TemplateCard({ points, selected, template, onSelect }) {
+  const issue = getTemplateHasConfigIssue(template, points);
+  return (
+    <button className={`arm-list-card ${selected ? 'selected' : ''}`} type="button" onClick={onSelect}>
+      <div className="arm-list-card-head"><strong>{template.templateId}</strong><StatusText value={issue ? '配置异常' : template.enabled ? '已启用' : '未启用'} /></div>
+      <div className="arm-list-card-type">{template.templateName}｜{template.actionType}</div>
+      <div className="arm-list-card-status"><span>{template.armId}</span><span>{template.stepCount} 步</span></div>
+      <div className="arm-list-card-meta"><span>{template.relatedTaskType}</span><time>{template.updatedAt}</time></div>
+    </button>
+  );
+}
+
+function getTeachingPointStats(points) {
+  return {
+    total: points.length,
+    door: points.filter((point) => point.pointType === '开门点').length,
+    pick: points.filter((point) => point.pointType === '抓取点').length,
+    place: points.filter((point) => point.pointType === '放料点').length,
+    reset: points.filter((point) => point.pointType === '复位点').length,
+    unverified: points.filter((point) => !point.verified).length,
+    enabled: points.filter((point) => point.enabled).length,
+  };
+}
+
+function filterTeachingPoints(points, filter, keyword) {
+  const text = keyword.trim().toLowerCase();
+  return points.filter((point) => {
+    const matchesKeyword = !text || [point.pointId, point.pointName, point.armId, point.relatedDevice, point.pointType].some((value) => String(value).toLowerCase().includes(text));
+    const matchesFilter =
+      filter === '全部' ||
+      point.pointType === filter ||
+      (filter === '已启用' && point.enabled) ||
+      (filter === '未校验' && !point.verified);
+    return matchesKeyword && matchesFilter;
+  });
+}
+
+function getTemplatesUsingPoint(templates, pointId) {
+  return templates.filter((template) => template.steps?.some((step) => step.targetTeachingPoint === pointId) || template.usedByTemplates?.includes(pointId));
+}
+
+function getTeachingPoseParams(point) {
+  const jointValues = String(point.jointAngles).match(/-?\d+/g) ?? [];
+  const endValues = String(point.endPose).match(/[XYZRxyz][a-z]?\s*-?\d+/g) ?? [];
+  const fallback = ['X -', 'Y -', 'Z -', 'Rx -', 'Ry -', 'Rz -'];
+  const poseValues = endValues.length ? endValues : fallback;
+  return [
+    ...[1, 2, 3, 4, 5, 6].map((index) => ({ label: `关节 ${index} 角度`, value: jointValues[index - 1] ? `${jointValues[index - 1]}°` : '-' })),
+    ...poseValues.slice(0, 6).map((value) => {
+      const [label, number] = value.split(/\s+/);
+      return { label: label.toUpperCase(), value: number ?? '-' };
+    }),
+    { label: '末端工具状态', value: point.toolState },
+  ];
+}
+
+function getTemplateStats(templates, points) {
+  return {
+    total: templates.length,
+    enabled: templates.filter((template) => template.enabled).length,
+    disabled: templates.filter((template) => !template.enabled).length,
+    door: templates.filter((template) => template.actionType === '开门').length,
+    pick: templates.filter((template) => template.actionType === '抓取').length,
+    place: templates.filter((template) => template.actionType === '放料').length,
+    bad: templates.filter((template) => getTemplateHasConfigIssue(template, points)).length,
+  };
+}
+
+function filterTemplates(templates, points, filter, keyword) {
+  const text = keyword.trim().toLowerCase();
+  return templates.filter((template) => {
+    const matchesKeyword = !text || [template.templateId, template.templateName, template.armId, template.actionType, template.relatedTaskType].some((value) => String(value).toLowerCase().includes(text));
+    const matchesFilter =
+      filter === '全部' ||
+      template.actionType === filter ||
+      (filter === '已启用' && template.enabled) ||
+      (filter === '未启用' && !template.enabled) ||
+      (filter === '异常' && getTemplateHasConfigIssue(template, points));
+    return matchesKeyword && matchesFilter;
+  });
+}
+
+function getTemplateHasConfigIssue(template, points) {
+  return template.steps?.some((step) => getStepConfigStatus(step, points) !== '已配置') ?? false;
+}
+
+function getStepConfigStatus(step, points) {
+  const targetPoint = points.find((point) => point.pointId === step.targetTeachingPoint);
+  if (step.targetTeachingPoint !== '-' && !targetPoint) return '未配置';
+  if (targetPoint && !targetPoint.verified) return '异常';
+  if (step.relatedVisionMarker !== '-' && !step.relatedVisionMarker) return '未配置';
+  return step.configStatus === '异常' && targetPoint?.verified ? '已配置' : step.configStatus;
+}
+
+function getTemplateSafetyRows(template, points, arm) {
+  const hasConfigIssue = getTemplateHasConfigIssue(template, points);
+  return [
+    { label: '机械臂在线', pass: (arm?.onlineStatus ?? arm?.online) === '在线' },
+    { label: '急停未触发', pass: arm?.emergencyStatus === '未触发' },
+    { label: '目标点位已校验', pass: !template.steps?.some((step) => points.find((point) => point.pointId === step.targetTeachingPoint && !point.verified)) },
+    { label: '视觉标识已配置', pass: !template.steps?.some((step) => step.actionType.includes('视觉') && step.relatedVisionMarker === '-') },
+    { label: '末端工具匹配', pass: true },
+    { label: '任务允许执行', pass: !hasConfigIssue },
+  ].map((row) => ({ ...row, status: row.pass ? '满足' : '不满足' }));
+}
+
+function getTemplateBlockedReason(currentUser, template, safetyRows, arm) {
+  if (!currentUser) return '无权限：请登录后再执行该操作';
+  if (!can(currentUser, PERMISSIONS.TASK_ACTION)) return permissionReason(currentUser, '执行模板');
+  if ((arm?.onlineStatus ?? arm?.online) !== '在线') return '机械臂在线 不满足';
+  if (arm?.emergencyStatus === '已触发') return '急停未触发 不满足';
+  const failed = safetyRows.find((row) => row.status !== '满足');
+  return failed ? `${failed.label} 不满足` : '';
+}
+
+function ArmControlSummary({ arm, safeCount, totalCount }) {
+  const task = arm.currentTask && arm.currentTask !== '无' ? arm.currentTask : '无当前任务';
+  return (
+    <div className="arm-control-summary-card">
+      <span>当前控制对象：</span>
+      <strong>{arm.armId}</strong>
+      <span>｜{arm.type}</span>
+      <StatusText value={arm.runStatus} />
+      <span>｜{task}</span>
+      <span>｜当前动作：{arm.currentAction || '-'}</span>
+      <span className={safeCount === totalCount ? 'summary-safe ok' : 'summary-safe blocked'}>安全条件 {safeCount}/{totalCount} 满足</span>
+    </div>
+  );
+}
+
+function ArmSummaryStrip({ activeFilter = '', stats, onSelect }) {
+  const items = [
+    { label: '机械臂总数', value: stats.total, filter: '全部' },
+    { label: '在线', value: stats.online, filter: '在线', tone: 'ok' },
+    { label: '运行中', value: stats.running, filter: '运行中', tone: 'ok' },
+    { label: '待机', value: stats.standby, filter: '待机' },
+    { label: '异常', value: stats.abnormal, filter: '异常', tone: stats.abnormal ? 'bad' : 'ok' },
+    { label: '急停', value: stats.emergency, filter: '急停', tone: stats.emergency ? 'bad' : 'ok' },
+    { label: '执行任务', value: stats.tasking, filter: '执行任务', tone: 'info' },
+  ];
+  return <SummaryStrip items={items.map((item) => ({ ...item, active: activeFilter === item.filter, onClick: onSelect ? () => onSelect(item.filter) : undefined }))} />;
+}
+
+function ArmCurrentStatusGroups({ arm }) {
+  const groups = [
+    {
+      title: '运行状态',
+      rows: [
+        ['控制模式', arm.controlMode],
+        ['运行状态', <StatusText value={arm.runStatus} />],
+        ['急停状态', <StatusText value={arm.emergencyStatus} />],
+        ['报警状态', <StatusText value={arm.alarmStatus} />],
+      ],
+    },
+    {
+      title: '任务与动作',
+      rows: [
+        ['当前任务', arm.currentTask || '无'],
+        ['当前动作', arm.currentAction || '-'],
+        ['更新时间', arm.updatedAt],
+      ],
+    },
+    {
+      title: '末端与姿态',
+      rows: [
+        ['末端工具', getArmToolLabel(arm)],
+        ['夹爪状态', getToolOpenCloseStatus(arm.toolId)],
+        ['当前姿态', arm.pose],
+      ],
+    },
+  ];
+  return (
+    <div className="arm-state-groups">
+      {groups.map((group) => (
+        <div className="arm-state-group" key={group.title}>
+          <div className="arm-state-group-title">{group.title}</div>
+          {group.rows.map(([label, value]) => <Info key={label} label={label} value={value} />)}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ArmListCard({ arm, selected, onSelect }) {
+  return (
+    <button className={`arm-list-card ${selected ? 'selected' : ''}`} type="button" onClick={onSelect}>
+      <div className="arm-list-card-head">
+        <strong>{arm.armId}</strong>
+      </div>
+      <div className="arm-list-card-type">{arm.type}</div>
+      <div className="arm-list-card-status"><StatusText value={arm.runStatus} /><span>{arm.currentTask}</span></div>
+      <div className="arm-list-card-meta"><span>{getArmToolTypeLabel(arm)}</span><time>{arm.updatedAt}</time></div>
+    </button>
+  );
+}
+
+function ArmMiniCard({ arm, onSelect }) {
+  return (
+    <button className="arm-mini-card" type="button" onClick={onSelect}>
+      <strong>{arm.armId}</strong>
+      <span>{arm.alarmStatus}</span>
+      <StatusText value={arm.runStatus} />
+    </button>
+  );
+}
+
+function ArmActionStepRow({ step }) {
+  return (
+    <div className={`arm-chain-row ${step.status === '执行中' ? 'active' : ''}`}>
+      <span>第 {step.stepNo} 步</span>
+      <strong>{step.actionName}</strong>
+      <StatusText value={step.status} />
+    </div>
+  );
+}
+
+function ArmOperationPanel({ blockedReason, onAction }) {
+  const groups = [
+    { title: '基础控制', actions: ['回零', '暂停', '继续', '停止', '复位'] },
+    { title: '末端工具', actions: ['打开夹爪', '关闭夹爪'] },
+    { title: '任务动作', actions: ['移动到开门点', '执行开门动作', '执行抓取动作', '执行放料动作'] },
+  ];
+  return (
+    <div className="arm-operation-panel">
+      <div className="arm-block-title">控制操作</div>
+      {groups.map((group) => (
+        <div className="arm-operation-group" key={group.title}>
+          <span>{group.title}</span>
+          <div className="button-row arm-operation-buttons">
+            {group.actions.map((action) => (
+              <button key={action} type="button" disabled={Boolean(blockedReason)} title={blockedReason || undefined} onClick={() => onAction(action)}>
+                {action}
+              </button>
+            ))}
+          </div>
+        </div>
+      ))}
+      {blockedReason && <div className="action-disabled-reason">{blockedReason}</div>}
+    </div>
+  );
+}
+
+function ArmReceiptPanel({ receipt, onOpen }) {
+  return (
+    <div className="arm-receipt-panel">
+      <div className="arm-block-title">指令回执</div>
+      <div className="detail-list dense">
+        <Info label="最近指令" value={receipt?.commandName ?? '-'} />
+        <Info label="下发结果" value={<StatusText value={receipt?.sendResult ?? '-'} />} />
+        <Info label="回执状态" value={<StatusText value={receipt?.receiptStatus ?? '-'} />} />
+        <Info label="耗时" value={receipt?.duration ?? '-'} />
+        <Info label="关联任务" value={receipt?.relatedTask ?? '-'} />
+        <Info label="更新时间" value={receipt?.sendTime ?? '-'} />
+      </div>
+      <button className="table-link-button" type="button" disabled={!receipt} onClick={onOpen}>查看回执</button>
+    </div>
+  );
+}
+
+function ArmCurrentRecordTable({ rows }) {
+  return (
+    <DataTable
+      columns={['时间', '动作', '目标点位', '结果', '回执状态', '关联任务', '操作人']}
+      rows={rows.map((row) => [
+        row.time,
+        row.actionName ?? row.action,
+        row.targetPoint ?? '-',
+        <StatusText value={row.result ?? row.status ?? '-'} />,
+        <StatusText value={row.receiptStatus ?? row.status ?? '-'} />,
+        row.relatedTask ?? row.taskId,
+        row.operator ?? '-',
+      ])}
+      className="arm-record-table"
+    />
+  );
+}
+
+function ArmRecordTable({ rows }) {
+  return (
+    <DataTable
+      columns={['时间', '机械臂', '动作', '目标点位', '结果', '回执状态', '关联任务', '操作人']}
+      rows={rows.map((row) => [
+        row.time,
+        row.armId,
+        row.actionName ?? row.action,
+        row.targetPoint ?? '-',
+        <StatusText value={row.result ?? row.status ?? '-'} />,
+        <StatusText value={row.receiptStatus ?? row.status ?? '-'} />,
+        row.relatedTask ?? row.taskId,
+        row.operator ?? '-',
+      ])}
+      className="arm-record-table"
+    />
+  );
+}
+
+function getArmStats(arms) {
+  return {
+    total: arms.length,
+    online: arms.filter((arm) => (arm.onlineStatus ?? arm.online) === '在线').length,
+    running: arms.filter((arm) => arm.runStatus === '运行中').length,
+    standby: arms.filter((arm) => arm.runStatus === '待机').length,
+    abnormal: arms.filter((arm) => arm.alarmStatus !== '无报警' || arm.runStatus === '异常').length,
+    emergency: arms.filter((arm) => arm.emergencyStatus === '已触发').length,
+    tasking: arms.filter((arm) => arm.currentTask && arm.currentTask !== '无').length,
+  };
+}
+
+function filterArmsBySummary(arms, filter) {
+  if (filter === '在线') return arms.filter((arm) => (arm.onlineStatus ?? arm.online) === '在线');
+  if (filter === '运行中') return arms.filter((arm) => arm.runStatus === '运行中');
+  if (filter === '待机') return arms.filter((arm) => arm.runStatus === '待机');
+  if (filter === '异常') return arms.filter((arm) => arm.alarmStatus !== '无报警' || arm.runStatus === '异常');
+  if (filter === '急停') return arms.filter((arm) => arm.emergencyStatus === '已触发');
+  if (filter === '执行任务') return arms.filter((arm) => arm.currentTask && arm.currentTask !== '无');
+  return arms;
+}
+
+function getArmToolLabel(arm) {
+  const tool = endEffectors.find((item) => item.toolId === arm.toolId);
+  return tool ? `${tool.toolType} / ${tool.installStatus}` : arm.toolStatus;
+}
+
+function getArmToolTypeLabel(arm) {
+  return endEffectors.find((item) => item.toolId === arm.toolId)?.toolType ?? arm.toolStatus;
+}
+
+function getToolOpenCloseStatus(toolId) {
+  return endEffectors.find((item) => item.toolId === toolId)?.openCloseStatus ?? '-';
+}
+
+function getArmSafetyRows(arm) {
+  const visionResult = visionResults.find((row) => row.relatedTask === arm.currentTask || row.visionTaskId === 'VT-001');
+  const chassisReady = robotStatus.online === '在线' && robotStatus.communicationStatus === '正常' && robotStatus.chassis.obstacleStatus === '通道清空';
+  const rows = [
+    { label: '机械臂在线', pass: (arm.onlineStatus ?? arm.online) === '在线' },
+    { label: '急停未触发', pass: arm.emergencyStatus === '未触发' },
+    { label: '底盘已到位', pass: chassisReady },
+    { label: '视觉识别成功', pass: visionResult?.result === '通过' },
+    { label: '目标点位可达', pass: arm.armId === 'ARM-001' },
+    { label: '夹爪状态正常', pass: !String(arm.toolStatus).includes('未闭合') && arm.alarmStatus === '无报警' },
+    { label: '当前任务允许操作', pass: arm.controlMode !== '人工接管' },
+  ];
+  return rows.map((row) => ({ ...row, status: row.pass ? '满足' : '不满足' }));
+}
+
+function getArmPermissionStatus(currentUser) {
+  if (!currentUser) return { ok: false, message: '权限状态：未登录，执行类操作不可用' };
+  if (!can(currentUser, PERMISSIONS.TASK_ACTION)) return { ok: false, message: `权限状态：${permissionReason(currentUser, '机械臂操作')}` };
+  return { ok: true, message: '权限状态：当前用户可执行机械臂操作' };
+}
+
+function getArmActionBlockedReason(currentUser, arm, safetyRows) {
+  if (!currentUser) return '无权限：请登录后再执行该操作';
+  if (!can(currentUser, PERMISSIONS.TASK_ACTION)) return permissionReason(currentUser, '机械臂动作');
+  if ((arm.onlineStatus ?? arm.online) !== '在线') return '机械臂在线 不满足';
+  if (arm.emergencyStatus === '已触发') return '急停未触发 不满足';
+  if (arm.controlMode === '人工接管') return '当前任务人工接管，只允许查看';
+  const failed = safetyRows.find((row) => row.status !== '满足');
+  return failed ? `${failed.label} 不满足` : '';
+}
+
+function getArmActionTargetPoint(action) {
+  if (action === '移动到开门点' || action === '执行开门动作') return 'DOOR-P01';
+  if (action === '执行抓取动作') return 'HANDLE-P01';
+  if (action === '执行放料动作') return 'PLACE-P01';
+  if (action === '回零' || action === '复位') return 'HOME';
+  return '-';
+}
+
+function buildArmActionRecordExportRow(row) {
+  return {
+    时间: row.time,
+    机械臂: row.armId,
+    动作: row.actionName ?? row.action,
+    目标点位: row.targetPoint ?? '-',
+    结果: row.result ?? row.status ?? '-',
+    回执状态: row.receiptStatus ?? row.status ?? '-',
+    关联任务: row.relatedTask ?? row.taskId,
+    操作人: row.operator ?? '-',
+  };
+}
+
+function buildArmCurrentActionRecordExportRow(row) {
+  return {
+    时间: row.time,
+    动作: row.actionName ?? row.action,
+    目标点位: row.targetPoint ?? '-',
+    结果: row.result ?? row.status ?? '-',
+    回执状态: row.receiptStatus ?? row.status ?? '-',
+    关联任务: row.relatedTask ?? row.taskId,
+    操作人: row.operator ?? '-',
+  };
+}
+
+function VisionRecognitionPage({ activeVisionTab, currentUser, selectedVisionTaskId, setActiveVisionTab, setSelectedVisionTaskId }) {
+  const [results, setResults] = useState(visionResults);
+  const [notice, setNotice] = useState('');
+  const runVision = (task = visionTasks[0]) => {
+    const row = { time: formatNowTime(), cameraId: task.cameraId, visionTaskId: task.visionTaskId, object: '模拟目标', result: '通过', confidence: '95%', duration: '132 ms', relatedTask: task.relatedRobotTask, relatedDevice: task.relatedDevice, screenshot: `mock://vision/${task.cameraId}/${Date.now()}`, processStatus: '已上传' };
+    setResults((rows) => [row, ...rows].slice(0, 12));
+    setSelectedVisionTaskId(task.visionTaskId);
+    setNotice(`已执行识别：${task.taskName}`);
+    window.setTimeout(() => setNotice(''), 1800);
+  };
+
+  if (activeVisionTab === 'cameras') return <CameraConfigPage runVision={runVision} />;
+  if (activeVisionTab === 'tasks') return <VisionTaskPage selectedVisionTaskId={selectedVisionTaskId} setSelectedVisionTaskId={setSelectedVisionTaskId} runVision={runVision} notice={notice} />;
+  if (activeVisionTab === 'results') return <VisionResultPage results={results} />;
+  if (activeVisionTab === 'models') return <VisionModelPage />;
+  return <VisionOverviewPage results={results} runVision={runVision} setActiveVisionTab={setActiveVisionTab} setSelectedVisionTaskId={setSelectedVisionTaskId} />;
+}
+
+function VisionOverviewPage({ results, runVision, setActiveVisionTab, setSelectedVisionTaskId }) {
+  const stats = {
+    cameraTotal: cameras.length,
+    online: cameras.filter((camera) => camera.online === '在线').length,
+    running: visionTasks.filter((task) => task.status === '识别中').length,
+    abnormal: visionTasks.filter((task) => task.status === '异常').length,
+    today: results.length,
+    badResults: results.filter((row) => ['未通过', '未识别', '低置信度', '异常'].includes(row.result)).length,
+    avgDuration: '139 ms',
+  };
+  return (
+    <div className="page-grid vision-overview-grid">
+      <section className="panel vision-summary-panel">
+        <SectionTitle icon={MonitorCog} title="视觉总览" />
+        <SummaryStrip items={[{ label: '相机总数', value: stats.cameraTotal }, { label: '在线相机', value: stats.online, tone: 'ok' }, { label: '识别中', value: stats.running }, { label: '识别异常', value: stats.abnormal, tone: stats.abnormal ? 'bad' : 'ok' }, { label: '今日识别次数', value: stats.today }, { label: '异常结果数', value: stats.badResults, tone: stats.badResults ? 'warn' : 'ok' }, { label: '平均识别耗时', value: stats.avgDuration }]} />
+      </section>
+      <section className="panel vision-recent-panel"><SectionTitle icon={History} title="最近识别结果" /><VisionResultTable rows={results.slice(0, 5)} /></section>
+      <section className="panel vision-exception-panel"><SectionTitle icon={AlertTriangle} title="异常识别任务" /><DataTable columns={['任务编号', '任务名称', '相机', '状态', '操作']} rows={visionTasks.filter((task) => task.status === '异常').map((task) => [task.visionTaskId, task.taskName, task.cameraId, <StatusText value={task.status} />, <button type="button" onClick={() => { setSelectedVisionTaskId(task.visionTaskId); setActiveVisionTab('tasks'); }}>查看</button>])} /></section>
+      <section className="panel vision-camera-panel"><SectionTitle icon={Database} title="相机状态" /><DataTable compact columns={['相机', '位置', '在线状态', '更新时间']} rows={cameras.map((camera) => [camera.cameraId, camera.position, <StatusText value={camera.online} />, camera.updatedAt])} /></section>
+      <section className="panel vision-model-panel"><SectionTitle icon={Cpu} title="模型运行状态" /><DataTable compact columns={['模型', '版本', '部署状态', '准确率']} rows={visionModels.map((model) => [model.modelName, model.version, <StatusText value={model.deployStatus} />, model.accuracy])} /></section>
+    </div>
+  );
+}
+
+function CameraConfigPage({ runVision }) {
+  const [notice, setNotice] = useState('');
+  const run = (message, camera) => {
+    setNotice(`${message}：${camera.cameraId}`);
+    window.setTimeout(() => setNotice(''), 1600);
+  };
+  return (
+    <section className="panel page-full camera-config-page">
+      <SectionTitle icon={Database} title="相机配置" />
+      <DataTable columns={['相机编号', '相机名称', '安装位置', '关联设备 / 工位', 'IP 地址', '分辨率', '帧率', '曝光', '光源配置', '在线状态', '更新时间', '操作']} rows={cameras.map((camera) => [camera.cameraId, camera.cameraName, camera.position, camera.relatedDevice, camera.ip, camera.resolution, camera.fps, camera.exposure, camera.light, <StatusText value={camera.online} />, camera.updatedAt, <div className="table-actions"><button type="button" onClick={() => run('查看画面', camera)}>查看画面</button><button type="button" onClick={() => runVision(visionTasks.find((task) => task.cameraId === camera.cameraId) ?? visionTasks[0])}>测试拍照</button><button type="button" onClick={() => run('编辑配置', camera)}>编辑配置</button><button type="button" onClick={() => run(camera.online === '在线' ? '停用' : '启用', camera)}>{camera.online === '在线' ? '停用' : '启用'}</button></div>])} />
+      {notice && <div className="inline-feedback">{notice}</div>}
+    </section>
+  );
+}
+
+function VisionTaskPage({ selectedVisionTaskId, setSelectedVisionTaskId, runVision, notice }) {
+  return (
+    <section className="panel page-full vision-task-page">
+      <SectionTitle icon={ClipboardList} title="识别任务" />
+      <DataTable columns={['识别任务编号', '任务名称', '识别类型', '关联相机', '关联设备', '关联工位', '关联机器人任务', '模型版本', '触发方式', '状态', '操作']} rows={visionTasks.map((task) => [task.visionTaskId, task.taskName, task.recognitionType, task.cameraId, task.relatedDevice, task.workstation, task.relatedRobotTask, task.modelVersion, task.triggerMode, <StatusText value={task.status} />, <button type="button" onClick={() => runVision(task)}>开始识别</button>])} rowKeys={visionTasks.map((task) => task.visionTaskId)} selectedKey={selectedVisionTaskId} onRowClick={setSelectedVisionTaskId} />
+      {notice && <div className="inline-feedback">{notice}</div>}
+    </section>
+  );
+}
+
+function VisionResultPage({ results }) {
+  return (
+    <section className="panel page-full vision-result-page">
+      <SectionTitle icon={History} title="识别结果" />
+      <VisionResultTable rows={results} />
+    </section>
+  );
+}
+
+function VisionResultTable({ rows }) {
+  return <DataTable columns={['时间', '相机', '识别任务', '识别对象', '结果', '置信度', '耗时', '关联任务', '关联设备', '截图', '处理状态']} rows={rows.map((row) => [row.time, row.cameraId, row.visionTaskId, row.object, <StatusText value={row.result} />, row.confidence, row.duration, row.relatedTask, row.relatedDevice, row.screenshot, <StatusText value={row.processStatus} />])} />;
+}
+
+function VisionModelPage() {
+  const [notice, setNotice] = useState('');
+  const run = (action, model) => {
+    setNotice(`${action}：${model.modelName}`);
+    window.setTimeout(() => setNotice(''), 1600);
+  };
+  return (
+    <section className="panel page-full vision-model-page">
+      <SectionTitle icon={Cpu} title="模型管理" />
+      <DataTable columns={['模型名称', '模型类型', '版本号', '适用任务', '部署状态', '更新时间', '准确率', '备注', '操作']} rows={visionModels.map((model) => [model.modelName, model.modelType, model.version, model.task, <StatusText value={model.deployStatus} />, model.updatedAt, model.accuracy, model.remark, <div className="table-actions">{['查看', '启用', '停用', '切换版本'].map((action) => <button key={action} type="button" onClick={() => run(action, model)}>{action}</button>)}</div>])} />
+      {notice && <div className="inline-feedback">{notice}</div>}
+    </section>
+  );
+}
+function RobotMonitorPage({ navigation, setLogFilter, setLogTypeFilter }) {
+  const [selectedRobotId, setSelectedRobotId] = useState(robotStatus.robotId);
+  const [manualMode, setManualMode] = useState(false);
+  const [speedLevel, setSpeedLevel] = useState('低速');
+  const selectedRobot = robots.find((robot) => robot.robotId === selectedRobotId) ?? robots[0];
+  const status = selectedRobotId === robotStatus.robotId ? robotStatus : { ...robotStatus, ...selectedRobot, online: selectedRobot.status, speed: '0 m/s', mode: selectedRobot.mode };
+  const robotLogs = [...telemetryLogs, ...auditLogs]
+    .filter((row) => ['机器人', '底盘', '巡检', '建图', '地图', '路线'].includes(row.logType) || row.deviceId === status.robotId)
+    .slice(0, 8);
+  const openLogs = () => {
+    setLogFilter(status.robotId);
+    setLogTypeFilter('全部');
+    navigation?.navigateToLogs(status.robotId, '全部');
+  };
+
+  return (
+    <div className="page-grid robot-monitor-grid">
+      <section className="panel robot-status-panel">
+        <SectionTitle icon={MonitorCog} title="机器人状态总览" action={<SegmentedFilter options={robots.map((robot) => robot.robotId)} value={selectedRobotId} onChange={setSelectedRobotId} />} />
+        <SummaryStrip
+          items={[
+            { label: '机器人编号', value: status.robotId },
+            { label: '在线状态', value: status.online, tone: status.online === '在线' ? 'ok' : 'bad' },
+            { label: '当前任务', value: status.currentTask },
+            { label: '电量', value: `${status.battery}%`, tone: status.battery < 30 ? 'bad' : 'ok' },
+            { label: '当前模式', value: status.mode },
+          ]}
+        />
+      </section>
+      <section className="panel robot-map-panel">
+        <SectionTitle icon={Database} title="地图与当前位置" action={status.currentMap} />
+        <RobotMapCanvas robot={status} activeRouteId="R001" />
+        <div className="detail-list dense robot-map-detail">
+          <Info label="当前地图" value={status.currentMap} />
+          <Info label="当前点位" value={status.currentPoint} />
+          <Info label="当前路线" value={status.targetRoute} />
+          <Info label="速度" value={status.speed} />
+        </div>
+      </section>
+      <section className="panel robot-chassis-panel">
+        <SectionTitle icon={Cpu} title="底盘状态" />
+        <div className="robot-status-cards">
+          {[
+            ['定位状态', status.localizationStatus],
+            ['通信状态', status.communicationStatus],
+            ['激光雷达', status.lidarStatus],
+            ['急停状态', status.emergencyStatus],
+            ['导航状态', status.chassis.navStatus],
+            ['建图状态', status.chassis.mappingStatus],
+            ['充电状态', status.chassis.chargeStatus],
+            ['避障状态', status.chassis.obstacleStatus],
+          ].map(([label, value]) => (
+            <div className="robot-status-card" key={label}>
+              <span>{label}</span>
+              <StatusText value={value} />
+            </div>
+          ))}
+        </div>
+      </section>
+      <section className="panel robot-manual-panel">
+        <SectionTitle icon={TerminalSquare} title="手动控制" action={manualMode ? '手动接管中' : '待接管'} />
+        <div className="manual-control-pad">
+          <button type="button">前进</button>
+          <div className="manual-middle-row">
+            <button type="button">左转</button>
+            <button className="danger" type="button">停止</button>
+            <button type="button">右转</button>
+          </div>
+          <button type="button">后退</button>
+        </div>
+        <div className="segmented-filter manual-speed-filter">
+          {['低速', '中速', '高速'].map((level) => (
+            <button className={speedLevel === level ? 'active' : ''} key={level} type="button" onClick={() => setSpeedLevel(level)}>{level}</button>
+          ))}
+        </div>
+        <div className="button-row">
+          <button type="button" onClick={() => setManualMode((value) => !value)}>{manualMode ? '退出接管' : '启用接管'}</button>
+          <button type="button">返航充电</button>
+          <button type="button" onClick={openLogs}>查看日志</button>
+        </div>
+      </section>
+      <section className="panel robot-log-panel">
+        <SectionTitle icon={History} title="机器人运行日志" action="最近记录" />
+        <SimpleLogTable rows={robotLogs} />
+      </section>
+    </div>
+  );
+}
+
+function MapManagementPage({ activeMapTab, currentUser, navigation, setActiveMapTab, setSelectedTaskId }) {
+  const [localMaps, setLocalMaps] = useState(maps);
+  const [selectedMapId, setSelectedMapId] = useState(maps.find((map) => map.isDefault)?.mapId ?? maps[0]?.mapId);
+  const selectedMap = localMaps.find((map) => map.mapId === selectedMapId) ?? localMaps[0];
+  const setDefaultMap = (mapId) => {
+    setLocalMaps((rows) => rows.map((map) => ({ ...map, isDefault: map.mapId === mapId })));
+    setSelectedMapId(mapId);
+  };
+  const deleteMap = (mapId) => {
+    setLocalMaps((rows) => rows.filter((map) => map.mapId !== mapId || map.isDefault));
+  };
+
+  if (activeMapTab === 'editor') return <MapEditorPage selectedMap={selectedMap} />;
+  if (activeMapTab === 'routes') return <RouteManagementPage navigation={navigation} setSelectedTaskId={setSelectedTaskId} />;
+  if (activeMapTab === 'mapping') return <AutoMappingPage />;
+  return <MapOverviewPage currentUser={currentUser} mapsForView={localMaps} onDelete={deleteMap} onSelect={setSelectedMapId} onSetDefault={setDefaultMap} selectedMapId={selectedMapId} setActiveMapTab={setActiveMapTab} />;
+}
+
+function MapOverviewPage({ currentUser, mapsForView, onDelete, onSelect, onSetDefault, selectedMapId, setActiveMapTab }) {
+  return (
+    <section className="panel page-full map-overview-page">
+      <SectionTitle
+        icon={Database}
+        title="地图总览"
+        action={<ExportButton pageName="地图管理" columns={['地图编号', '地图名称', '默认地图', '尺寸', '分辨率', '点位数量', '路线数量', '更新时间']} getRows={() => mapsForView.map((map) => ({ mapId: map.mapId, mapName: map.mapName, isDefault: map.isDefault ? '是' : '否', size: `${map.width}m x ${map.height}m`, resolution: `${map.resolution}m`, pointCount: map.pointCount, routeCount: map.routeCount, updatedAt: map.updatedAt }))} currentUser={currentUser} />}
+      />
+      <DataTable
+        columns={['地图编号', '默认', '地图名称', '地图尺寸', '分辨率', '点位', '路线', '更新时间', '操作']}
+        rows={mapsForView.map((map) => [
+          map.mapId,
+          map.isDefault ? '默认地图' : '-',
+          map.mapName,
+          `${map.width}m x ${map.height}m`,
+          `${map.resolution}m`,
+          map.pointCount,
+          map.routeCount,
+          map.updatedAt,
+          <div className="table-actions">
+            <button type="button" onClick={() => { onSelect(map.mapId); setActiveMapTab('editor'); }}>查看</button>
+            <button type="button" disabled={map.isDefault} onClick={() => onSetDefault(map.mapId)}>设为默认</button>
+            <button className="danger" type="button" disabled={map.isDefault} onClick={() => onDelete(map.mapId)}>删除</button>
+          </div>,
+        ])}
+        rowKeys={mapsForView.map((map) => map.mapId)}
+        selectedKey={selectedMapId}
+        onRowClick={onSelect}
+      />
+    </section>
+  );
+}
+
+function MapEditorPage({ selectedMap }) {
+  const [tool, setTool] = useState('点位');
+  const [saveMessage, setSaveMessage] = useState('');
+  const layerStats = [
+    ['区域', mapAreas.length],
+    ['点位', mapPoints.length],
+    ['路线', mapRoutes.length],
+    ['虚拟墙', mapVirtualWalls.length],
+    ['禁行区', mapNoGoAreas.length],
+    ['障碍物', mapObstacles.length],
+    ['门', mapDoors.length],
+    ['充电点', mapPoints.filter((point) => point.type === '充电点').length],
+  ];
+  const saveEdit = () => {
+    setSaveMessage(`已模拟保存：${selectedMap?.mapName ?? '当前地图'}`);
+    window.setTimeout(() => setSaveMessage(''), 1800);
+  };
+
+  return (
+    <div className="page-grid map-editor-grid">
+      <section className="panel map-canvas-panel">
+        <SectionTitle icon={Database} title="地图画布" action={selectedMap?.mapName ?? '当前地图'} />
+        <RobotMapCanvas editable activeRouteId="R001" robot={robotStatus} />
+      </section>
+      <section className="panel map-layer-panel">
+        <SectionTitle icon={TerminalSquare} title="编辑对象" action={tool} />
+        <SegmentedFilter options={['区域', '点位', '路线', '虚拟墙', '禁行区', '障碍物', '门', '充电点']} value={tool} onChange={setTool} />
+        <DataTable compact columns={['对象', '数量']} rows={layerStats.map(([label, count]) => [label, count])} />
+        <div className="button-row">
+          <button type="button" onClick={saveEdit}>保存编辑</button>
+          <button type="button">新增{tool}</button>
+        </div>
+        {saveMessage && <div className="inline-feedback">{saveMessage}</div>}
+      </section>
+    </div>
+  );
+}
+
+function RouteManagementPage({ navigation, setSelectedTaskId }) {
+  const [selectedRouteId, setSelectedRouteId] = useState(mapRoutes[0]?.routeId);
+  const [notice, setNotice] = useState('');
+  const getPointNames = (route) => route.pointSequence.map((pointId) => mapPoints.find((point) => point.pointId === pointId)?.name ?? pointId).join(' → ');
+  const startInspect = (route) => {
+    setSelectedTaskId?.('TASK-006');
+    setNotice(`已模拟发起巡检：${route.routeName}`);
+    window.setTimeout(() => setNotice(''), 1800);
+    navigation?.navigateToTask('TASK-006');
+  };
+
+  return (
+    <section className="panel page-full route-management-page">
+      <SectionTitle icon={ClipboardList} title="路线管理" action={`${mapRoutes.length} 条路线`} />
+      <DataTable
+        columns={['路线编号', '路线名称', '所属地图', '点位顺序', '执行模式', '预计耗时', '状态', '操作']}
+        rows={mapRoutes.map((route) => [
+          route.routeId,
+          route.routeName,
+          maps.find((map) => map.mapId === route.mapId)?.mapName ?? route.mapId,
+          getPointNames(route),
+          route.mode,
+          route.estimatedDuration,
+          <StatusText value={route.status} />,
+          <div className="table-actions">
+            <button type="button" onClick={() => setSelectedRouteId(route.routeId)}>查看</button>
+            <button type="button" onClick={() => setNotice(`已进入模拟编辑：${route.routeName}`)}>编辑</button>
+            <button className="danger" type="button" onClick={() => setNotice(`已模拟删除：${route.routeName}`)}>删除</button>
+            <button type="button" onClick={() => startInspect(route)}>发起巡检</button>
+          </div>,
+        ])}
+        rowKeys={mapRoutes.map((route) => route.routeId)}
+        selectedKey={selectedRouteId}
+        onRowClick={setSelectedRouteId}
+      />
+      {notice && <div className="inline-feedback">{notice}</div>}
+    </section>
+  );
+}
+
+function AutoMappingPage() {
+  const [task, setTask] = useState(mappingTasks[0]);
+  const [mapName, setMapName] = useState(mappingTasks[0]?.mapName ?? '车间A自动扫描地图');
+  const [logs, setLogs] = useState(mappingLogs);
+  const statusLabel = task.status;
+  const addLog = (message) => setLogs((rows) => [`${formatNowTime()} ${message}`, ...rows].slice(0, 8));
+  const patchTask = (patch, message) => {
+    setTask((current) => ({ ...current, ...patch, updatedAt: formatNowTime() }));
+    addLog(message);
+  };
+
+  return (
+    <div className="page-grid mapping-grid">
+      <section className="panel mapping-control-panel">
+        <SectionTitle icon={MonitorCog} title="自动建图控制" action={<StatusText value={statusLabel} />} />
+        <div className="settings-grid mapping-form-grid">
+          <label className="setting-item"><span>选择机器人底座</span><select value={task.robotId} onChange={(event) => patchTask({ robotId: event.target.value }, `已选择底座：${event.target.value}`)}>{robots.map((robot) => <option key={robot.robotId}>{robot.robotId}</option>)}</select><small>第一版仅模拟状态</small></label>
+          <label className="setting-item"><span>地图名称</span><input value={mapName} onChange={(event) => setMapName(event.target.value)} /><small>保存时写入 mock 状态</small></label>
+          <div className="setting-item"><span>建图状态</span><strong>{task.status}</strong><small>{task.mappingTaskId}</small></div>
+          <div className="setting-item"><span>建图进度</span><strong>{task.progress}%</strong><small>{task.resultStatus}</small></div>
+        </div>
+        <div className="button-row">
+          <button type="button" onClick={() => patchTask({ status: '建图中', progress: Math.max(task.progress, 24), resultStatus: '未保存', startedAt: task.startedAt === '-' ? formatNowTime() : task.startedAt }, '建图开始')}>开始建图</button>
+          <button type="button" onClick={() => patchTask({ status: '已暂停' }, '建图暂停')}>暂停建图</button>
+          <button type="button" onClick={() => patchTask({ status: '建图中', progress: Math.min(86, task.progress + 18) }, '建图继续')}>继续建图</button>
+          <button type="button" onClick={() => patchTask({ status: '已停止', progress: Math.max(task.progress, 72) }, '建图停止，生成轨迹预览')}>停止建图</button>
+          <button type="button" onClick={() => patchTask({ status: '已保存', progress: 100, resultStatus: '已保存', mapName }, `保存地图：${mapName}`)}>保存地图</button>
+        </div>
+      </section>
+      <section className="panel mapping-preview-panel">
+        <SectionTitle icon={Database} title="建图轨迹预览" action={`${task.progress}%`} />
+        <MappingPreviewSvg progress={task.progress} />
+      </section>
+      <section className="panel mapping-log-panel">
+        <SectionTitle icon={History} title="建图日志" />
+        <div className="mapping-log-list">
+          {logs.map((log) => <div key={log}>{log}</div>)}
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function RobotMapCanvas({ activeRouteId = 'R001', editable = false, robot = robotStatus }) {
+  const route = mapRoutes.find((item) => item.routeId === activeRouteId) ?? mapRoutes[0];
+  const routePoints = (route?.pointSequence ?? []).map((pointId) => mapPoints.find((point) => point.pointId === pointId)).filter(Boolean);
+  const routeLine = routePoints.map((point) => `${point.x},${point.y}`).join(' ');
+  return (
+    <div className={`robot-map-stage ${editable ? 'editable' : ''}`}>
+      <svg className="robot-map-svg" viewBox="0 0 620 430" role="img" aria-label="机器人地图">
+        <defs>
+          <pattern id="platform-map-grid" width="24" height="24" patternUnits="userSpaceOnUse">
+            <path d="M24 0H0V24" fill="none" stroke="#e5e7eb" strokeWidth="1" />
+          </pattern>
+        </defs>
+        <rect x="0" y="0" width="620" height="430" fill="url(#platform-map-grid)" />
+        {mapAreas.map((area) => <polygon className="map-area" key={area.areaId} points={area.polygon.map((point) => `${point.x},${point.y}`).join(' ')} fill={area.color} />)}
+        {mapWalls.map((wall) => <line className="map-wall" key={wall.wallId} x1={wall.start.x} y1={wall.start.y} x2={wall.end.x} y2={wall.end.y} />)}
+        {mapDoors.map((door) => <line className="map-door" key={door.doorId} x1={door.start.x} y1={door.start.y} x2={door.end.x} y2={door.end.y} />)}
+        {mapNoGoAreas.map((area) => <polygon className="map-no-go" key={area.areaId} points={area.polygon.map((point) => `${point.x},${point.y}`).join(' ')} />)}
+        {mapVirtualWalls.map((wall) => <line className="map-virtual-wall" key={wall.wallId} x1={wall.start.x} y1={wall.start.y} x2={wall.end.x} y2={wall.end.y} />)}
+        {mapObstacles.map((item) => <rect className="map-obstacle" key={item.obstacleId} x={item.x} y={item.y} width={item.width} height={item.height} rx="5" />)}
+        {routeLine && <polyline className="map-route" points={routeLine} />}
+        {mapPoints.map((point, index) => (
+          <g className={`map-point ${point.type === '充电点' ? 'charge' : ''}`} key={point.pointId}>
+            <circle cx={point.x} cy={point.y} r="8" />
+            <text x={point.x + 12} y={point.y - 10}>{point.name}</text>
+            <text x={point.x - 4} y={point.y + 4}>{index + 1}</text>
+          </g>
+        ))}
+        <g className="map-robot" transform={`translate(${robot.x} ${robot.y}) rotate(${robot.theta || 90})`}>
+          <circle cx="0" cy="0" r="13" />
+          <path d="M0 -22 L8 -4 L-8 -4 Z" />
+        </g>
+        <text className="map-robot-label" x={robot.x + 18} y={robot.y + 5}>{robot.robotId}</text>
+      </svg>
+    </div>
+  );
+}
+
+function MappingPreviewSvg({ progress }) {
+  const width = Math.max(20, Math.min(480, progress * 4.8));
+  return (
+    <div className="robot-map-stage mapping-stage">
+      <svg className="robot-map-svg" viewBox="0 0 620 430" role="img" aria-label="自动建图预览">
+        <rect className="mapping-boundary" x="34" y="34" width="552" height="350" rx="8" />
+        <rect className="mapping-scanned" x="70" y="70" width={width} height="260" rx="8" />
+        <rect className="mapping-unscanned" x={70 + width} y="70" width={Math.max(0, 480 - width)} height="260" rx="8" />
+        <path className="map-wall" d="M75 82 H520 V330 H75 Z" fill="none" />
+        <path className="map-wall" d="M190 82 V185 H330 V330" fill="none" />
+        <rect className="map-obstacle" x="390" y="128" width="66" height="52" rx="6" />
+        <polyline className="mapping-trail" points="120,88 168,116 226,128 286,166 350,192" />
+        <g className="map-robot" transform="translate(350 192) rotate(90)">
+          <circle cx="0" cy="0" r="13" />
+          <path d="M0 -22 L8 -4 L-8 -4 Z" />
+        </g>
+        <text className="point-label" x="78" y="104">已扫描区域</text>
+        <text className="point-label" x="430" y="305">未扫描区域</text>
+      </svg>
+    </div>
   );
 }
 
@@ -2697,13 +4584,17 @@ function TaskQueue({ taskList = tasks, selectedTaskId, setSelectedTaskId }) {
   return (
     <DataTable
       className="task-table"
-      columns={['任务编号', '状态', '步骤', '关联设备', '报警', '更新时间']}
+      columns={['订单编号', '任务类型', '目标设备', '取料工位', '放料方案', '开门方式', '当前步骤', '任务状态', '处理状态', '更新时间']}
       rows={taskList.map((task) => [
-        task.id,
+        task.orderNo ?? task.id,
+        task.taskType ?? '生产任务',
+        task.targetDevice ?? getTaskPrimaryDevice(task),
+        task.pickupStation ?? '-',
+        task.placementPlan ?? '-',
+        task.doorMode ?? '-',
+        getTaskCurrentStepDetail(task).stepLabel,
         <StatusText value={task.status} />,
-        task.step,
-        task.devices,
-        task.alarmCount,
+        <StatusText value={task.processStatus ?? '待处理'} />,
         task.updatedAt,
       ])}
       rowKeys={taskList.map((task) => task.id)}
@@ -2712,7 +4603,6 @@ function TaskQueue({ taskList = tasks, selectedTaskId, setSelectedTaskId }) {
     />
   );
 }
-
 function CurrentTaskCard({ task, onTaskAction, currentUser, onDetail, onLogs }) {
   return (
     <div className="current-task">
@@ -3147,6 +5037,26 @@ function AlarmActionPanel({ alarm, onNavigate, onRecord, currentUser }) {
       onNavigate?.('tasks', context.task);
       return;
     }
+    if (label === '查看设备') {
+      if (alarm.jumpTarget === 'robot-monitor') {
+        onNavigate?.('robot-monitor', alarm.robotId ?? alarm.device);
+        return;
+      }
+      if (alarm.jumpTarget === 'map-management') {
+        onNavigate?.('map-management', alarm.device);
+        return;
+      }
+      if (alarm.jumpTarget === 'arm-control') {
+        onNavigate?.('arm-control', alarm.armId ?? alarm.device);
+        return;
+      }
+      if (alarm.jumpTarget === 'vision-recognition') {
+        onNavigate?.('vision-recognition', alarm.visionTaskId ?? alarm.cameraId ?? alarm.device);
+        return;
+      }
+      onNavigate?.('devices', alarm.device);
+      return;
+    }
     if (label === '查看日志') {
       onNavigate?.('logs', alarm.name === '日志上传失败' ? '日志上传' : alarm.name);
       return;
@@ -3330,7 +5240,7 @@ function RecentLogs({ selectedTaskId, setLogFilter, setLogTypeFilter }) {
   const rows = filterLogs(allLogs, type, '').slice(0, 6);
   return (
     <>
-      <SegmentedFilter options={['全部', '指令', '报警', '任务', '审计', '设备']} value={type} onChange={setType} />
+      <SegmentedFilter options={['全部', '指令', '报警', '任务', '审计', '设备', '机器人', '地图', '路线', '建图', '巡检', '底盘', '机械臂', '末端工具', '视觉识别', '相机', '模型']} value={type} onChange={setType} />
       <div className="log-scope-note">
         当前任务日志入口：{selectedTaskId}
         <button
@@ -3348,21 +5258,59 @@ function RecentLogs({ selectedTaskId, setLogFilter, setLogTypeFilter }) {
   );
 }
 
-function StepList({ task }) {
+function StepList({ task, onStepNavigate }) {
   const steps = getTaskStepPreview(task);
   if (!steps.length) {
     return <div className="step-empty">暂无工序信息，请检查任务配置。</div>;
   }
 
+  const openStep = (step) => {
+    if (step.templateId) {
+      onStepNavigate?.navigateToArmTemplate?.(step.templateId);
+      return;
+    }
+    if (step.stepType === 'arm') onStepNavigate?.navigateToArm(step.target || task.armId || 'ARM-001');
+    if (step.stepType === 'vision') onStepNavigate?.navigateToVision(step.target || task.visionTaskId || 'VT-001');
+  };
+
   return (
     <div className="step-list">
-      {steps.map((step) => (
-        <div className={`step-item ${step.isCurrent ? 'current' : ''}`} key={step.id}>
-          <span>{toChineseStep(step.id)}</span>
-          <strong>{step.name}</strong>
-          <StatusText value={step.displayStatus} />
-        </div>
-      ))}
+      {steps.map((step) => {
+        const clickable = ['arm', 'vision'].includes(step.stepType);
+        return (
+          <div
+            aria-disabled={!clickable}
+            className={`step-item ${step.isCurrent ? 'current' : ''} ${clickable ? 'clickable' : ''}`}
+            key={step.id}
+            onClick={() => {
+              if (clickable) openStep(step);
+            }}
+            onKeyDown={(event) => {
+              if (!clickable || !['Enter', ' '].includes(event.key)) return;
+              event.preventDefault();
+              openStep(step);
+            }}
+            role={clickable ? 'button' : undefined}
+            tabIndex={clickable ? 0 : undefined}
+          >
+            <span>{toChineseStep(step.id)}</span>
+            <strong>{step.name}</strong>
+            {step.templateName && (
+              <button
+                className="step-template-link"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onStepNavigate?.navigateToArmTemplate?.(step.templateId);
+                }}
+                type="button"
+              >
+                {step.templateName}
+              </button>
+            )}
+            <StatusText value={step.displayStatus} />
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -3885,14 +5833,20 @@ function getDeviceStatusSummary(device, context) {
 function getKeyPointProblemText(device) {
   if (device.type === '数控机床') return '主轴负载偏高';
   if (device.type === '控制器') return '防护门异常';
-  if (device.type === '工业机器人') return '机器人加工区异常';
+  if (['机械臂', '夹爪', '吸盘'].includes(device.type)) return '机械臂点位异常';
+  if (['相机', '光源', '视觉工控机', '视觉服务'].includes(device.type)) return '视觉点位异常';
+  if (['工业机器人', '移动机器人', '机器人底盘', '激光雷达', '充电桩', '地图服务', '导航服务'].includes(device.type)) return '机器人点位异常';
   return '关键点位异常';
 }
 
 function getDeviceSuggestion(device, context) {
   if (device.online === '离线' || context.mappingSummary.collectStatus === '需检查') return '检查设备连接';
   if (context.interlockStatus === '不满足') return device.type === '控制器' ? '检查防护门' : '复核互锁条件';
-  if (context.keyAbnormalCount > 0) return device.type === '工业机器人' ? '复核机器人区域' : '检查关键点位';
+  if (context.keyAbnormalCount > 0) {
+    if (['机械臂', '夹爪', '吸盘'].includes(device.type)) return '复核机械臂与末端工具状态';
+    if (['相机', '光源', '视觉工控机', '视觉服务'].includes(device.type)) return '复核相机与视觉服务状态';
+    return ['工业机器人', '移动机器人', '机器人底盘', '激光雷达', '充电桩', '地图服务', '导航服务'].includes(device.type) ? '复核机器人状态' : '检查关键点位';
+  }
   if (device.alarmCount > 0) return '查看报警处理';
   return '持续观察';
 }
@@ -3925,10 +5879,20 @@ function getCriticalPointsForDevice(device) {
     return ['door_closed', 'fixture_locked', 'estop', 'air_pressure'].map((code) => pointsByCode.get(code)).filter(Boolean);
   }
 
-  if (device.type === '工业机器人') {
-    ensurePoint({ device: device.id, name: '夹爪状态', code: 'gripper_state', pointType: 'status', value: device.runStatus === '运行中' ? '已夹紧' : '松开', status: '正常', quality: '良好', updatedAt: device.updatedAt });
+  if (['工业机器人', '移动机器人', '机器人底盘', '激光雷达', '充电桩', '地图服务', '导航服务'].includes(device.type)) {
+    ensurePoint({ device: device.id, name: '机器人状态', code: 'robot_state', pointType: 'status', value: device.runStatus, status: device.alarmCount > 0 ? '异常' : '正常', quality: '良好', updatedAt: device.updatedAt });
     ensurePoint({ device: device.id, name: '安全区状态', code: 'safe_area', pointType: 'status', value: '安全', status: '正常', quality: '良好', updatedAt: device.updatedAt });
-    return ['robot_state', 'gripper_state', 'safe_area', 'in_cnc_work_area'].map((code) => pointsByCode.get(code)).filter(Boolean);
+    return ['robot_position', 'battery', 'localization_status', 'communication_status', 'emergency_status', 'navigation_status', 'mapping_status', 'current_map', 'current_route', 'lidar_status', 'speed', 'odom_status', 'charge_status', 'robot_state', 'safe_area', 'in_cnc_work_area'].map((code) => pointsByCode.get(code)).filter(Boolean);
+  }
+
+  if (['机械臂', '夹爪', '吸盘'].includes(device.type)) {
+    ensurePoint({ device: device.id, name: '机械臂运行状态', code: 'arm_run_status', pointType: 'status', value: device.runStatus, status: device.alarmCount > 0 ? '异常' : '正常', quality: device.online === '离线' ? '异常' : '良好', updatedAt: device.updatedAt });
+    return ['arm_online', 'arm_run_status', 'joint_angles', 'end_pose', 'gripper_status', 'vacuum_value'].map((code) => pointsByCode.get(code)).filter(Boolean);
+  }
+
+  if (['相机', '光源', '视觉工控机', '视觉服务'].includes(device.type)) {
+    ensurePoint({ device: device.id, name: '视觉运行状态', code: 'vision_run_status', pointType: 'status', value: device.runStatus, status: device.alarmCount > 0 ? '异常' : '正常', quality: device.online === '离线' ? '异常' : '良好', updatedAt: device.updatedAt });
+    return ['camera_online', 'capture_status', 'recognition_status', 'recognition_result', 'model_version', 'recognition_duration', 'vision_run_status'].map((code) => pointsByCode.get(code)).filter(Boolean);
   }
 
   if (device.type === '公共机') {
@@ -4107,7 +6071,7 @@ function getPointManagementStats(rows) {
 
 function getPointSource(device) {
   if (device.type === '控制器') return 'PLC';
-  if (device.type === '工业机器人') return '机器人控制器';
+  if (['工业机器人', '移动机器人', '机器人底盘', '激光雷达', '充电桩', '地图服务', '导航服务'].includes(device.type)) return '机器人控制器';
   return 'MQTT';
 }
 
@@ -4544,7 +6508,7 @@ function getAlarmRelatedLogs(alarm) {
 
 function getAlarmHandlingContext(alarm) {
   const relatedLog = allLogs.find((log) => log.content === alarm.name || log.deviceId === alarm.device || log.objectId === alarm.device);
-  const relatedTask = alarm.name === '日志上传失败' ? '无' : (relatedLog?.taskId || getRelatedTaskForDevice(alarm.device));
+  const relatedTask = alarm.relatedTask || (alarm.name === '日志上传失败' ? '无' : (relatedLog?.taskId || getRelatedTaskForDevice(alarm.device)));
   const latestRecord = relatedLog ? `${relatedLog.time} ${relatedLog.content}` : `${alarm.time} ${alarm.status}`;
 
   if (alarm.name === '日志上传失败') {
@@ -4561,6 +6525,33 @@ function getAlarmHandlingContext(alarm) {
       impact: '设备通信异常，相关任务可能暂停或等待人工确认',
       task: relatedTask === '无' ? 'TASK-004' : relatedTask,
       suggestion: '检查设备连接，通信恢复后记录处理结果',
+      latestRecord,
+    };
+  }
+
+  if (alarm.type === '机器人报警') {
+    return {
+      impact: `机器人${alarm.robotId ?? alarm.device}异常，可能影响巡检、建图或返航充电`,
+      task: relatedTask === '无' ? '无' : relatedTask,
+      suggestion: '优先进入机器人监控查看底盘、定位、雷达和急停状态',
+      latestRecord,
+    };
+  }
+
+  if (alarm.type === '机械臂报警' || alarm.type === '末端工具报警') {
+    return {
+      impact: `${alarm.armId ?? alarm.device} 异常，可能影响上下料、抓取或动作模板执行`,
+      task: relatedTask === '无' ? 'TASK-008' : relatedTask,
+      suggestion: '进入机械臂控制查看急停、关节状态、末端工具和最近指令回执',
+      latestRecord,
+    };
+  }
+
+  if (alarm.type === '视觉报警') {
+    return {
+      impact: `${alarm.cameraId ?? alarm.device} 异常，可能影响视觉检测、定位识别或安全区域判断`,
+      task: relatedTask === '无' ? 'TASK-009' : relatedTask,
+      suggestion: '进入视觉识别查看相机在线、识别任务、模型状态和最近识别结果',
       latestRecord,
     };
   }
@@ -4584,12 +6575,12 @@ function getAlarmHandlingContext(alarm) {
 
 function getAlarmActionsByStatus(status) {
   const actionMap = {
-    未处理: ['确认处理', '派发维修', '查看任务', '查看日志'],
-    处理中: ['标记恢复', '派发维修', '查看任务', '查看日志'],
-    已恢复: ['确认归档', '查看日志', '查看任务'],
-    已归档: ['查看日志', '查看处理记录'],
+    未处理: ['确认处理', '派发维修', '查看设备', '查看任务', '查看日志'],
+    处理中: ['标记恢复', '派发维修', '查看设备', '查看任务', '查看日志'],
+    已恢复: ['确认归档', '查看设备', '查看日志', '查看任务'],
+    已归档: ['查看设备', '查看日志', '查看处理记录'],
   };
-  return actionMap[status] ?? ['查看日志', '查看任务'];
+  return actionMap[status] ?? ['查看设备', '查看日志', '查看任务'];
 }
 
 function getAlarmOperationContext(alarm, context) {
@@ -4982,9 +6973,10 @@ function DataTable({ columns, rows, rowKeys = [], selectedKey, highlightedKey, h
                 key={key}
                 onClick={() => onRowClick?.(key)}
               >
-                {row.map((cell, cellIndex) => (
-                  <td key={`${key}-${cellIndex}`}>{cell}</td>
-                ))}
+                {row.map((cell, cellIndex) => {
+                  const title = typeof cell === 'string' || typeof cell === 'number' ? String(cell) : undefined;
+                  return <td key={`${key}-${cellIndex}`} title={title}>{cell}</td>;
+                })}
               </tr>
             );
           })}
@@ -4995,8 +6987,18 @@ function DataTable({ columns, rows, rowKeys = [], selectedKey, highlightedKey, h
 }
 
 function StatusText({ value }) {
-  const tone = getStatusTone(value);
+  const tone = getStatusVisualTone(value);
   return <span className={`status-text ${tone}`}>{value}</span>;
+}
+
+function getStatusVisualTone(value) {
+  const text = String(value ?? '');
+  if (['运行中', '执行中', '识别中', '处理中', '下发中', '建图中'].some((status) => text.includes(status))) return 'info';
+  if (['待执行', '待回执', '待确认', '排队中', '待处理', '待下发', '暂停'].some((status) => text.includes(status))) return 'warn';
+  if (['异常', '失败', '离线', '急停', '超时', '不满足', '未处理'].some((status) => text.includes(status))) return 'bad';
+  if (['待机', '已处理', '无', '已归档', '已记录', '-'].includes(text)) return 'neutral';
+  if (['正常', '在线', '已完成', '已确认', '已恢复', '成功', '满足', '良好', '启用'].some((status) => text.includes(status))) return 'ok';
+  return getStatusTone(value);
 }
 
 function Info({ label, value }) {
@@ -5034,6 +7036,27 @@ const commandReceiptExportColumns = [
   { header: '处理结果', value: '处理结果' },
 ];
 
+const armActionRecordExportColumns = [
+  { header: '时间', value: '时间' },
+  { header: '机械臂', value: '机械臂' },
+  { header: '动作', value: '动作' },
+  { header: '目标点位', value: '目标点位' },
+  { header: '结果', value: '结果' },
+  { header: '回执状态', value: '回执状态' },
+  { header: '关联任务', value: '关联任务' },
+  { header: '操作人', value: '操作人' },
+];
+
+const armCurrentActionRecordExportColumns = [
+  { header: '时间', value: '时间' },
+  { header: '动作', value: '动作' },
+  { header: '目标点位', value: '目标点位' },
+  { header: '结果', value: '结果' },
+  { header: '回执状态', value: '回执状态' },
+  { header: '关联任务', value: '关联任务' },
+  { header: '操作人', value: '操作人' },
+];
+
 const alarmExportColumns = [
   { header: '报警名称', value: '报警名称' },
   { header: '关联设备', value: '关联设备' },
@@ -5066,9 +7089,21 @@ const pointManagementExportColumns = [
 ];
 
 const taskExportColumns = [
+  { header: '订单编号', value: '订单编号' },
   { header: '任务编号', value: '任务编号' },
-  { header: '任务状态', value: '任务状态' },
+  { header: '任务类型', value: '任务类型' },
+  { header: '目标设备', value: '目标设备' },
+  { header: '取料工位', value: '取料工位' },
+  { header: '放料方案', value: '放料方案' },
+  { header: '开门方式', value: '开门方式' },
   { header: '当前步骤', value: '当前步骤' },
+  { header: '任务状态', value: '任务状态' },
+  { header: '处理状态', value: '处理状态' },
+  { header: '机器人编号', value: '机器人编号' },
+  { header: '机械臂编号', value: '机械臂编号' },
+  { header: '视觉任务', value: '视觉任务' },
+  { header: '目标点位', value: '目标点位' },
+  { header: '执行模式', value: '执行模式' },
   { header: '关联设备', value: '关联设备' },
   { header: '下发指令', value: '下发指令' },
   { header: '报警数', value: '报警数' },
@@ -5077,7 +7112,6 @@ const taskExportColumns = [
   { header: '失败原因', value: '失败原因' },
   { header: '操作记录', value: '操作记录' },
 ];
-
 function buildLogExportRow(row) {
   return {
     时间: row.time,
@@ -5133,9 +7167,21 @@ function buildTaskExportRow(task) {
   const stepDetail = getTaskCurrentStepDetail(task);
   const relatedLogs = stepLogs.filter((row) => row.taskId === task.id);
   return {
+    订单编号: task.orderNo ?? task.id,
     任务编号: task.id,
-    任务状态: task.status,
+    任务类型: task.taskType ?? '生产任务',
+    目标设备: task.targetDevice ?? getTaskPrimaryDevice(task),
+    取料工位: task.pickupStation ?? '-',
+    放料方案: task.placementPlan ?? '-',
+    开门方式: task.doorMode ?? '-',
     当前步骤: stepDetail.stepLabel,
+    任务状态: task.status,
+    处理状态: task.processStatus ?? '待处理',
+    机器人编号: task.robotId ?? '-',
+    机械臂编号: task.armId ?? '-',
+    视觉任务: task.visionTaskId ?? '-',
+    目标点位: task.targetPoint ?? '-',
+    执行模式: task.executionMode ?? '-',
     关联设备: task.devices,
     下发指令: stepDetail.command,
     报警数: task.alarmCount,
@@ -5146,6 +7192,39 @@ function buildTaskExportRow(task) {
   };
 }
 
+function getTaskPrimaryDevice(task) {
+  return task.targetDevice ?? task.devices?.split(',').map((item) => item.trim()).filter(Boolean)[0] ?? '-';
+}
+
+function getTaskRecordCategory(logType) {
+  if (['任务', '视觉识别'].includes(logType)) return '任务记录';
+  if (['机械臂', '指令'].includes(logType)) return '动作记录';
+  if (['报警', '异常'].includes(logType)) return '异常记录';
+  if (['审计'].includes(logType)) return '处理记录';
+  if (['模型', '参数'].includes(logType)) return '参数修改记录';
+  return '调试记录';
+}
+
+function getTaskManagementRecordRows(task, logs) {
+  const stepDetail = getTaskCurrentStepDetail(task);
+  const derivedRows = [
+    { time: task.startedAt || '-', category: '任务记录', objectId: task.id, content: `${task.taskType ?? '生产任务'}启动，订单 ${task.orderNo ?? '-'}`, status: task.status },
+    { time: task.updatedAt, category: '动作记录', objectId: task.actionPoint ?? task.currentStep, content: stepDetail.command, status: task.status },
+    { time: task.updatedAt, category: '处理记录', objectId: task.targetDevice ?? getTaskPrimaryDevice(task), content: task.processStatus ?? '待处理', status: task.processStatus ?? '待处理' },
+    { time: task.updatedAt, category: '参数修改记录', objectId: task.taskPlan ?? '任务方案', content: task.reviewRule ?? '按默认复核规则执行', status: '已记录' },
+    { time: task.updatedAt, category: '调试记录', objectId: task.visionMark ?? task.visionTaskId ?? task.id, content: task.alarmCount > 0 ? '存在异常，建议人工复核' : '未发现阻塞项', status: task.alarmCount > 0 ? '待确认' : '正常' },
+  ];
+  const exceptionRows = task.alarmCount > 0
+    ? [{ time: task.updatedAt, category: '异常记录', objectId: task.targetDevice ?? getTaskPrimaryDevice(task), content: `${task.alarmCount} 条异常待处理`, status: task.processStatus ?? '异常处理中' }]
+    : [];
+  return [...derivedRows, ...exceptionRows, ...logs.map((row) => ({
+    time: row.time,
+    category: getTaskRecordCategory(row.logType),
+    objectId: row.objectId ?? row.deviceId,
+    content: row.content,
+    status: row.status,
+  }))];
+}
 function getDeviceStats(list) {
   return {
     total: list.length,
@@ -5183,12 +7262,11 @@ function filterTasks(list, query, scope) {
   const text = query.trim().toLowerCase();
   return list.filter((task) => {
     const matchesQuery =
-      !text || [task.id, task.status, task.step, task.devices, task.command].some((value) => value.toLowerCase().includes(text));
-    const matchesScope = scope === '全部' || task.status === scope || (scope === '有报警' && task.alarmCount > 0);
+      !text || [task.id, task.orderNo, task.taskType, task.targetDevice, task.pickupStation, task.placementPlan, task.doorMode, task.processStatus, task.robotId, task.armId, task.visionTaskId, task.targetMap, task.targetRoute, task.targetPoint, task.executionMode, task.status, task.step, task.devices, task.command].some((value) => String(value ?? '').toLowerCase().includes(text));
+    const matchesScope = scope === '全部' || task.status === scope || task.taskType === scope || task.processStatus === scope || (scope === '有报警' && task.alarmCount > 0);
     return matchesQuery && matchesScope;
   });
 }
-
 function getTaskStats(list) {
   return {
     total: list.length,
