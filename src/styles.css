@@ -4503,13 +4503,13 @@ button:disabled,
   grid-template-areas:
     "status status"
     "map chassis"
-    "manual logs";
+    "map logs";
+  align-items: start;
 }
 
 .robot-status-panel { grid-area: status; }
 .robot-map-panel { grid-area: map; }
 .robot-chassis-panel { grid-area: chassis; }
-.robot-manual-panel { grid-area: manual; }
 .robot-log-panel { grid-area: logs; }
 
 .robot-status-cards {
@@ -4635,6 +4635,205 @@ button:disabled,
   margin-top: 10px;
 }
 
+.robot-map-with-joystick {
+  position: relative;
+}
+
+.robot-map-joystick {
+  position: absolute;
+  right: 16px;
+  bottom: 16px;
+  z-index: 2;
+}
+
+.virtual-joystick-panel {
+  width: 220px;
+  min-height: 250px;
+  padding: 12px;
+  border: 1px solid #e5eaf0;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 12px 28px rgba(31, 42, 68, 0.12);
+  backdrop-filter: blur(8px);
+}
+
+.virtual-joystick-status {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.virtual-joystick-status > div,
+.virtual-joystick-direction {
+  display: grid;
+  gap: 3px;
+  color: #475569;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.virtual-joystick-helper {
+  color: #64748b;
+}
+
+.takeover-button {
+  min-height: 30px;
+  padding: 5px 12px;
+  border: 1px solid #2563eb;
+  border-radius: 8px;
+  background: #2563eb;
+  color: #fff;
+  font-weight: 800;
+}
+
+.virtual-joystick-base-wrap {
+  display: flex;
+  justify-content: center;
+}
+
+.virtual-joystick-base {
+  width: 140px;
+  height: 140px;
+  border-radius: 50%;
+  position: relative;
+  overflow: hidden;
+  touch-action: none;
+  cursor: grab;
+  background: radial-gradient(circle, #f8fafc 0%, #edf4ff 100%);
+  border: 1px solid #cfe0ff;
+  box-shadow: inset 0 0 0 10px rgba(219, 234, 254, 0.42);
+}
+
+.virtual-joystick-base::after {
+  content: "";
+  position: absolute;
+  inset: 34px;
+  border: 1px dashed rgba(59, 130, 246, 0.26);
+  border-radius: 50%;
+}
+
+.virtual-joystick-cross::before,
+.virtual-joystick-cross::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  background: rgba(59, 130, 246, 0.22);
+  transform: translate(-50%, -50%);
+}
+
+.virtual-joystick-cross::before {
+  width: 96px;
+  height: 1px;
+}
+
+.virtual-joystick-cross::after {
+  width: 1px;
+  height: 96px;
+}
+
+.virtual-joystick-tick {
+  position: absolute;
+  color: #7aa7e8;
+  font-size: 11px;
+  line-height: 1;
+  user-select: none;
+}
+
+.virtual-joystick-tick.top {
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.virtual-joystick-tick.right {
+  top: 50%;
+  right: 10px;
+  transform: translateY(-50%);
+}
+
+.virtual-joystick-tick.bottom {
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.virtual-joystick-tick.left {
+  top: 50%;
+  left: 10px;
+  transform: translateY(-50%);
+}
+
+.virtual-joystick-knob {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: 1;
+  transform: translate(calc(-50% + var(--knob-x)), calc(-50% + var(--knob-y)));
+  background: linear-gradient(145deg, #60a5fa 0%, #2563eb 100%);
+  border: 2px solid rgba(255, 255, 255, 0.9);
+  box-shadow: 0 8px 18px rgba(59, 130, 246, 0.25);
+  transition: transform 0.16s ease, box-shadow 0.16s ease;
+}
+
+.virtual-joystick-knob.is-dragging {
+  transition: none;
+  box-shadow: 0 10px 22px rgba(37, 99, 235, 0.32);
+}
+
+.virtual-joystick-panel.is-disabled .virtual-joystick-base {
+  cursor: not-allowed;
+  filter: grayscale(0.35);
+  opacity: 0.58;
+}
+
+.virtual-joystick-panel.is-disabled .virtual-joystick-knob {
+  background: #94a3b8;
+  box-shadow: 0 6px 14px rgba(100, 116, 139, 0.2);
+}
+
+.takeover-button:hover:not(:disabled) {
+  box-shadow: 0 6px 16px rgba(37, 99, 235, 0.14);
+  transform: translateY(-1px);
+}
+
+.takeover-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+  transform: none;
+  box-shadow: none;
+}
+
+.virtual-joystick-direction {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: 10px;
+}
+
+.virtual-joystick-direction span:first-child {
+  grid-column: 1 / -1;
+  color: #1d4ed8;
+  font-weight: 800;
+}
+
+.robot-receipt-list {
+  display: grid;
+  gap: 7px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #e2e8f0;
+  color: #475569;
+  font-size: 12px;
+}
+
+.robot-receipt-list strong {
+  color: #1f2937;
+  font-size: 13px;
+}
 .manual-control-pad {
   display: grid;
   gap: 8px;
@@ -4758,13 +4957,27 @@ button:disabled,
   .robot-status-panel,
   .robot-map-panel,
   .robot-chassis-panel,
-  .robot-manual-panel,
   .robot-log-panel {
     grid-area: auto;
   }
 
   .robot-status-cards {
     grid-template-columns: 1fr;
+  }
+  .robot-map-joystick {
+    right: 10px;
+    bottom: 10px;
+  }
+
+  .virtual-joystick-panel {
+    width: min(220px, calc(100vw - 48px));
+    min-height: 240px;
+    padding: 10px;
+  }
+
+  .virtual-joystick-base {
+    width: 128px;
+    height: 128px;
   }
 }
 /* Arm and vision mock modules */
@@ -4839,6 +5052,44 @@ button:disabled,
 .step-item.clickable:focus-visible {
   outline: 2px solid #94a3b8;
   outline-offset: 2px;
+}
+
+.step-jump-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-width: 160px;
+}
+
+.step-jump-link {
+  width: fit-content;
+  padding: 3px 8px;
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 650;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.step-jump-link:hover {
+  background: #dbeafe;
+}
+
+.inline-link-button {
+  padding: 0;
+  color: var(--accent);
+  font: inherit;
+  font-weight: 700;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+
+.inline-link-button:hover {
+  text-decoration: underline;
 }
 
 @media (max-width: 1180px) {

@@ -1,21 +1,23 @@
 {
-    "scripts":  {
-                    "dev":  "vite --host 127.0.0.1",
-                    "build":  "vite build \u0026\u0026 node scripts/copy-404.cjs",
-                    "preview":  "vite preview --host 127.0.0.1"
-                },
-    "engines":  {
-                    "node":  "22.x"
-                },
-    "dependencies":  {
-                         "@vitejs/plugin-react":  "4.3.4",
-                         "vite":  "5.4.11",
-                         "react":  "18.2.0",
-                         "react-dom":  "18.2.0",
-                         "lucide-react":  "0.468.0"
-                     },
-    "devDependencies":  {
-
-                        },
-    "name":  "robot-comprehensive-management-platform"
+    "scripts": {
+        "dev": "vite --host 127.0.0.1 --port 5173 --strictPort",
+        "dev:local": "vite --host 127.0.0.1 --port 5173 --strictPort",
+        "dev:lan": "vite --host 0.0.0.0 --port 5173 --strictPort",
+        "build": "vite build && node scripts/copy-404.cjs",
+        "preview": "vite preview --host 127.0.0.1 --port 5173 --strictPort"
+    },
+    "engines": {
+        "node": "22.x"
+    },
+    "dependencies": {
+        "@vitejs/plugin-react": "4.3.4",
+        "lucide-react": "0.468.0",
+        "react": "18.2.0",
+        "react-dom": "18.2.0",
+        "vite": "5.4.11"
+    },
+    "devDependencies": {
+        "vite-plugin-singlefile": "^2.2.0"
+    },
+    "name": "robot-integrated-management-platform"
 }

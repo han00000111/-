@@ -1,4 +1,4 @@
-import React, { Fragment, useEffect, useMemo, useState } from 'react';
+import React, { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import {
   Activity,
@@ -158,6 +158,7 @@ function App() {
   const [selectedTeachingPointId, setSelectedTeachingPointId] = useState('TP-DOOR-001');
   const [selectedArmTemplateId, setSelectedArmTemplateId] = useState('TPL-DOOR-001');
   const [selectedVisionTaskId, setSelectedVisionTaskId] = useState('VT-001');
+  const [selectedRobotId, setSelectedRobotId] = useState('AMR-001');
   const [selectedTaskId, setSelectedTaskId] = useState('TASK-001');
   const [selectedDeviceId, setSelectedDeviceId] = useState('CNC-001');
   const [logFilter, setLogFilter] = useState('');
@@ -167,7 +168,9 @@ function App() {
   const [loginModalOpen, setLoginModalOpen] = useState(false);
   const [accountLogs, setAccountLogs] = useState([]);
   const [armRuntimeCommands, setArmRuntimeCommands] = useState(armCommandReceipts);
+  const [robotRuntimeCommands, setRobotRuntimeCommands] = useState([]);
   const [armRuntimeLogs, setArmRuntimeLogs] = useState([]);
+  const [robotRuntimeLogs, setRobotRuntimeLogs] = useState([]);
   const [armRuntimeAlarms, setArmRuntimeAlarms] = useState([]);
   const [selectedCommandId, setSelectedCommandId] = useState('');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -181,7 +184,7 @@ function App() {
   );
   const selectedTask = taskList.find((task) => task.id === selectedTaskId) ?? taskList[0];
   const selectedDevice = devices.find((device) => device.id === selectedDeviceId) ?? devices[0];
-  const logRows = useMemo(() => [...armRuntimeLogs, ...accountLogs, ...allLogs].sort((a, b) => b.time.localeCompare(a.time)), [accountLogs, armRuntimeLogs]);
+  const logRows = useMemo(() => [...robotRuntimeLogs, ...armRuntimeLogs, ...accountLogs, ...allLogs].sort((a, b) => b.time.localeCompare(a.time)), [accountLogs, armRuntimeLogs, robotRuntimeLogs]);
   const topbarTitle = page === 'devices'
     ? `设备与点位 / ${deviceTabs.find((tab) => tab.key === activeDeviceTab)?.label ?? '设备详情'}`
     : page === 'map-management'
@@ -266,6 +269,10 @@ function App() {
       setActiveArmTab('control');
       setPage('arm-control');
     },
+    navigateToRobot: (robotId = 'AMR-001') => {
+      if (robotId) setSelectedRobotId(robotId);
+      setPage('robot-monitor');
+    },
     navigateToTeachingPoint: (pointId = 'TP-DOOR-001') => {
       if (pointId) setSelectedTeachingPointId(pointId);
       setActiveArmTab('teaching');
@@ -323,7 +330,19 @@ function App() {
         )}
         {page === 'robot-monitor' && (
           <RobotMonitorPage
+            currentUser={currentUser}
             navigation={navigation}
+            onRobotCommandEvent={({ command, log }) => {
+              if (command) {
+                setRobotRuntimeCommands((rows) => [command, ...rows.filter((row) => row.id !== command.id)]);
+                setSelectedCommandId(command.id);
+              }
+              if (log) setRobotRuntimeLogs((rows) => [log, ...rows]);
+            }}
+            robotRuntimeCommands={robotRuntimeCommands}
+            robotRuntimeLogs={robotRuntimeLogs}
+            selectedRobotId={selectedRobotId}
+            setSelectedRobotId={setSelectedRobotId}
             setLogFilter={setLogFilter}
             setLogTypeFilter={setLogTypeFilter}
           />
@@ -342,13 +361,16 @@ function App() {
             activeArmTab={activeArmTab}
             currentUser={currentUser}
             navigation={navigation}
-            onArmActionEvent={({ command, log, alarm }) => {
+            onArmActionEvent={({ command, log, alarm, taskUpdate }) => {
               if (command) {
                 setArmRuntimeCommands((rows) => [command, ...rows.filter((row) => row.id !== command.id)]);
                 setSelectedCommandId(command.id);
               }
               if (log) setArmRuntimeLogs((rows) => [log, ...rows]);
               if (alarm) setArmRuntimeAlarms((rows) => [alarm, ...rows.filter((row) => !(row.name === alarm.name && row.device === alarm.device))]);
+              if (taskUpdate?.taskId) {
+                setTaskStatusOverrides((rows) => ({ ...rows, [taskUpdate.taskId]: taskUpdate.patch }));
+              }
             }}
             selectedArmId={selectedArmId}
             selectedArmTemplateId={selectedArmTemplateId}
@@ -369,38 +391,40 @@ function App() {
           />
         )}
         {page === 'devices' && (
-          <DevicesPageRoute
-            activeDeviceTab={activeDeviceTab}
-            currentUser={currentUser}
-            implementation={DevicesPageImpl}
-            selectedDevice={selectedDevice}
-            selectedDeviceId={selectedDeviceId}
-            setActiveDeviceTab={setActiveDeviceTab}
-            setSelectedDeviceId={setSelectedDeviceId}
-          />
+          <DevicesPageRoute>
+            <DevicesPageImpl
+              activeDeviceTab={activeDeviceTab}
+              currentUser={currentUser}
+              selectedDevice={selectedDevice}
+              selectedDeviceId={selectedDeviceId}
+              setActiveDeviceTab={setActiveDeviceTab}
+              setSelectedDeviceId={setSelectedDeviceId}
+            />
+          </DevicesPageRoute>
         )}
         {page === 'tasks' && (
-          <TasksPageRoute
-            selectedTask={selectedTask}
-            taskList={taskList}
-            implementation={TasksPageImpl}
-            selectedTaskId={selectedTaskId}
-            setSelectedTaskId={setSelectedTaskId}
-            onTaskAction={handleTaskAction}
-            currentUser={currentUser}
-            openTaskLogs={openTaskLogs}
-            navigation={navigation}
-            setActiveDeviceTab={setActiveDeviceTab}
-            setLogFilter={setLogFilter}
-            setLogTypeFilter={setLogTypeFilter}
-            setPage={setPage}
-            setSelectedDeviceId={setSelectedDeviceId}
-          />
+          <TasksPageRoute>
+            <TasksPageImpl
+              selectedTask={selectedTask}
+              taskList={taskList}
+              selectedTaskId={selectedTaskId}
+              setSelectedTaskId={setSelectedTaskId}
+              onTaskAction={handleTaskAction}
+              currentUser={currentUser}
+              openTaskLogs={openTaskLogs}
+              navigation={navigation}
+              setActiveDeviceTab={setActiveDeviceTab}
+              setLogFilter={setLogFilter}
+              setLogTypeFilter={setLogTypeFilter}
+              setPage={setPage}
+              setSelectedDeviceId={setSelectedDeviceId}
+            />
+          </TasksPageRoute>
         )}
         {page === 'commands' && (
           <CommandsPageRoute
             currentUser={currentUser}
-            externalCommandRows={armRuntimeCommands}
+            externalCommandRows={[...robotRuntimeCommands, ...armRuntimeCommands]}
             implementation={CommandsPageImpl}
             initialSelectedCommandId={selectedCommandId}
             navigation={navigation}
@@ -1935,7 +1959,14 @@ function TaskOverviewSection({ currentStepDetail, filteredTasks, selectedTask, s
         <SectionTitle icon={ClipboardList} title="任务总览" />
         <div className="detail-list dense task-overview-detail">
           <Info label="当前任务" value={`${selectedTask.id} / ${selectedTask.orderNo ?? '-'}`} />
-          <Info label="目标设备" value={selectedTask.targetDevice ?? getTaskPrimaryDevice(selectedTask)} />
+          <Info
+            label="目标设备"
+            value={(
+              <button className="inline-link-button" type="button" onClick={() => navigation?.navigateToDevice?.(selectedTask.targetDevice ?? getTaskPrimaryDevice(selectedTask))}>
+                {selectedTask.targetDevice ?? getTaskPrimaryDevice(selectedTask)}
+              </button>
+            )}
+          />
           <Info label="当前步骤" value={`${currentStepDetail.stepLabel}｜${currentStepDetail.command}`} />
           <Info label="任务状态" value={<StatusText value={selectedTask.status} />} />
           <Info label="处理状态" value={<StatusText value={selectedTask.processStatus ?? '待处理'} />} />
@@ -2039,7 +2070,12 @@ function TaskDetailSection({ currentStepDetail, currentUser, navigation, onAlarm
       <section className="panel task-detail-result-panel">
         <SectionTitle icon={Cpu} title="机械臂执行结果" />
         <div className="detail-list dense">
-          <Info label="机械臂" value={selectedTask.armId ?? '-'} />
+          <Info
+            label="机械臂"
+            value={selectedTask.armId && selectedTask.armId !== '-'
+              ? <button className="inline-link-button" type="button" onClick={() => navigation?.navigateToArm?.(selectedTask.armId)}>{selectedTask.armId}</button>
+              : '-'}
+          />
           <Info label="动作点位" value={selectedTask.actionPoint ?? '-'} />
           <Info label="当前动作" value={currentStepDetail.command} />
           <Info label="执行状态" value={<StatusText value={selectedTask.status} />} />
@@ -2970,6 +3006,8 @@ function ArmControlPage({ activeArmTab, currentUser, navigation, onArmActionEven
     }
     const now = formatNowTime();
     const commandId = `CMD-TPL-${Date.now().toString().slice(-6)}`;
+    const relatedTask = arm.currentTask && arm.currentTask !== '无' ? arm.currentTask : 'TASK-008';
+    const willFail = template.templateId === 'TPL-PLACE-001';
     const command = {
       id: commandId,
       commandId,
@@ -2979,15 +3017,15 @@ function ArmControlPage({ activeArmTab, currentUser, navigation, onArmActionEven
       commandName: '执行动作模板',
       params: `template=${template.templateId}`,
       sendResult: '已下发',
-      receiptStatus: '已确认',
-      stage: '设备已确认',
-      relatedTask: arm.currentTask || 'TASK-001',
+      receiptStatus: willFail ? '超时' : '已确认',
+      stage: willFail ? '执行超时' : '设备已确认',
+      relatedTask,
       sender: currentUser?.username ?? 'admin',
       sendTime: now,
       receiptTime: addSecondsToTime(now, 12),
-      duration: '12.4s',
-      failReason: '-',
-      suggestion: '动作模板已按前端 mock 执行完成。',
+      duration: willFail ? '-' : '12.4s',
+      failReason: willFail ? '模板执行超时' : '-',
+      suggestion: willFail ? '已生成机械臂异常，请转人工接管。' : '动作模板已按前端 mock 执行完成。',
       handledBy: '-',
       handledAt: '-',
       targetArm: arm.armId,
@@ -2997,11 +3035,23 @@ function ArmControlPage({ activeArmTab, currentUser, navigation, onArmActionEven
       objectType: 'arm-template',
       objectId: template.templateId,
       deviceId: arm.armId,
-      taskId: arm.currentTask || 'TASK-001',
+      taskId: relatedTask,
       logType: '机械臂',
       content: `执行动作模板：${template.templateName}`,
       params: template.templateId,
-      status: '成功',
+      status: willFail ? '失败' : '成功',
+      operator: currentUser?.username ?? 'admin',
+    };
+    const actionRecord = {
+      time: now,
+      armId: arm.armId,
+      actionName: `执行动作模板：${template.templateName}`,
+      action: `执行动作模板：${template.templateName}`,
+      targetPoint: template.steps?.find((step) => step.targetTeachingPoint && step.targetTeachingPoint !== '-')?.targetTeachingPoint ?? '-',
+      result: willFail ? '失败' : '成功',
+      receiptStatus: willFail ? '超时' : '已确认',
+      relatedTask,
+      taskId: relatedTask,
       operator: currentUser?.username ?? 'admin',
     };
     const record = {
@@ -3009,16 +3059,33 @@ function ArmControlPage({ activeArmTab, currentUser, navigation, onArmActionEven
       templateId: template.templateId,
       templateName: template.templateName,
       armId: arm.armId,
-      relatedTask: arm.currentTask || 'TASK-001',
-      result: '成功',
-      receiptStatus: '已确认',
-      duration: '12.4s',
+      relatedTask,
+      result: willFail ? '失败' : '成功',
+      receiptStatus: willFail ? '超时' : '已确认',
+      duration: willFail ? '-' : '12.4s',
       operator: currentUser?.username ?? 'admin',
     };
+    const alarm = willFail ? {
+      name: '机械臂动作模板执行超时',
+      device: arm.armId,
+      type: '机械臂报警',
+      level: '中危',
+      status: '处理中',
+      time: now,
+      jumpTarget: 'arm-control',
+      armId: arm.armId,
+      relatedTask,
+    } : null;
     setReceipts((rows) => [command, ...rows]);
+    setRecords((rows) => [actionRecord, ...rows]);
     setTemplateLogs((rows) => [record, ...rows]);
-    onArmActionEvent?.({ command, log });
-    setNotice(`执行动作模板：${template.templateName}（前端模拟）`);
+    onArmActionEvent?.({
+      command,
+      log,
+      alarm,
+      taskUpdate: alarm ? { taskId: relatedTask, patch: { status: '异常处理中', processStatus: '待人工接管', alarmCount: 1, updatedAt: now } } : null,
+    });
+    setNotice(`${willFail ? '模板执行失败' : '执行动作模板'}：${template.templateName}（前端模拟）`);
     window.setTimeout(() => setNotice(''), 1800);
     return command;
   };
@@ -3358,7 +3425,7 @@ function ArmTemplatePage({ arms, currentUser, executeTemplate, logs, navigation,
             }}>复制模板</button>
             <button type="button" disabled={!can(currentUser, PERMISSIONS.TASK_ACTION) || (getTemplateHasConfigIssue(selectedTemplate, points) && !selectedTemplate.enabled)} title={getTemplateHasConfigIssue(selectedTemplate, points) ? '模板存在未校验点位或未配置视觉标识' : undefined} onClick={() => updateTemplate({ enabled: !selectedTemplate.enabled })}>{selectedTemplate.enabled ? '停用' : '启用'}</button>
             <button type="button" disabled={Boolean(blockedReason)} title={blockedReason || undefined} onClick={() => executeTemplate(selectedTemplate)}>执行模板</button>
-            <button type="button" onClick={() => navigation?.navigateToTask?.('TASK-001')}>查看引用任务</button>
+            <button type="button" onClick={() => navigation?.navigateToTask?.(getTemplateRelatedTaskId(selectedTemplate))}>查看引用任务</button>
             <button type="button">查看执行记录</button>
           </div>
           {blockedReason && <div className="action-disabled-reason">{blockedReason}</div>}
@@ -3516,12 +3583,17 @@ function getTemplateHasConfigIssue(template, points) {
   return template.steps?.some((step) => getStepConfigStatus(step, points) !== '已配置') ?? false;
 }
 
+function getTemplateRelatedTaskId(template) {
+  if (['TPL-DOOR-001', 'TPL-PICK-001', 'TPL-PLACE-001'].includes(template?.templateId)) return 'TASK-008';
+  return 'TASK-001';
+}
+
 function getStepConfigStatus(step, points) {
   const targetPoint = points.find((point) => point.pointId === step.targetTeachingPoint);
   if (step.targetTeachingPoint !== '-' && !targetPoint) return '未配置';
   if (targetPoint && !targetPoint.verified) return '异常';
   if (step.relatedVisionMarker !== '-' && !step.relatedVisionMarker) return '未配置';
-  return step.configStatus === '异常' && targetPoint?.verified ? '已配置' : step.configStatus;
+  return step.configStatus === '异常' ? '配置异常' : step.configStatus;
 }
 
 function getTemplateSafetyRows(template, points, arm) {
@@ -3919,19 +3991,276 @@ function VisionModelPage() {
     </section>
   );
 }
-function RobotMonitorPage({ navigation, setLogFilter, setLogTypeFilter }) {
-  const [selectedRobotId, setSelectedRobotId] = useState(robotStatus.robotId);
-  const [manualMode, setManualMode] = useState(false);
-  const [speedLevel, setSpeedLevel] = useState('低速');
+
+const JOYSTICK_BASE_SIZE = 140;
+const JOYSTICK_MAX_OFFSET = (JOYSTICK_BASE_SIZE / 2) * 0.45;
+
+function getJoystickDirection({ x, y }) {
+  const forward = y < -0.25;
+  const back = y > 0.25;
+  const left = x < -0.25;
+  const right = x > 0.25;
+  if (forward && left) return '左前';
+  if (forward && right) return '右前';
+  if (back && left) return '左后';
+  if (back && right) return '右后';
+  if (forward) return '前进';
+  if (back) return '后退';
+  if (left) return '左转';
+  if (right) return '右转';
+  return '停止';
+}
+
+function getJoystickMotion(vector) {
+  return {
+    direction: getJoystickDirection(vector),
+    linearSpeed: Math.abs(vector.y) < 0.25 ? 0 : -vector.y * 0.4,
+    angularSpeed: Math.abs(vector.x) < 0.25 ? 0 : vector.x * 0.6,
+  };
+}
+
+function formatMotionValue(value) {
+  return Math.abs(value).toFixed(2);
+}
+
+function getRobotManualSafetyIssues(status) {
+  const issues = [];
+  if (status.online !== '在线') issues.push('当前机器人离线');
+  if (status.emergencyStatus !== '未触发') issues.push('急停已触发');
+  if (status.communicationStatus !== '正常') issues.push('通信异常');
+  const currentTask = tasks.find((task) => task.id === status.currentTask);
+  const taskAllowsManual = !currentTask
+    || ['待人工接管', '异常处理中', '待确认', '设备异常关注'].includes(currentTask.processStatus)
+    || ['暂停', '失败', '排队中'].includes(currentTask.status);
+  if (!taskAllowsManual) issues.push('当前任务不允许手动接管');
+  if (currentTask?.executionMode?.includes('不可中断')) issues.push('机器人正在执行不可中断任务');
+  return issues;
+}
+
+function VirtualJoystick({ active, angularSpeed, disabled, disabledReason, direction, joystickDragging, joystickVector, linearSpeed, onMoveChange, onMoveEnd, onMoveStart, onRelease, onTakeover, status }) {
+  const baseRef = useRef(null);
+  const canDrag = active && !disabled;
+  const knobX = `${joystickVector.x * JOYSTICK_MAX_OFFSET}px`;
+  const knobY = `${joystickVector.y * JOYSTICK_MAX_OFFSET}px`;
+  const panelStatus = disabled ? '不可操作' : status;
+  const helperText = disabled ? disabledReason : active ? '拖动摇杆控制底盘' : '请先接管后控制';
+
+  const getVectorFromEvent = (event) => {
+    const base = baseRef.current;
+    if (!base) return { x: 0, y: 0 };
+    const point = event.touches?.[0] ?? event.changedTouches?.[0] ?? event;
+    const rect = base.getBoundingClientRect();
+    const dx = point.clientX - rect.left - rect.width / 2;
+    const dy = point.clientY - rect.top - rect.height / 2;
+    const distance = Math.hypot(dx, dy);
+    const ratio = distance > JOYSTICK_MAX_OFFSET ? JOYSTICK_MAX_OFFSET / distance : 1;
+    return {
+      x: Number(((dx * ratio) / JOYSTICK_MAX_OFFSET).toFixed(3)),
+      y: Number(((dy * ratio) / JOYSTICK_MAX_OFFSET).toFixed(3)),
+    };
+  };
+
+  const startDrag = (event) => {
+    if (!canDrag) return;
+    event.preventDefault();
+    const vector = getVectorFromEvent(event);
+    onMoveStart(vector);
+  };
+
+  useEffect(() => {
+    if (!joystickDragging) return undefined;
+    const move = (event) => {
+      event.preventDefault();
+      onMoveChange(getVectorFromEvent(event));
+    };
+    const end = () => onMoveEnd();
+    window.addEventListener('mousemove', move);
+    window.addEventListener('mouseup', end);
+    window.addEventListener('touchmove', move, { passive: false });
+    window.addEventListener('touchend', end);
+    window.addEventListener('touchcancel', end);
+    return () => {
+      window.removeEventListener('mousemove', move);
+      window.removeEventListener('mouseup', end);
+      window.removeEventListener('touchmove', move);
+      window.removeEventListener('touchend', end);
+      window.removeEventListener('touchcancel', end);
+    };
+  }, [joystickDragging, onMoveChange, onMoveEnd]);
+
+  return (
+    <div className={`virtual-joystick-panel ${disabled ? 'is-disabled' : ''}`} aria-label="地图内虚拟摇杆">
+      <div className="virtual-joystick-status">
+        <div>
+          <span>当前状态：{panelStatus}</span>
+          <span className="virtual-joystick-helper">{helperText}</span>
+        </div>
+        <button type="button" className="takeover-button" disabled={disabled} onClick={active ? onRelease : onTakeover}>{active ? '释放' : '接管'}</button>
+      </div>
+      <div className="virtual-joystick-base-wrap">
+        <div
+          ref={baseRef}
+          className="virtual-joystick-base"
+          onMouseDown={startDrag}
+          onTouchStart={startDrag}
+          role="application"
+          aria-disabled={!canDrag}
+          aria-label="虚拟摇杆底盘"
+        >
+          <div className="virtual-joystick-cross" />
+          <span className="virtual-joystick-tick top">▲</span>
+          <span className="virtual-joystick-tick right">▶</span>
+          <span className="virtual-joystick-tick bottom">▼</span>
+          <span className="virtual-joystick-tick left">◀</span>
+          <div
+            className={`virtual-joystick-knob ${joystickDragging ? 'is-dragging' : ''}`}
+            style={{ '--knob-x': knobX, '--knob-y': knobY }}
+          />
+        </div>
+      </div>
+      <div className="virtual-joystick-direction">
+        <span>方向：{direction}</span>
+        <span>速度：{formatMotionValue(linearSpeed)} m/s</span>
+        <span>角速度：{formatMotionValue(angularSpeed)} rad/s</span>
+      </div>
+    </div>
+  );
+}
+function RobotMonitorPage({ currentUser, navigation, onRobotCommandEvent, robotRuntimeCommands = [], robotRuntimeLogs = [], selectedRobotId, setSelectedRobotId, setLogFilter, setLogTypeFilter }) {
+  const [manualControlActive, setManualControlActive] = useState(false);
+  const [joystickDragging, setJoystickDragging] = useState(false);
+  const [joystickVector, setJoystickVector] = useState({ x: 0, y: 0 });
+  const [joystickDirection, setJoystickDirection] = useState('停止');
+  const [linearSpeed, setLinearSpeed] = useState(0);
+  const [angularSpeed, setAngularSpeed] = useState(0);
+  const [robotPoseHint, setRobotPoseHint] = useState({ x: 0, y: 0, theta: 0 });
+  const joystickMoveStartedRef = useRef(false);
   const selectedRobot = robots.find((robot) => robot.robotId === selectedRobotId) ?? robots[0];
-  const status = selectedRobotId === robotStatus.robotId ? robotStatus : { ...robotStatus, ...selectedRobot, online: selectedRobot.status, speed: '0 m/s', mode: selectedRobot.mode };
-  const robotLogs = [...telemetryLogs, ...auditLogs]
-    .filter((row) => ['机器人', '底盘', '巡检', '建图', '地图', '路线'].includes(row.logType) || row.deviceId === status.robotId)
+  const baseStatus = selectedRobotId === robotStatus.robotId ? robotStatus : { ...robotStatus, ...selectedRobot, online: selectedRobot.status, speed: '0 m/s', mode: selectedRobot.mode };
+  const status = {
+    ...baseStatus,
+    mode: manualControlActive ? '手动控制' : baseStatus.mode,
+    speed: manualControlActive ? `${formatMotionValue(linearSpeed)} m/s` : baseStatus.speed,
+    theta: (baseStatus.theta || 90) + robotPoseHint.theta,
+    x: baseStatus.x + robotPoseHint.x,
+    y: baseStatus.y + robotPoseHint.y,
+  };
+  const canManualControl = can(currentUser, PERMISSIONS.TASK_ACTION);
+  const safetyIssues = getRobotManualSafetyIssues(status);
+  const manualAvailable = canManualControl && safetyIssues.length === 0;
+  const controlStatus = !manualAvailable ? '不可操作' : manualControlActive ? '手动控制中' : '待接管';
+  const disabledHint = !canManualControl ? (currentUser ? permissionReason(currentUser, '手动控制') : '无权限：请登录后再执行手动控制') : safetyIssues.length ? '不可操作：当前机器人不满足手动控制条件' : '';
+  const robotLogs = [...robotRuntimeLogs, ...telemetryLogs, ...auditLogs]
+    .filter((row) => ['机器人', '底盘', '巡检', '建图', '地图', '路线', '手动控制', '手动接管'].includes(row.logType) || row.deviceId === status.robotId)
     .slice(0, 8);
+  const robotCommandReceipts = robotRuntimeCommands.filter((row) => row.deviceId === status.robotId).slice(0, 3);
   const openLogs = () => {
     setLogFilter(status.robotId);
     setLogTypeFilter('全部');
     navigation?.navigateToLogs(status.robotId, '全部');
+  };
+  const writeManualLog = (logType, content, params = '-') => {
+    const now = formatNowTime();
+    const log = {
+      time: now,
+      objectType: 'robot',
+      objectId: status.robotId,
+      deviceId: status.robotId,
+      taskId: status.currentTask || '无',
+      logType,
+      content,
+      params,
+      status: '成功',
+      operator: currentUser?.name ?? currentUser?.role ?? 'mock-user',
+    };
+    onRobotCommandEvent?.({ log });
+    return now;
+  };
+  const resetJoystick = () => {
+    setJoystickDragging(false);
+    setJoystickVector({ x: 0, y: 0 });
+    setJoystickDirection('停止');
+    setLinearSpeed(0);
+    setAngularSpeed(0);
+    joystickMoveStartedRef.current = false;
+  };
+  const createManualCommandReceipt = (commandName, params, now) => {
+    const commandId = `ROBOT-MANUAL-${Date.now()}`;
+    onRobotCommandEvent?.({
+      command: {
+        id: commandId,
+        commandId,
+        deviceId: status.robotId,
+        deviceType: '移动机器人',
+        objectType: 'robot',
+        objectId: status.robotId,
+        commandName,
+        params,
+        sendResult: '已下发',
+        receiptStatus: '已确认',
+        stage: '设备已确认',
+        relatedTask: status.currentTask || '无',
+        sender: currentUser?.username ?? currentUser?.role ?? 'mock-user',
+        sendTime: now,
+        receiptTime: addSecondsToTime(now, 1),
+        duration: '1.0s',
+        failReason: '-',
+        suggestion: '前端 mock 已确认执行。',
+        handledBy: '-',
+        handledAt: '-',
+      },
+    });
+  };
+  const takeoverManualControl = () => {
+    if (!manualAvailable) return;
+    setManualControlActive(true);
+    resetJoystick();
+    writeManualLog('手动接管', '进入手动控制', currentUser?.role ?? 'operator');
+  };
+  const releaseManualControl = () => {
+    if (!manualControlActive) return;
+    setManualControlActive(false);
+    resetJoystick();
+    writeManualLog('手动接管', '释放手动控制', currentUser?.role ?? 'operator');
+  };
+  const applyJoystickVector = (vector) => {
+    const motion = getJoystickMotion(vector);
+    setJoystickVector(vector);
+    setJoystickDirection(motion.direction);
+    setLinearSpeed(motion.linearSpeed);
+    setAngularSpeed(motion.angularSpeed);
+    return motion;
+  };
+  const sendJoystickMoveStart = (motion) => {
+    if (joystickMoveStartedRef.current || motion.direction === '停止') return;
+    joystickMoveStartedRef.current = true;
+    const params = `方向=${motion.direction} speed=${formatMotionValue(motion.linearSpeed)} angular=${formatMotionValue(motion.angularSpeed)}`;
+    const receiptParams = `linear=${formatMotionValue(motion.linearSpeed)} angular=${formatMotionValue(motion.angularSpeed)}`;
+    const now = writeManualLog('手动控制', `开始移动｜方向=${motion.direction} speed=${formatMotionValue(motion.linearSpeed)} angular=${formatMotionValue(motion.angularSpeed)}`, params);
+    createManualCommandReceipt('底盘手动控制', receiptParams, now);
+  };
+  const startJoystickMove = (vector) => {
+    if (!manualControlActive || !manualAvailable) return;
+    joystickMoveStartedRef.current = false;
+    const motion = applyJoystickVector(vector);
+    setJoystickDragging(true);
+    sendJoystickMoveStart(motion);
+    setRobotPoseHint((pose) => ({
+      x: pose.x + vector.x * 8,
+      y: pose.y + vector.y * 8,
+      theta: pose.theta + vector.x * 12,
+    }));
+  };
+  const changeJoystickMove = (vector) => {
+    if (!manualControlActive || !manualAvailable) return;
+    const motion = applyJoystickVector(vector);
+    sendJoystickMoveStart(motion);
+  };
+  const stopJoystickMove = () => {
+    if (!manualControlActive || !joystickDragging) return;
+    resetJoystick();
+    const now = writeManualLog('手动控制', '底盘停止', 'linear=0 angular=0');
+    createManualCommandReceipt('底盘停止', 'linear=0 angular=0', now);
   };
 
   return (
@@ -3950,7 +4279,27 @@ function RobotMonitorPage({ navigation, setLogFilter, setLogTypeFilter }) {
       </section>
       <section className="panel robot-map-panel">
         <SectionTitle icon={Database} title="地图与当前位置" action={status.currentMap} />
-        <RobotMapCanvas robot={status} activeRouteId="R001" />
+        <div className="robot-map-with-joystick">
+          <RobotMapCanvas robot={status} activeRouteId="R001" />
+          <div className="robot-map-joystick">
+            <VirtualJoystick
+              active={manualControlActive}
+              angularSpeed={angularSpeed}
+              disabled={!manualAvailable}
+              disabledReason={disabledHint}
+              direction={joystickDirection}
+              joystickDragging={joystickDragging}
+              joystickVector={joystickVector}
+              linearSpeed={linearSpeed}
+              onMoveChange={changeJoystickMove}
+              onMoveEnd={stopJoystickMove}
+              onMoveStart={startJoystickMove}
+              onRelease={releaseManualControl}
+              onTakeover={takeoverManualControl}
+              status={controlStatus}
+            />
+          </div>
+        </div>
         <div className="detail-list dense robot-map-detail">
           <Info label="当前地图" value={status.currentMap} />
           <Info label="当前点位" value={status.currentPoint} />
@@ -3978,31 +4327,18 @@ function RobotMonitorPage({ navigation, setLogFilter, setLogTypeFilter }) {
           ))}
         </div>
       </section>
-      <section className="panel robot-manual-panel">
-        <SectionTitle icon={TerminalSquare} title="手动控制" action={manualMode ? '手动接管中' : '待接管'} />
-        <div className="manual-control-pad">
-          <button type="button">前进</button>
-          <div className="manual-middle-row">
-            <button type="button">左转</button>
-            <button className="danger" type="button">停止</button>
-            <button type="button">右转</button>
-          </div>
-          <button type="button">后退</button>
-        </div>
-        <div className="segmented-filter manual-speed-filter">
-          {['低速', '中速', '高速'].map((level) => (
-            <button className={speedLevel === level ? 'active' : ''} key={level} type="button" onClick={() => setSpeedLevel(level)}>{level}</button>
-          ))}
-        </div>
-        <div className="button-row">
-          <button type="button" onClick={() => setManualMode((value) => !value)}>{manualMode ? '退出接管' : '启用接管'}</button>
-          <button type="button">返航充电</button>
-          <button type="button" onClick={openLogs}>查看日志</button>
-        </div>
-      </section>
+
       <section className="panel robot-log-panel">
-        <SectionTitle icon={History} title="机器人运行日志" action="最近记录" />
+        <SectionTitle icon={History} title="机器人运行日志" action={<button type="button" onClick={openLogs}>查看全部</button>} />
         <SimpleLogTable rows={robotLogs} />
+        {robotCommandReceipts.length > 0 && (
+          <div className="robot-receipt-list">
+            <strong>最近指令回执</strong>
+            {robotCommandReceipts.map((row) => (
+              <div key={row.id}>{row.deviceId}｜{row.commandName}｜{row.params}｜{row.sendResult}｜{row.receiptStatus}</div>
+            ))}
+          </div>
+        )}
       </section>
     </div>
   );
@@ -5265,18 +5601,40 @@ function StepList({ task, onStepNavigate }) {
   }
 
   const openStep = (step) => {
-    if (step.templateId) {
-      onStepNavigate?.navigateToArmTemplate?.(step.templateId);
+    const target = step.target || '';
+    if (target.startsWith('TP-')) {
+      onStepNavigate?.navigateToTeachingPoint?.(target);
       return;
     }
-    if (step.stepType === 'arm') onStepNavigate?.navigateToArm(step.target || task.armId || 'ARM-001');
-    if (step.stepType === 'vision') onStepNavigate?.navigateToVision(step.target || task.visionTaskId || 'VT-001');
+    if (step.stepType === 'robot') {
+      onStepNavigate?.navigateToRobot?.(target || task.robotId || 'AMR-001');
+      return;
+    }
+    if (step.stepType === 'vision') {
+      onStepNavigate?.navigateToVision?.(target || task.visionTaskId || 'VT-001');
+      return;
+    }
+    if (step.stepType === 'arm') {
+      onStepNavigate?.navigateToArm?.(target || task.armId || 'ARM-001');
+      return;
+    }
+    if (step.stepType === 'device' || target) {
+      onStepNavigate?.navigateToDevice?.(target || task.targetDevice);
+      return;
+    }
+    if (step.stepType === 'task') onStepNavigate?.navigateToTask?.(target || task.id);
+  };
+  const openTemplateTeachingPoint = (step) => {
+    const pointId = getStepTemplateTeachingPoint(step);
+    if (pointId) onStepNavigate?.navigateToTeachingPoint?.(pointId);
   };
 
   return (
     <div className="step-list">
       {steps.map((step) => {
-        const clickable = ['arm', 'vision'].includes(step.stepType);
+        const clickable = ['robot', 'arm', 'vision', 'device', 'task'].includes(step.stepType) || Boolean(step.target);
+        const targetLabel = getStepNavigateLabel(step);
+        const teachingPointId = getStepTemplateTeachingPoint(step);
         return (
           <div
             aria-disabled={!clickable}
@@ -5295,24 +5653,68 @@ function StepList({ task, onStepNavigate }) {
           >
             <span>{toChineseStep(step.id)}</span>
             <strong>{step.name}</strong>
-            {step.templateName && (
-              <button
-                className="step-template-link"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  onStepNavigate?.navigateToArmTemplate?.(step.templateId);
-                }}
-                type="button"
-              >
-                {step.templateName}
-              </button>
-            )}
+            <div className="step-jump-actions">
+              {clickable && (
+                <button
+                  className="step-jump-link"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    openStep(step);
+                  }}
+                  type="button"
+                >
+                  {targetLabel}
+                </button>
+              )}
+              {step.templateName && (
+                <button
+                  className="step-template-link"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onStepNavigate?.navigateToArmTemplate?.(step.templateId);
+                  }}
+                  type="button"
+                >
+                  {step.templateName}
+                </button>
+              )}
+              {teachingPointId && (
+                <button
+                  className="step-template-link"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    openTemplateTeachingPoint(step);
+                  }}
+                  type="button"
+                >
+                  {teachingPointId}
+                </button>
+              )}
+            </div>
             <StatusText value={step.displayStatus} />
           </div>
         );
       })}
     </div>
   );
+}
+
+function getStepNavigateLabel(step) {
+  if (step.target?.startsWith('TP-')) return `查看示教点 ${step.target}`;
+  const labelMap = {
+    robot: '查看机器人',
+    vision: '查看视觉',
+    arm: '查看机械臂',
+    device: '查看设备',
+    task: '查看任务',
+  };
+  return labelMap[step.stepType] ?? '查看关联对象';
+}
+
+function getStepTemplateTeachingPoint(step) {
+  if (!step.templateId) return '';
+  const template = armActionTemplates.find((item) => item.templateId === step.templateId);
+  return template?.steps?.find((item) => item.targetTeachingPoint && item.targetTeachingPoint !== '-')?.targetTeachingPoint ?? '';
 }
 
 function InterlockTable({ highlightedDeviceIds = [], onNavigate, onRecord, currentUser }) {
@@ -7532,4 +7934,7 @@ function toChineseStep(stepId) {
   return Number.isFinite(number) ? `第 ${number} 步` : stepId;
 }
 
-createRoot(document.getElementById('root')).render(<App />);
+const rootElement = document.getElementById('root');
+const appRoot = rootElement.__reactRoot ?? createRoot(rootElement);
+rootElement.__reactRoot = appRoot;
+appRoot.render(<App />);

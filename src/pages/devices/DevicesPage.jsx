@@ -1,5 +1,9 @@
 import React from 'react';
 
-export function DevicesPage({ implementation: Implementation, ...props }) {
-  return <Implementation {...props} />;
+export function DevicesPage({ children }) {
+  return (
+    <div className="devices-page-route" data-page="devices">
+      {children}
+    </div>
+  );
 }

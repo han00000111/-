@@ -1,5 +1,9 @@
 import React from 'react';
 
-export function TasksPage({ implementation: Implementation, ...props }) {
-  return <Implementation {...props} />;
+export function TasksPage({ children }) {
+  return (
+    <div className="tasks-page-route" data-page="tasks">
+      {children}
+    </div>
+  );
 }

@@ -79,8 +79,8 @@ jobs:
           test -d dist/assets
           find dist -maxdepth 2 -type f | sort
           grep -E '<script|<link' dist/index.html
-          grep -q 'src="/-/assets/' dist/index.html
-          grep -q 'href="/-/assets/' dist/index.html
+          grep -q 'src="./assets/' dist/index.html
+          grep -q 'href="./assets/' dist/index.html
           ! grep -q '/src/main.jsx' dist/index.html
           ! grep -q 'src="/assets/' dist/index.html
           ! grep -q 'href="/assets/' dist/index.html

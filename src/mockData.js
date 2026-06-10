@@ -1,7 +1,11 @@
 export const navItems = [
   { key: 'overview', label: '总览' },
-  { key: 'devices', label: '设备与点位' },
+  { key: 'robot-monitor', label: '机器人监控' },
+  { key: 'map-management', label: '地图管理' },
+  { key: 'arm-control', label: '机械臂控制' },
+  { key: 'vision-recognition', label: '视觉识别' },
   { key: 'tasks', label: '任务管理' },
+  { key: 'devices', label: '设备与点位' },
   { key: 'commands', label: '指令回执' },
   { key: 'alarms', label: '报警互锁' },
   { key: 'logs', label: '日志审计' },
@@ -17,6 +21,23 @@ export const devices = [
   { id: 'CNC-006', type: '数控机床', online: '在线', runStatus: '待机', alarmCount: 0, updatedAt: '09:09:58' },
   { id: 'ROBOT-001', type: '工业机器人', online: '在线', runStatus: '运行中', alarmCount: 0, updatedAt: '09:11:18' },
   { id: 'ROBOT-002', type: '工业机器人', online: '在线', runStatus: '待机', alarmCount: 0, updatedAt: '09:10:50' },
+  { id: 'AMR-001', type: '移动机器人', online: '在线', runStatus: '巡检中', alarmCount: 1, updatedAt: '09:12:08' },
+  { id: 'CHASSIS-001', type: '机器人底盘', online: '在线', runStatus: '导航中', alarmCount: 0, updatedAt: '09:12:08' },
+  { id: 'LIDAR-001', type: '激光雷达', online: '在线', runStatus: '正常', alarmCount: 0, updatedAt: '09:12:06' },
+  { id: 'CHARGE-001', type: '充电桩', online: '在线', runStatus: '空闲', alarmCount: 0, updatedAt: '09:11:56' },
+  { id: 'MAP-SVC-001', type: '地图服务', online: '在线', runStatus: '正常', alarmCount: 0, updatedAt: '09:11:58' },
+  { id: 'NAV-SVC-001', type: '导航服务', online: '在线', runStatus: '正常', alarmCount: 0, updatedAt: '09:12:02' },
+  { id: 'ARM-001', type: '机械臂', online: '在线', runStatus: '运行中', alarmCount: 0, updatedAt: '09:14:12' },
+  { id: 'ARM-002', type: '机械臂', online: '在线', runStatus: '待机', alarmCount: 0, updatedAt: '09:13:48' },
+  { id: 'ARM-003', type: '机械臂', online: '离线', runStatus: '异常', alarmCount: 2, updatedAt: '09:10:22' },
+  { id: 'GRIPPER-001', type: '夹爪', online: '在线', runStatus: '已打开', alarmCount: 0, updatedAt: '09:14:02' },
+  { id: 'SUCTION-001', type: '吸盘', online: '在线', runStatus: '真空保持', alarmCount: 0, updatedAt: '09:13:40' },
+  { id: 'CAM-001', type: '相机', online: '在线', runStatus: '识别中', alarmCount: 0, updatedAt: '09:14:08' },
+  { id: 'CAM-002', type: '相机', online: '在线', runStatus: '待触发', alarmCount: 1, updatedAt: '09:13:50' },
+  { id: 'CAM-003', type: '相机', online: '离线', runStatus: '异常', alarmCount: 1, updatedAt: '09:10:12' },
+  { id: 'LGT-001', type: '光源', online: '在线', runStatus: '正常', alarmCount: 0, updatedAt: '09:14:00' },
+  { id: 'VISION-IPC-001', type: '视觉工控机', online: '在线', runStatus: '正常', alarmCount: 0, updatedAt: '09:14:05' },
+  { id: 'VISION-SVC-001', type: '视觉服务', online: '在线', runStatus: '模型加载失败', alarmCount: 1, updatedAt: '09:12:58' },
   { id: 'PLC-001', type: '控制器', online: '在线', runStatus: '正常', alarmCount: 0, updatedAt: '09:11:18' },
   { id: 'PLC-002', type: '控制器', online: '在线', runStatus: '维护中', alarmCount: 1, updatedAt: '09:10:42' },
   { id: 'PLC-003', type: '控制器', online: '在线', runStatus: '正常', alarmCount: 0, updatedAt: '09:11:02' },
@@ -29,6 +50,10 @@ export const tasks = [
   { id: 'TASK-003', orderNo: 'ORD-20250608-003', taskType: '搬运任务', targetDevice: 'CNC-002', pickupStation: '缓存区 A', placementPlan: 'CNC-002 待加工区', doorMode: '不开门', processStatus: '待确认', status: '排队中', step: '0/5', currentStep: 'STEP-000', devices: 'CNC-002, PLC-002', alarmCount: 0, updatedAt: '09:10:58', command: '等待执行', startedAt: '-', taskPlan: '短距搬运方案', visionMark: '料框编号识别', actionPoint: 'AMR-P05', materialRule: '同批次物料合并', reviewRule: '到位拍照确认' },
   { id: 'TASK-004', orderNo: 'ORD-20250608-004', taskType: '巡检任务', targetDevice: 'CNC-003', pickupStation: '无', placementPlan: '无', doorMode: '人工确认开门', processStatus: '待人工接管', status: '暂停', step: '2/5', currentStep: 'STEP-002', devices: 'CNC-003', alarmCount: 1, updatedAt: '09:10:30', command: '等待人工确认', startedAt: '09:04:26', taskPlan: '设备巡检方案', visionMark: '设备铭牌识别', actionPoint: 'CNC-003-I01', materialRule: '无物料', reviewRule: '人工确认后恢复' },
   { id: 'TASK-005', orderNo: 'ORD-20250608-005', taskType: '生产任务', targetDevice: 'CNC-003', pickupStation: 'WS-003 取料位', placementPlan: '机床夹具 B 面', doorMode: 'PLC 自动开门', processStatus: '异常处理中', status: '失败', step: '2/7', currentStep: 'STEP-002', devices: 'CNC-003', alarmCount: 2, updatedAt: '09:07:18', command: '回执确认', startedAt: '09:01:14', taskPlan: '返修加工方案', visionMark: '零件二维码', actionPoint: 'CNC-003-B02', materialRule: '返修件单独放料', reviewRule: '失败后必须复测' },
+  { id: 'TASK-006', orderNo: 'ORD-20250608-006', taskType: '巡检任务', targetDevice: 'AMR-001', pickupStation: '无', placementPlan: '无', doorMode: '不开门', processStatus: '待人工接管', robotId: 'AMR-001', armId: '-', visionTaskId: 'VT-003', targetMap: '一号厂区地图', targetRoute: '主通道巡检路线', targetPoint: '充电桩', executionMode: '循环巡检 + 安全区域判断', status: '异常处理中', step: '2/4', currentStep: 'STEP-002', devices: 'AMR-001, CAM-003, NAV-SVC-001', alarmCount: 2, updatedAt: '09:12:08', command: '安全区域判断异常', startedAt: '09:05:00', taskPlan: '主通道巡检方案', visionMark: '安全区域模型 SAFE-v1.2', actionPoint: 'R001 / P002', materialRule: '无物料', reviewRule: '视觉异常后转人工确认' },
+  { id: 'TASK-007', orderNo: 'ORD-20250608-007', taskType: '建图任务', targetDevice: 'AMR-001', pickupStation: '无', placementPlan: '地图 M003', doorMode: '不开门', processStatus: '待回执', robotId: 'AMR-001', armId: '-', visionTaskId: '-', targetMap: '车间A自动扫描地图', targetRoute: '建图轨迹 MAP_TASK_001', targetPoint: '设备区入口', executionMode: '手动建图', status: '排队中', step: '0/3', currentStep: 'STEP-000', devices: 'AMR-001, MAP-SVC-001', alarmCount: 1, updatedAt: '09:11:40', command: '等待建图回执', startedAt: '-', taskPlan: '车间A自动建图任务', visionMark: '无', actionPoint: 'M003 / MAP_TASK_001', materialRule: '无物料', reviewRule: '保存地图前检查建图日志' },
+  { id: 'TASK-008', orderNo: 'ORD-20250608-008', taskType: '上下料任务', targetDevice: 'CNC-002', pickupStation: '料仓 A-03', placementPlan: 'CNC-002 上料位', doorMode: '视觉确认后开门', processStatus: '设备异常关注', robotId: 'AMR-001', armId: 'ARM-001', visionTaskId: 'VT-001', targetMap: '一号厂区地图', targetRoute: '设备区短巡检', targetPoint: 'CNC-002 上料位', executionMode: '视觉引导 + 机械臂抓取', status: '运行中', step: '3/8', currentStep: 'STEP-003', devices: 'AMR-001, ARM-001, CAM-001, CNC-002', alarmCount: 1, updatedAt: '09:14:12', command: '机械臂移动到抓取位', startedAt: '09:12:00', taskPlan: 'AMR + 机械臂上下料方案', visionMark: '物料定位模型 LOC-MAT-v2.3', actionPoint: 'ARM-001-TP-002', materialRule: '夹爪闭合前二次确认', reviewRule: '抓取与放置后各复测一次' },
+  { id: 'TASK-009', orderNo: 'ORD-20250608-009', taskType: '视觉检测任务', targetDevice: 'CNC-002', pickupStation: '无', placementPlan: '无', doorMode: '不开门', processStatus: '待确认', robotId: '-', armId: '-', visionTaskId: 'VT-004', targetMap: '-', targetRoute: '-', targetPoint: 'CNC-002 上料位', executionMode: '相机触发识别', status: '排队中', step: '0/3', currentStep: 'STEP-000', devices: 'CAM-001, VISION-SVC-001', alarmCount: 0, updatedAt: '09:13:20', command: '等待识别', startedAt: '-', taskPlan: '单相机检测方案', visionMark: '二维码 / 条码模型 CODE-v1.1', actionPoint: 'CAM-001-FOV', materialRule: '检测任务不绑定物料', reviewRule: '低置信度转人工确认' },
 ];
 const cnc001Points = [
   { device: 'CNC-001', name: '主轴转速', code: 'spindle_speed', pointType: 'numeric', value: '3200 rpm', status: '正常', quality: '良好', updatedAt: '09:11:18' },
@@ -158,6 +183,7 @@ export const trendSeries = [
 ];
 
 export const settings = [
+  { label: '平台名称', value: '机器人综合管理平台', desc: '当前系统显示名称' },
   { label: '工位编号', value: 'WS-001', desc: '当前单工位编号' },
   { label: '公共机编号', value: 'IPC-001', desc: '现场 Windows 公共机' },
   { label: '后台地址', value: 'https://platform.local', desc: '后台服务连接地址' },
@@ -189,21 +215,24 @@ export const taskAttachments = {
   'TASK-005': [
     { type: '程序文件', name: 'O5002_failed.nc', version: '失败记录', target: 'TASK-005', updatedAt: '2025-05-27 09:07', remark: '回执超时任务的程序文件。' },
   ],
+  'TASK-006': [
+    { type: '巡检路线', name: '主通道巡检路线_R001.json', version: 'v1.4', target: 'TASK-006', updatedAt: '2025-05-27 09:05', remark: 'AMR-001 当前巡检路线。' },
+    { type: '视觉截图', name: 'CAM-003_安全区域异常.png', version: '当前', target: 'TASK-006', updatedAt: '2025-05-27 09:10', remark: '安全区域判断异常截图。' },
+  ],
+  'TASK-007': [
+    { type: '建图日志', name: 'MAP_TASK_001_build.log', version: '当前', target: 'TASK-007', updatedAt: '2025-05-27 09:11', remark: '车间A自动建图过程日志。' },
+    { type: '地图草稿', name: 'M003_preview.png', version: '草稿', target: 'TASK-007', updatedAt: '2025-05-27 09:11', remark: '未保存地图预览。' },
+  ],
+  'TASK-008': [
+    { type: '动作模板', name: '设备开门模板_TPL-DOOR-001.json', version: 'v1.0', target: 'TASK-008', updatedAt: '2025-05-27 09:12', remark: '上下料开门动作模板。' },
+    { type: '视觉结果', name: 'VT-001_物料定位结果.json', version: '当前', target: 'TASK-008', updatedAt: '2025-05-27 09:14', remark: '物料位置识别结果。' },
+  ],
+  'TASK-009': [
+    { type: '识别配置', name: 'VT-004_CODE-v1.1.json', version: 'v1.1', target: 'TASK-009', updatedAt: '2025-05-27 09:13', remark: '二维码 / 条码识别配置。' },
+  ],
 };
 
 // robotPlatformMockPatch: 机器人综合管理平台第一版前端 mock 扩展。
-navItems.splice(0, navItems.length,
-  { key: 'overview', label: '总览' },
-  { key: 'robot-monitor', label: '机器人监控' },
-  { key: 'map-management', label: '地图管理' },
-  { key: 'tasks', label: '任务管理' },
-  { key: 'devices', label: '设备与点位' },
-  { key: 'commands', label: '指令回执' },
-  { key: 'alarms', label: '报警互锁' },
-  { key: 'logs', label: '日志审计' },
-  { key: 'settings', label: '系统设置' },
-);
-
 export const robots = [
   { robotId: 'AMR-001', name: 'HERMES 移动底座 01', status: '在线', battery: 82, currentMap: '一号厂区地图', currentPoint: '主通道中段', currentTask: 'TASK-006', mode: '自动巡检', communicationStatus: '正常', localizationStatus: '正常', lidarStatus: '正常', emergencyStatus: '未触发', updatedAt: '09:12:08' },
   { robotId: 'AMR-002', name: 'HERMES 移动底座 02', status: '在线', battery: 64, currentMap: '二号仓储地图', currentPoint: '充电桩', currentTask: '无', mode: '待机', communicationStatus: '正常', localizationStatus: '正常', lidarStatus: '正常', emergencyStatus: '未触发', updatedAt: '09:10:44' },
@@ -311,18 +340,6 @@ export const robotCommandLogs = [
   { time: '09:09:58', objectType: 'chassis', objectId: 'AMR-001', deviceId: 'AMR-001', taskId: '', logType: '底盘', content: '手动接管已退出', params: 'operator01', status: '成功' },
 ];
 
-const robotDeviceRows = [
-  { id: 'AMR-001', type: '移动机器人', online: '在线', runStatus: '巡检中', alarmCount: 1, updatedAt: '09:12:08' },
-  { id: 'CHASSIS-001', type: '机器人底盘', online: '在线', runStatus: '导航中', alarmCount: 0, updatedAt: '09:12:08' },
-  { id: 'LIDAR-001', type: '激光雷达', online: '在线', runStatus: '正常', alarmCount: 0, updatedAt: '09:12:06' },
-  { id: 'CHARGE-001', type: '充电桩', online: '在线', runStatus: '空闲', alarmCount: 0, updatedAt: '09:11:56' },
-  { id: 'MAP-SVC-001', type: '地图服务', online: '在线', runStatus: '正常', alarmCount: 0, updatedAt: '09:11:58' },
-  { id: 'NAV-SVC-001', type: '导航服务', online: '在线', runStatus: '正常', alarmCount: 0, updatedAt: '09:12:02' },
-];
-robotDeviceRows.forEach((row) => {
-  if (!devices.some((device) => device.id === row.id)) devices.splice(8, 0, row);
-});
-
 Object.assign(devicePoints, {
   'AMR-001': [
     { device: 'AMR-001', name: '机器人位置', code: 'robot_position', pointType: 'status', value: 'X285 Y166', status: '正常', quality: '良好', updatedAt: '09:12:08' },
@@ -367,24 +384,17 @@ tasks.forEach((task) => {
   task.targetPoint ??= '-';
   task.executionMode ??= '自动';
 });
-[
-  { id: 'TASK-006', taskType: '巡检任务', robotId: 'AMR-001', targetMap: '一号厂区地图', targetRoute: '主通道巡检路线', targetPoint: '充电桩', executionMode: '循环巡检', status: '运行中', step: '2/4', currentStep: 'STEP-002', devices: 'AMR-001, NAV-SVC-001', alarmCount: 1, updatedAt: '09:12:08', command: '开始巡检', startedAt: '09:05:00' },
-  { id: 'TASK-007', taskType: '建图任务', robotId: 'AMR-001', targetMap: '车间A自动扫描地图', targetRoute: '建图轨迹 MAP_TASK_001', targetPoint: '设备区入口', executionMode: '手动建图', status: '排队中', step: '0/3', currentStep: 'STEP-000', devices: 'AMR-001, MAP-SVC-001', alarmCount: 0, updatedAt: '09:11:40', command: '等待建图', startedAt: '-' },
-].forEach((task) => {
-  if (!tasks.some((row) => row.id === task.id)) tasks.push(task);
-});
-
 Object.assign(stepsByTask, {
   'TASK-006': [
-    { id: 'STEP-001', name: '下发巡检路线', status: '完成' },
-    { id: 'STEP-002', name: '主通道巡检', status: '执行中' },
-    { id: 'STEP-003', name: '仓储区巡检', status: '等待前置条件' },
-    { id: 'STEP-004', name: '返航充电', status: '等待前置条件' },
+    { id: 'STEP-001', name: '下发巡检路线', status: '完成', stepType: 'robot', target: 'AMR-001' },
+    { id: 'STEP-002', name: '安全区域判断', status: '执行中', stepType: 'vision', target: 'VT-003' },
+    { id: 'STEP-003', name: '仓储区巡检', status: '等待前置条件', stepType: 'robot', target: 'AMR-001' },
+    { id: 'STEP-004', name: '返航充电', status: '等待前置条件', stepType: 'device', target: 'CHARGE-001' },
   ],
   'TASK-007': [
-    { id: 'STEP-001', name: '选择底座', status: '等待前置条件' },
-    { id: 'STEP-002', name: '开始建图', status: '等待前置条件' },
-    { id: 'STEP-003', name: '保存地图', status: '等待前置条件' },
+    { id: 'STEP-001', name: '选择底座', status: '等待前置条件', stepType: 'robot', target: 'AMR-001' },
+    { id: 'STEP-002', name: '开始建图', status: '等待前置条件', stepType: 'device', target: 'MAP-SVC-001' },
+    { id: 'STEP-003', name: '保存地图', status: '等待前置条件', stepType: 'device', target: 'MAP-SVC-001' },
   ],
 });
 
@@ -424,22 +434,7 @@ robotCommandLogs.forEach((log) => telemetryLogs.push(log));
   { time: '09:05:20', objectType: 'chassis', objectId: 'AMR-001', deviceId: 'AMR-001', taskId: '', logType: '底盘', content: '急停触发', params: 'estop=true', status: '异常', operator: 'system' },
 ].forEach((log) => auditLogs.push(log));
 
-settings.unshift({ label: '平台名称', value: '机器人综合管理平台', desc: '当前系统显示名称' });
 // armVisionMockPatch: 机械臂控制与视觉识别第一版前端 mock 扩展。
-navItems.splice(0, navItems.length,
-  { key: 'overview', label: '总览' },
-  { key: 'robot-monitor', label: '机器人监控' },
-  { key: 'map-management', label: '地图管理' },
-  { key: 'arm-control', label: '机械臂控制' },
-  { key: 'vision-recognition', label: '视觉识别' },
-  { key: 'tasks', label: '任务管理' },
-  { key: 'devices', label: '设备与点位' },
-  { key: 'commands', label: '指令回执' },
-  { key: 'alarms', label: '报警互锁' },
-  { key: 'logs', label: '日志审计' },
-  { key: 'settings', label: '系统设置' },
-);
-
 export const robotArms = [
   {
     armId: 'ARM-001',
@@ -475,6 +470,23 @@ export const robotArms = [
     alarmStatus: '无报警',
     updatedAt: '09:10:42',
   },
+  {
+    armId: 'ARM-003',
+    name: '三号机械臂',
+    type: '六轴机械臂',
+    onlineStatus: '离线',
+    online: '离线',
+    runStatus: '异常',
+    controlMode: '-',
+    currentTask: '无',
+    currentAction: '无',
+    toolId: 'GRIPPER-003',
+    toolStatus: '异常',
+    pose: '-',
+    emergencyStatus: '未知',
+    alarmStatus: '机械臂离线',
+    updatedAt: '09:10:22',
+  },
 ];
 
 export const endEffectors = [
@@ -482,6 +494,7 @@ export const endEffectors = [
   { toolId: 'TOOL-002', toolType: '吸盘', armId: 'ARM-002', installStatus: '已安装', openCloseStatus: '-', suctionStatus: '已吸附', adsorbStatus: '已吸附', pressure: '-68 kPa', currentTask: '无', alarmStatus: '无报警', updatedAt: '09:10:42' },
   { toolId: 'TOOL-003', toolType: '磁吸', armId: 'ARM-001', installStatus: '未安装', openCloseStatus: '-', suctionStatus: '-', adsorbStatus: '-', pressure: '-', currentTask: '无', alarmStatus: '无报警', updatedAt: '09:00:12' },
   { toolId: 'TOOL-004', toolType: '扫码枪', armId: 'ARM-002', installStatus: '备用', openCloseStatus: '-', suctionStatus: '-', adsorbStatus: '-', pressure: '-', currentTask: '无', alarmStatus: '无报警', updatedAt: '08:58:30' },
+  { toolId: 'GRIPPER-003', toolType: '夹爪', armId: 'ARM-003', installStatus: '异常', openCloseStatus: '-', suctionStatus: '-', adsorbStatus: '-', pressure: '-', currentTask: '无', alarmStatus: '机械臂离线', updatedAt: '09:10:22' },
 ];
 
 export const armActionSteps = [
@@ -492,6 +505,7 @@ export const armActionSteps = [
   { armId: 'ARM-001', taskId: 'TASK-001', stepNo: 5, actionName: '确认门已打开', targetPoint: 'CAM-002', status: '待执行' },
   { armId: 'ARM-002', taskId: '无', stepNo: 1, actionName: '退回安全位', targetPoint: 'SAFE-P01', status: '已完成' },
   { armId: 'ARM-002', taskId: '无', stepNo: 2, actionName: '等待人工释放', targetPoint: '-', status: '待执行' },
+  { armId: 'ARM-003', taskId: '无', stepNo: 1, actionName: '等待离线恢复', targetPoint: '-', status: '失败' },
 ];
 
 export const armTeachingPoints = [
@@ -547,6 +561,7 @@ export const armActionLogs = [
   { time: '09:10:58', armId: 'ARM-001', actionName: '打开夹爪', action: '打开夹爪', targetPoint: '-', result: '成功', receiptStatus: '已确认', relatedTask: 'TASK-001', taskId: 'TASK-001', operator: 'admin' },
   { time: '09:10:20', armId: 'ARM-001', actionName: '上抬把手', action: '上抬把手', targetPoint: 'HANDLE-P01', result: '执行中', receiptStatus: '待回执', relatedTask: 'TASK-001', taskId: 'TASK-001', operator: 'admin' },
   { time: '09:09:42', armId: 'ARM-002', actionName: '退回安全位', action: '退回安全位', targetPoint: 'SAFE-P01', result: '成功', receiptStatus: '已确认', relatedTask: '无', taskId: '无', operator: 'engineer01' },
+  { time: '09:10:22', armId: 'ARM-003', actionName: '等待离线恢复', action: '等待离线恢复', targetPoint: '-', result: '失败', receiptStatus: '超时', relatedTask: '无', taskId: '无', operator: 'system' },
 ];
 
 export const armCommandReceipts = [
@@ -570,6 +585,7 @@ export const visionResults = [
   { time: '09:14:08', cameraId: 'CAM-001', visionTaskId: 'VT-001', object: '物料 A-102', result: '通过', confidence: '96%', duration: '128 ms', relatedTask: 'TASK-008', relatedDevice: 'CNC-002', screenshot: 'mock://vision/CAM-001/001', processStatus: '已上传' },
   { time: '09:13:50', cameraId: 'CAM-002', visionTaskId: 'VT-002', object: '夹爪姿态', result: '低置信度', confidence: '62%', duration: '156 ms', relatedTask: 'TASK-008', relatedDevice: 'ARM-001', screenshot: 'mock://vision/CAM-002/002', processStatus: '待复核' },
   { time: '09:10:12', cameraId: 'CAM-003', visionTaskId: 'VT-003', object: '安全区域', result: '异常', confidence: '0%', duration: '-', relatedTask: 'TASK-006', relatedDevice: 'AMR-001', screenshot: 'mock://vision/CAM-003/offline', processStatus: '处理中' },
+  { time: '09:13:20', cameraId: 'CAM-001', visionTaskId: 'VT-004', object: '二维码 / 条码', result: '待执行', confidence: '-', duration: '-', relatedTask: 'TASK-009', relatedDevice: 'CNC-002', screenshot: 'mock://vision/CAM-001/code', processStatus: '待识别' },
 ];
 
 export const visionModels = [
@@ -583,23 +599,6 @@ export const visionLogs = [
   { time: '09:13:50', objectType: 'camera', objectId: 'CAM-002', deviceId: 'CAM-002', taskId: 'TASK-008', logType: '相机', content: '相机拍照：抓取复核相机', params: '1280x720', status: '成功' },
   { time: '09:12:58', objectType: 'model', objectId: 'SAFE-v1.2', deviceId: 'VISION-SVC-001', taskId: 'TASK-006', logType: '模型', content: '模型加载失败：安全区域模型', params: 'SAFE-v1.2', status: '异常' },
 ];
-
-const armVisionDevices = [
-  { id: 'ARM-001', type: '机械臂', online: '在线', runStatus: '运行中', alarmCount: 0, updatedAt: '09:14:12' },
-  { id: 'ARM-002', type: '机械臂', online: '在线', runStatus: '待机', alarmCount: 0, updatedAt: '09:13:48' },
-  { id: 'ARM-003', type: '机械臂', online: '离线', runStatus: '异常', alarmCount: 2, updatedAt: '09:10:22' },
-  { id: 'GRIPPER-001', type: '夹爪', online: '在线', runStatus: '已打开', alarmCount: 0, updatedAt: '09:14:02' },
-  { id: 'SUCTION-001', type: '吸盘', online: '在线', runStatus: '真空保持', alarmCount: 0, updatedAt: '09:13:40' },
-  { id: 'CAM-001', type: '相机', online: '在线', runStatus: '识别中', alarmCount: 0, updatedAt: '09:14:08' },
-  { id: 'CAM-002', type: '相机', online: '在线', runStatus: '待触发', alarmCount: 1, updatedAt: '09:13:50' },
-  { id: 'CAM-003', type: '相机', online: '离线', runStatus: '异常', alarmCount: 1, updatedAt: '09:10:12' },
-  { id: 'LGT-001', type: '光源', online: '在线', runStatus: '正常', alarmCount: 0, updatedAt: '09:14:00' },
-  { id: 'VISION-IPC-001', type: '视觉工控机', online: '在线', runStatus: '正常', alarmCount: 0, updatedAt: '09:14:05' },
-  { id: 'VISION-SVC-001', type: '视觉服务', online: '在线', runStatus: '模型加载失败', alarmCount: 1, updatedAt: '09:12:58' },
-];
-armVisionDevices.forEach((row) => {
-  if (!devices.some((device) => device.id === row.id)) devices.splice(Math.min(devices.length, 14), 0, row);
-});
 
 Object.assign(devicePoints, {
   'ARM-001': [
@@ -645,14 +644,6 @@ Object.assign(devicePoints, {
     { device: 'VISION-SVC-001', name: '模型版本', code: 'model_version', pointType: 'status', value: 'SAFE-v1.2', status: '异常', quality: '异常', updatedAt: '09:12:58' },
     { device: 'VISION-SVC-001', name: '识别状态', code: 'recognition_status', pointType: 'status', value: '模型加载失败', status: '异常', quality: '异常', updatedAt: '09:12:58' },
   ],
-});
-
-const armVisionTasks = [
-  { id: 'TASK-008', orderNo: 'ORD-20250608-008', taskType: '上下料任务', targetDevice: 'CNC-002', pickupStation: '料仓 A-03', placementPlan: 'CNC-002 上料位', doorMode: '视觉确认后开门', processStatus: '设备异常关注', robotId: 'AMR-001', armId: 'ARM-001', visionTaskId: 'VT-001', targetMap: '一号厂区地图', targetRoute: '设备区短巡检', targetPoint: 'CNC-002 上料位', executionMode: '视觉引导 + 机械臂抓取', status: '运行中', step: '3/8', currentStep: 'STEP-003', devices: 'AMR-001, ARM-001, CAM-001, CNC-002', alarmCount: 1, updatedAt: '09:14:12', command: '机械臂移动到抓取位', startedAt: '09:12:00', taskPlan: 'AMR + 机械臂上下料方案', visionMark: '物料定位模型 LOC-MAT-v2.3', actionPoint: 'ARM-001-TP-002', materialRule: '夹爪闭合前二次确认', reviewRule: '抓取与放置后各复测一次' },
-  { id: 'TASK-009', orderNo: 'ORD-20250608-009', taskType: '视觉检测任务', targetDevice: 'CNC-002', pickupStation: '无', placementPlan: '无', doorMode: '不开门', processStatus: '待确认', robotId: '-', armId: '-', visionTaskId: 'VT-004', targetMap: '-', targetRoute: '-', targetPoint: 'CNC-002 上料位', executionMode: '相机触发识别', status: '排队中', step: '0/3', currentStep: 'STEP-000', devices: 'CAM-001, VISION-SVC-001', alarmCount: 0, updatedAt: '09:13:20', command: '等待识别', startedAt: '-', taskPlan: '单相机检测方案', visionMark: '安全区域模型 SAFE-v1.2', actionPoint: 'CAM-001-FOV', materialRule: '检测任务不绑定物料', reviewRule: '低置信度转人工确认' },
-];
-armVisionTasks.forEach((task) => {
-  if (!tasks.some((row) => row.id === task.id)) tasks.push(task);
 });
 
 taskPoints['TASK-008'] = [...(devicePoints['ARM-001'] ?? []), ...(devicePoints['CAM-001'] ?? [])];
