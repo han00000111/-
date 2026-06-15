@@ -68,6 +68,7 @@ import {
   telemetryLogs,
   trendSeries,
   visionModels,
+  visionLogs,
   visionResults,
   visionTasks,
 } from './mockData';
@@ -158,6 +159,8 @@ function App() {
   const [selectedTeachingPointId, setSelectedTeachingPointId] = useState('TP-DOOR-001');
   const [selectedArmTemplateId, setSelectedArmTemplateId] = useState('TPL-DOOR-001');
   const [selectedVisionTaskId, setSelectedVisionTaskId] = useState('VT-001');
+  const [selectedVisionCameraId, setSelectedVisionCameraId] = useState('CAM-001');
+  const [selectedVisionResultKey, setSelectedVisionResultKey] = useState('');
   const [selectedRobotId, setSelectedRobotId] = useState('AMR-001');
   const [selectedTaskId, setSelectedTaskId] = useState('TASK-001');
   const [selectedDeviceId, setSelectedDeviceId] = useState('CNC-001');
@@ -285,9 +288,13 @@ function App() {
     },
     navigateToVision: (targetId = 'VT-001') => {
       const target = String(targetId || 'VT-001');
-      const task = visionTasks.find((item) => item.visionTaskId === target) ?? visionTasks.find((item) => item.cameraId === target);
-      setSelectedVisionTaskId(task?.visionTaskId ?? target);
-      setActiveVisionTab(target.startsWith('CAM-') ? 'cameras' : 'tasks');
+      const result = visionResults.find((item) => item.screenshot === target || `${item.time}-${item.cameraId}-${item.visionTaskId}` === target);
+      const task = visionTasks.find((item) => item.visionTaskId === target) ?? visionTasks.find((item) => item.cameraId === target) ?? visionTasks.find((item) => item.visionTaskId === result?.visionTaskId);
+      const cameraId = target.startsWith('CAM-') ? target : result?.cameraId ?? task?.cameraId ?? 'CAM-001';
+      setSelectedVisionCameraId(cameraId);
+      setSelectedVisionTaskId(task?.visionTaskId ?? result?.visionTaskId ?? 'VT-001');
+      setSelectedVisionResultKey(result ? getVisionResultKey(result) : '');
+      setActiveVisionTab('overview');
       setPage('vision-recognition');
     },
   };
@@ -386,8 +393,13 @@ function App() {
             activeVisionTab={activeVisionTab}
             currentUser={currentUser}
             selectedVisionTaskId={selectedVisionTaskId}
+            selectedVisionCameraId={selectedVisionCameraId}
+            selectedVisionResultKey={selectedVisionResultKey}
             setActiveVisionTab={setActiveVisionTab}
+            setSelectedVisionCameraId={setSelectedVisionCameraId}
+            setSelectedVisionResultKey={setSelectedVisionResultKey}
             setSelectedVisionTaskId={setSelectedVisionTaskId}
+            navigation={navigation}
           />
         )}
         {page === 'devices' && (
@@ -2016,7 +2028,11 @@ function TaskQueueSection({ currentUser, filteredTasks, query, scope, selectedTa
 }
 
 function TaskDetailSection({ currentStepDetail, currentUser, navigation, onAlarms, onDevice, onLogs, onTaskAction, selectedTask, setPreviewAttachment }) {
-  const visionRows = visionResults.filter((row) => row.relatedTask === selectedTask.id || row.visionTaskId === selectedTask.visionTaskId);
+  const visionRows = visionResults.filter((row) => row.relatedTask === selectedTask.id || row.visionTaskId === selectedTask.visionTaskId).map(normalizeVisionResult);
+  const recentVisionRow = visionRows[0];
+  const recentVisionTask = visionTasks.find((task) => task.visionTaskId === recentVisionRow?.visionTaskId) ?? visionTasks.find((task) => task.visionTaskId === selectedTask.visionTaskId) ?? visionTasks[0];
+  const recentVisionCamera = cameras.find((camera) => camera.cameraId === recentVisionRow?.cameraId) ?? cameras.find((camera) => camera.cameraId === recentVisionTask?.cameraId) ?? cameras[0];
+  const hasVisionRisk = visionRows.some((row) => ['异常', '低置信度', '失败'].includes(row.result) || ['待复核', '处理中', '转人工处理'].includes(row.processStatus));
   const taskAlarms = alarms.filter((alarm) => alarm.relatedTask === selectedTask.id || selectedTask.devices.includes(alarm.device));
   return (
     <div className="task-management-layout">
@@ -2058,11 +2074,19 @@ function TaskDetailSection({ currentStepDetail, currentUser, navigation, onAlarm
       <section className="panel task-detail-result-panel">
         <SectionTitle icon={MonitorCog} title="视觉结果" />
         {visionRows.length ? (
-          <DataTable
-            compact
-            columns={['时间', '相机', '对象', '结果', '置信度', '处理状态']}
-            rows={visionRows.map((row) => [row.time, row.cameraId, row.object, <StatusText value={row.result} />, row.confidence, <StatusText value={row.processStatus} />])}
-          />
+          <div className="task-vision-result-card">
+            <div className="task-vision-thumb">
+              <MockVisionFrame camera={recentVisionCamera} result={recentVisionRow} task={recentVisionTask} variant="snapshot" />
+            </div>
+            <div className="task-vision-result-body">
+              {hasVisionRisk && <div className="task-vision-alert">视觉结果存在低置信度、异常或待复核项，请进入视觉监控工作台复核。</div>}
+              <DataTable
+                compact
+                columns={['时间', '相机', '对象', '结果', '置信度', '处理状态', '操作']}
+                rows={visionRows.map((row) => [row.time, row.cameraId, row.object, <StatusText value={row.result} />, row.confidence, <StatusText value={row.processStatus} />, <button type="button" onClick={() => navigation?.navigateToVision?.(getVisionResultKey(row))}>查看截图</button>])}
+              />
+            </div>
+          </div>
         ) : (
           <div className="attachment-empty">当前任务暂无视觉结果</div>
         )}
@@ -3897,49 +3921,310 @@ function buildArmCurrentActionRecordExportRow(row) {
   };
 }
 
-function VisionRecognitionPage({ activeVisionTab, currentUser, selectedVisionTaskId, setActiveVisionTab, setSelectedVisionTaskId }) {
-  const [results, setResults] = useState(visionResults);
-  const [notice, setNotice] = useState('');
-  const runVision = (task = visionTasks[0]) => {
-    const row = { time: formatNowTime(), cameraId: task.cameraId, visionTaskId: task.visionTaskId, object: '模拟目标', result: '通过', confidence: '95%', duration: '132 ms', relatedTask: task.relatedRobotTask, relatedDevice: task.relatedDevice, screenshot: `mock://vision/${task.cameraId}/${Date.now()}`, processStatus: '已上传' };
-    setResults((rows) => [row, ...rows].slice(0, 12));
-    setSelectedVisionTaskId(task.visionTaskId);
-    setNotice(`已执行识别：${task.taskName}`);
-    window.setTimeout(() => setNotice(''), 1800);
-  };
-
-  if (activeVisionTab === 'cameras') return <CameraConfigPage runVision={runVision} />;
-  if (activeVisionTab === 'tasks') return <VisionTaskPage selectedVisionTaskId={selectedVisionTaskId} setSelectedVisionTaskId={setSelectedVisionTaskId} runVision={runVision} notice={notice} />;
-  if (activeVisionTab === 'results') return <VisionResultPage results={results} />;
-  if (activeVisionTab === 'models') return <VisionModelPage />;
-  return <VisionOverviewPage results={results} runVision={runVision} setActiveVisionTab={setActiveVisionTab} setSelectedVisionTaskId={setSelectedVisionTaskId} />;
+function getVisionResultKey(row) {
+  return row?.screenshot || `${row?.time}-${row?.cameraId}-${row?.visionTaskId}`;
 }
 
-function VisionOverviewPage({ results, runVision, setActiveVisionTab, setSelectedVisionTaskId }) {
-  const stats = {
+function getVisionImageTypeByTask(task) {
+  if (task?.recognitionType?.includes('姿态')) return 'gripper-pose';
+  if (task?.recognitionType?.includes('安全')) return 'safety-area';
+  if (task?.recognitionType?.includes('二维码') || task?.recognitionType?.includes('条码')) return 'code-read';
+  return 'material-position';
+}
+
+function getVisionObjectByTask(task) {
+  if (task?.recognitionType?.includes('姿态')) return '夹爪姿态';
+  if (task?.recognitionType?.includes('安全')) return '安全区域';
+  if (task?.recognitionType?.includes('二维码') || task?.recognitionType?.includes('条码')) return '二维码 / 条码';
+  return '物料 A-102';
+}
+
+function getDefaultVisionBox(imageType, result) {
+  if (imageType === 'gripper-pose') return { x: 44, y: 28, width: 24, height: 34, label: `${result.object} / ${result.confidence}` };
+  if (imageType === 'safety-area') return { x: 18, y: 20, width: 64, height: 52, label: `${result.object} / ${result.confidence}` };
+  if (imageType === 'code-read') return { x: 58, y: 34, width: 18, height: 18, label: result.object };
+  return { x: 36, y: 32, width: 28, height: 24, label: `${result.object} / ${result.confidence}` };
+}
+
+function getDefaultVisionRoi(imageType) {
+  if (imageType === 'gripper-pose') return { x: 30, y: 18, width: 52, height: 58 };
+  if (imageType === 'safety-area') return { x: 12, y: 16, width: 76, height: 62 };
+  if (imageType === 'code-read') return { x: 48, y: 24, width: 36, height: 36 };
+  return { x: 24, y: 22, width: 56, height: 48 };
+}
+
+function normalizeVisionResult(row) {
+  const task = visionTasks.find((item) => item.visionTaskId === row.visionTaskId);
+  const imageType = row.imageType ?? getVisionImageTypeByTask(task);
+  const normalized = {
+    ...row,
+    imageType,
+    frameStatus: row.frameStatus ?? (row.result === '异常' ? 'OFFLINE' : 'SNAPSHOT'),
+  };
+  return {
+    ...normalized,
+    bbox: row.bbox ?? getDefaultVisionBox(imageType, normalized),
+    roi: row.roi ?? getDefaultVisionRoi(imageType),
+  };
+}
+
+function getSelectedVisionResult(results, selectedKey, task, camera) {
+  return results.find((row) => getVisionResultKey(row) === selectedKey)
+    ?? results.find((row) => row.visionTaskId === task?.visionTaskId)
+    ?? results.find((row) => row.cameraId === camera?.cameraId)
+    ?? normalizeVisionResult(visionResults[0]);
+}
+
+function getVisionStats(results) {
+  const durations = results
+    .map((row) => Number.parseFloat(String(row.duration).replace(' ms', '')))
+    .filter((value) => Number.isFinite(value));
+  const avgDuration = durations.length ? `${Math.round(durations.reduce((sum, value) => sum + value, 0) / durations.length)} ms` : '-';
+  return {
     cameraTotal: cameras.length,
     online: cameras.filter((camera) => camera.online === '在线').length,
     running: visionTasks.filter((task) => task.status === '识别中').length,
     abnormal: visionTasks.filter((task) => task.status === '异常').length,
     today: results.length,
-    badResults: results.filter((row) => ['未通过', '未识别', '低置信度', '异常'].includes(row.result)).length,
-    avgDuration: '139 ms',
+    badResults: results.filter((row) => ['异常', '低置信度', '失败'].includes(row.result) || row.processStatus === '待复核').length,
+    avgDuration,
   };
+}
+
+function getVisionBoxStyle(box = {}) {
+  return {
+    left: `${box.x ?? 0}%`,
+    top: `${box.y ?? 0}%`,
+    width: `${box.width ?? 0}%`,
+    height: `${box.height ?? 0}%`,
+  };
+}
+
+function getVisionBoxTone(result) {
+  if (result.result === '异常' || result.frameStatus === 'OFFLINE') return 'danger';
+  if (result.result === '低置信度' || result.processStatus === '待复核') return 'warning';
+  if (result.imageType === 'gripper-pose') return 'warning';
+  return 'primary';
+}
+
+function getVisionSuggestion(result, model) {
+  if (result.frameStatus === 'OFFLINE') return { tone: 'danger', title: '相机离线', text: '建议检查相机连接和视觉工控机状态。' };
+  if (model?.deployStatus === '加载失败') return { tone: 'danger', title: '模型加载失败', text: '建议检查模型部署状态。' };
+  if (result.result === '低置信度') return { tone: 'warning', title: '低置信度', text: '建议人工复核或重新拍照。' };
+  if (['异常', '失败'].includes(result.result)) return { tone: 'danger', title: '识别失败', text: '建议重新触发识别或转人工处理。' };
+  return { tone: 'ok', title: '识别通过', text: '当前结果可继续流转，必要时可人工复核。' };
+}
+
+function VisionRecognitionPage({ activeVisionTab, currentUser, navigation, selectedVisionCameraId, selectedVisionResultKey, selectedVisionTaskId, setActiveVisionTab, setSelectedVisionCameraId, setSelectedVisionResultKey, setSelectedVisionTaskId }) {
+  const [results, setResults] = useState(() => visionResults.map(normalizeVisionResult));
+  const [notice, setNotice] = useState('');
+  const [runtimeLogs, setRuntimeLogs] = useState(visionLogs);
+  const selectVisionTarget = ({ cameraId, resultKey, tab = 'overview', taskId }) => {
+    const result = resultKey ? results.find((row) => getVisionResultKey(row) === resultKey) : null;
+    const task = visionTasks.find((item) => item.visionTaskId === taskId) ?? visionTasks.find((item) => item.visionTaskId === result?.visionTaskId) ?? visionTasks.find((item) => item.cameraId === cameraId);
+    setSelectedVisionCameraId(cameraId ?? result?.cameraId ?? task?.cameraId ?? 'CAM-001');
+    setSelectedVisionTaskId(task?.visionTaskId ?? result?.visionTaskId ?? selectedVisionTaskId);
+    setSelectedVisionResultKey(resultKey ?? (result ? getVisionResultKey(result) : ''));
+    setActiveVisionTab(tab);
+  };
+  const writeVisionLog = (content, target = selectedVisionTaskId, status = '成功') => {
+    setRuntimeLogs((rows) => [{
+      time: formatNowTime(),
+      objectType: 'vision',
+      objectId: target,
+      deviceId: selectedVisionCameraId,
+      taskId: visionTasks.find((task) => task.visionTaskId === target)?.relatedRobotTask ?? '无',
+      logType: '视觉识别',
+      content,
+      params: target,
+      status,
+      operator: currentUser?.username ?? currentUser?.role ?? 'mock-user',
+    }, ...rows]);
+  };
+  const runVision = (task = visionTasks[0]) => {
+    const imageType = getVisionImageTypeByTask(task);
+    const row = normalizeVisionResult({
+      time: formatNowTime(),
+      cameraId: task.cameraId,
+      visionTaskId: task.visionTaskId,
+      object: getVisionObjectByTask(task),
+      result: task.status === '异常' ? '异常' : '通过',
+      confidence: task.status === '异常' ? '0%' : '95%',
+      duration: task.status === '异常' ? '-' : '132 ms',
+      relatedTask: task.relatedRobotTask,
+      relatedDevice: task.relatedDevice,
+      screenshot: `mock://vision/${task.cameraId}/${Date.now()}`,
+      processStatus: task.status === '异常' ? '处理中' : '已上传',
+      imageType,
+      frameStatus: task.status === '异常' ? 'OFFLINE' : 'SNAPSHOT',
+    });
+    setResults((rows) => [row, ...rows].slice(0, 16));
+    selectVisionTarget({ cameraId: row.cameraId, resultKey: getVisionResultKey(row), taskId: row.visionTaskId, tab: 'overview' });
+    writeVisionLog(`触发识别：${task.taskName}`, task.visionTaskId, row.result === '异常' ? '异常' : '成功');
+    setNotice(`已执行识别：${task.taskName}`);
+    window.setTimeout(() => setNotice(''), 1800);
+  };
+  const updateResultStatus = (result, nextStatus, content) => {
+    const key = getVisionResultKey(result);
+    setResults((rows) => rows.map((row) => (getVisionResultKey(row) === key ? { ...row, processStatus: nextStatus } : row)));
+    setSelectedVisionResultKey(key);
+    writeVisionLog(content, result.visionTaskId, nextStatus === '转人工处理' ? '待处理' : '成功');
+    setNotice(content);
+    window.setTimeout(() => setNotice(''), 1800);
+  };
+  const sharedProps = {
+    navigation,
+    notice,
+    results,
+    runVision,
+    runtimeLogs,
+    selectedVisionCameraId,
+    selectedVisionResultKey,
+    selectedVisionTaskId,
+    selectVisionTarget,
+    setActiveVisionTab,
+    updateResultStatus,
+  };
+
+  if (activeVisionTab === 'cameras') return <CameraConfigPage {...sharedProps} />;
+  if (activeVisionTab === 'tasks') return <VisionTaskPage {...sharedProps} setSelectedVisionTaskId={setSelectedVisionTaskId} />;
+  if (activeVisionTab === 'results') return <VisionResultPage {...sharedProps} />;
+  if (activeVisionTab === 'models') return <VisionModelPage />;
+  return <VisionOverviewPage {...sharedProps} />;
+}
+
+function VisionOverviewPage({ navigation, notice, results, runVision, runtimeLogs, selectedVisionCameraId, selectedVisionResultKey, selectedVisionTaskId, selectVisionTarget, setActiveVisionTab, updateResultStatus }) {
+  const selectedCamera = cameras.find((camera) => camera.cameraId === selectedVisionCameraId) ?? cameras[0];
+  const selectedTask = visionTasks.find((task) => task.visionTaskId === selectedVisionTaskId) ?? visionTasks.find((task) => task.cameraId === selectedCamera.cameraId) ?? visionTasks[0];
+  const selectedResult = getSelectedVisionResult(results, selectedVisionResultKey, selectedTask, selectedCamera);
+  const stats = getVisionStats(results);
   return (
-    <div className="page-grid vision-overview-grid">
-      <section className="panel vision-summary-panel">
-        <SectionTitle icon={MonitorCog} title="视觉总览" />
+    <div className="vision-monitor-workbench">
+      <section className="panel vision-summary-panel vision-workbench-summary">
+        <SectionTitle icon={MonitorCog} title="视觉监控工作台" action={notice || 'mock 画面 / 本地识别复核'} />
         <SummaryStrip items={[{ label: '相机总数', value: stats.cameraTotal }, { label: '在线相机', value: stats.online, tone: 'ok' }, { label: '识别中', value: stats.running }, { label: '识别异常', value: stats.abnormal, tone: stats.abnormal ? 'bad' : 'ok' }, { label: '今日识别次数', value: stats.today }, { label: '异常结果数', value: stats.badResults, tone: stats.badResults ? 'warn' : 'ok' }, { label: '平均识别耗时', value: stats.avgDuration }]} />
       </section>
-      <section className="panel vision-recent-panel"><SectionTitle icon={History} title="最近识别结果" /><VisionResultTable rows={results.slice(0, 5)} /></section>
-      <section className="panel vision-exception-panel"><SectionTitle icon={AlertTriangle} title="异常识别任务" /><DataTable columns={['任务编号', '任务名称', '相机', '状态', '操作']} rows={visionTasks.filter((task) => task.status === '异常').map((task) => [task.visionTaskId, task.taskName, task.cameraId, <StatusText value={task.status} />, <button type="button" onClick={() => { setSelectedVisionTaskId(task.visionTaskId); setActiveVisionTab('tasks'); }}>查看</button>])} /></section>
-      <section className="panel vision-camera-panel"><SectionTitle icon={Database} title="相机状态" /><DataTable compact columns={['相机', '位置', '在线状态', '更新时间']} rows={cameras.map((camera) => [camera.cameraId, camera.position, <StatusText value={camera.online} />, camera.updatedAt])} /></section>
-      <section className="panel vision-model-panel"><SectionTitle icon={Cpu} title="模型运行状态" /><DataTable compact columns={['模型', '版本', '部署状态', '准确率']} rows={visionModels.map((model) => [model.modelName, model.version, <StatusText value={model.deployStatus} />, model.accuracy])} /></section>
+      <VisionTargetPanel selectedCameraId={selectedCamera.cameraId} selectedTaskId={selectedTask.visionTaskId} selectVisionTarget={selectVisionTarget} />
+      <section className="panel vision-screen-panel">
+        <SectionTitle icon={MonitorCog} title="实时画面 / 当前识别截图" action={selectedCamera.cameraId} />
+        <div className="vision-screen-stack">
+          <MockVisionFrame camera={selectedCamera} result={selectedResult} task={selectedTask} variant="live" />
+          <MockVisionFrame camera={selectedCamera} result={selectedResult} task={selectedTask} variant="snapshot" />
+        </div>
+      </section>
+      <VisionDetailPanel navigation={navigation} result={selectedResult} runVision={runVision} task={selectedTask} updateResultStatus={updateResultStatus} />
+      <section className="panel vision-record-panel">
+        <SectionTitle icon={History} title="最近识别记录" action={<button type="button" onClick={() => setActiveVisionTab('results')}>查看全部</button>} />
+        <VisionRecentRecords navigation={navigation} results={results.slice(0, 6)} selectVisionTarget={selectVisionTarget} updateResultStatus={updateResultStatus} />
+        {runtimeLogs.length > 0 && <div className="vision-log-inline">{runtimeLogs[0].time}｜{runtimeLogs[0].content}</div>}
+      </section>
     </div>
   );
 }
 
-function CameraConfigPage({ runVision }) {
+function VisionTargetPanel({ selectedCameraId, selectedTaskId, selectVisionTarget }) {
+  return (
+    <section className="panel vision-target-panel">
+      <SectionTitle icon={Database} title="相机 / 识别任务" />
+      <div className="vision-target-block">
+        <strong>相机列表</strong>
+        {cameras.map((camera) => (
+          <button className={`vision-target-card ${selectedCameraId === camera.cameraId ? 'selected' : ''}`} key={camera.cameraId} type="button" onClick={() => selectVisionTarget({ cameraId: camera.cameraId })}>
+            <span>{camera.cameraId}｜{camera.cameraName}</span>
+            <em>{camera.position}</em>
+            <small>{camera.online}｜{camera.updatedAt}</small>
+          </button>
+        ))}
+      </div>
+      <div className="vision-target-block">
+        <strong>识别任务</strong>
+        {visionTasks.map((task) => (
+          <button className={`vision-target-card ${selectedTaskId === task.visionTaskId ? 'selected' : ''}`} key={task.visionTaskId} type="button" onClick={() => selectVisionTarget({ cameraId: task.cameraId, taskId: task.visionTaskId })}>
+            <span>{task.visionTaskId}｜{task.taskName}</span>
+            <em>{task.recognitionType}｜{task.cameraId}</em>
+            <small>{task.relatedDevice}｜{task.relatedRobotTask}｜{task.status}</small>
+          </button>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function MockVisionFrame({ camera, result, task, variant = 'snapshot' }) {
+  const frameStatus = variant === 'live' ? (camera.online === '在线' ? 'LIVE' : 'OFFLINE') : result.frameStatus;
+  const imageType = variant === 'live' ? getVisionImageTypeByTask(task) : result.imageType;
+  const offline = frameStatus === 'OFFLINE';
+  const label = variant === 'live' ? `${camera.cameraName} 实时监控` : `${result.screenshot} 当前识别截图`;
+  return (
+    <div className={`vision-frame ${imageType} ${offline ? 'offline' : ''}`}>
+      <div className="vision-frame-head">
+        <span className={`vision-frame-badge ${frameStatus.toLowerCase()}`}>{frameStatus}</span>
+        <strong>{label}</strong>
+        <span>{camera.cameraId}｜{camera.resolution}｜{camera.fps}</span>
+      </div>
+      <div className="vision-frame-body">
+        <div className="vision-grid-lines" />
+        <div className="vision-roi" style={getVisionBoxStyle(result.roi)} />
+        <VisionScene imageType={imageType} offline={offline} />
+        {!offline && <div className={`vision-bbox ${getVisionBoxTone(result)}`} style={getVisionBoxStyle(result.bbox)}><span>{result.bbox?.label ?? `${result.object} / ${result.confidence}`}</span></div>}
+        {offline && <div className="vision-offline-mask">OFFLINE</div>}
+      </div>
+      <div className="vision-frame-foot">
+        <span>{task.taskName}</span>
+        <span>{task.modelVersion}</span>
+        <span>{result.duration}</span>
+        <span>{result.time}</span>
+      </div>
+    </div>
+  );
+}
+
+function VisionScene({ imageType, offline }) {
+  if (offline) return <div className="vision-scene offline-scene">相机离线 / 无画面</div>;
+  if (imageType === 'code-read') return <div className="vision-scene code-scene"><i /><i /><i /><b /></div>;
+  if (imageType === 'gripper-pose') return <div className="vision-scene gripper-scene"><i /><b /><span /></div>;
+  if (imageType === 'safety-area') return <div className="vision-scene safety-scene"><i /><b /></div>;
+  return <div className="vision-scene material-scene"><i /><b /><span /></div>;
+}
+
+function VisionDetailPanel({ navigation, result, runVision, task, updateResultStatus }) {
+  const model = visionModels.find((item) => item.version === task.modelVersion) ?? visionModels.find((item) => item.task === task.taskName) ?? visionModels[0];
+  const suggestion = getVisionSuggestion(result, model);
+  return (
+    <section className="panel vision-detail-panel">
+      <SectionTitle icon={ClipboardList} title="识别结果详情" action={<StatusText value={result.processStatus} />} />
+      <div className="detail-list dense">
+        <Info label="识别任务" value={result.visionTaskId} />
+        <Info label="识别类型" value={task.recognitionType} />
+        <Info label="关联相机" value={result.cameraId} />
+        <Info label="关联设备" value={result.relatedDevice} />
+        <Info label="关联任务" value={result.relatedTask} />
+        <Info label="识别对象" value={result.object} />
+        <Info label="识别结果" value={<StatusText value={result.result} />} />
+        <Info label="置信度" value={result.confidence} />
+        <Info label="识别耗时" value={result.duration} />
+        <Info label="模型版本" value={task.modelVersion} />
+        <Info label="截图编号" value={result.screenshot} />
+        <Info label="更新时间" value={result.time} />
+      </div>
+      <div className={`vision-suggestion ${suggestion.tone}`}>
+        <strong>{suggestion.title}</strong>
+        <span>{suggestion.text}</span>
+        <em>模型：{model.modelName}｜{model.deployStatus}｜{model.accuracy}</em>
+      </div>
+      <div className="vision-detail-actions">
+        <button type="button" onClick={() => runVision(task)}>重新识别</button>
+        <button type="button" onClick={() => navigation?.navigateToTask?.(result.relatedTask)}>查看关联任务</button>
+        <button type="button" onClick={() => navigation?.navigateToDevice?.(result.relatedDevice)}>查看设备</button>
+        <button type="button" onClick={() => navigation?.navigateToLogs?.(result.visionTaskId, '视觉识别')}>查看日志</button>
+        <button type="button" onClick={() => updateResultStatus(result, '已复核', `已复核视觉结果：${result.visionTaskId}`)}>标记已复核</button>
+        <button type="button" onClick={() => updateResultStatus(result, '转人工处理', `视觉结果转人工处理：${result.visionTaskId}`)}>转人工处理</button>
+      </div>
+    </section>
+  );
+}
+
+function CameraConfigPage({ runVision, selectVisionTarget, setActiveVisionTab }) {
   const [notice, setNotice] = useState('');
   const run = (message, camera) => {
     setNotice(`${message}：${camera.cameraId}`);
@@ -3948,33 +4233,68 @@ function CameraConfigPage({ runVision }) {
   return (
     <section className="panel page-full camera-config-page">
       <SectionTitle icon={Database} title="相机配置" />
-      <DataTable columns={['相机编号', '相机名称', '安装位置', '关联设备 / 工位', 'IP 地址', '分辨率', '帧率', '曝光', '光源配置', '在线状态', '更新时间', '操作']} rows={cameras.map((camera) => [camera.cameraId, camera.cameraName, camera.position, camera.relatedDevice, camera.ip, camera.resolution, camera.fps, camera.exposure, camera.light, <StatusText value={camera.online} />, camera.updatedAt, <div className="table-actions"><button type="button" onClick={() => run('查看画面', camera)}>查看画面</button><button type="button" onClick={() => runVision(visionTasks.find((task) => task.cameraId === camera.cameraId) ?? visionTasks[0])}>测试拍照</button><button type="button" onClick={() => run('编辑配置', camera)}>编辑配置</button><button type="button" onClick={() => run(camera.online === '在线' ? '停用' : '启用', camera)}>{camera.online === '在线' ? '停用' : '启用'}</button></div>])} />
+      <DataTable columns={['相机编号', '相机名称', '安装位置', '关联设备 / 工位', 'IP 地址', '分辨率', '帧率', '曝光', '光源配置', '在线状态', '更新时间', '操作']} rows={cameras.map((camera) => [camera.cameraId, camera.cameraName, camera.position, camera.relatedDevice, camera.ip, camera.resolution, camera.fps, camera.exposure, camera.light, <StatusText value={camera.online} />, camera.updatedAt, <div className="table-actions"><button type="button" onClick={() => selectVisionTarget({ cameraId: camera.cameraId })}>查看监控</button><button type="button" onClick={() => { setActiveVisionTab('tasks'); selectVisionTarget({ cameraId: camera.cameraId, tab: 'tasks' }); }}>查看识别任务</button><button type="button" onClick={() => { setActiveVisionTab('results'); selectVisionTarget({ cameraId: camera.cameraId, tab: 'results' }); }}>查看结果</button><button type="button" onClick={() => runVision(visionTasks.find((task) => task.cameraId === camera.cameraId) ?? visionTasks[0])}>测试拍照</button><button type="button" onClick={() => run('编辑配置', camera)}>编辑配置</button></div>])} />
       {notice && <div className="inline-feedback">{notice}</div>}
     </section>
   );
 }
 
-function VisionTaskPage({ selectedVisionTaskId, setSelectedVisionTaskId, runVision, notice }) {
+function VisionTaskPage({ navigation, notice, runVision, selectedVisionTaskId, selectVisionTarget, setSelectedVisionTaskId }) {
   return (
     <section className="panel page-full vision-task-page">
       <SectionTitle icon={ClipboardList} title="识别任务" />
-      <DataTable columns={['识别任务编号', '任务名称', '识别类型', '关联相机', '关联设备', '关联工位', '关联机器人任务', '模型版本', '触发方式', '状态', '操作']} rows={visionTasks.map((task) => [task.visionTaskId, task.taskName, task.recognitionType, task.cameraId, task.relatedDevice, task.workstation, task.relatedRobotTask, task.modelVersion, task.triggerMode, <StatusText value={task.status} />, <button type="button" onClick={() => runVision(task)}>开始识别</button>])} rowKeys={visionTasks.map((task) => task.visionTaskId)} selectedKey={selectedVisionTaskId} onRowClick={setSelectedVisionTaskId} />
+      <DataTable columns={['识别任务编号', '任务名称', '识别类型', '关联相机', '关联设备', '关联工位', '关联机器人任务', '模型版本', '触发方式', '状态', '操作']} rows={visionTasks.map((task) => [task.visionTaskId, task.taskName, task.recognitionType, task.cameraId, task.relatedDevice, task.workstation, task.relatedRobotTask, task.modelVersion, task.triggerMode, <StatusText value={task.status} />, <div className="table-actions"><button type="button" onClick={() => selectVisionTarget({ cameraId: task.cameraId, taskId: task.visionTaskId })}>查看监控</button><button type="button" onClick={() => selectVisionTarget({ cameraId: task.cameraId, taskId: task.visionTaskId, tab: 'results' })}>查看结果</button><button type="button" onClick={() => runVision(task)}>触发识别</button><button type="button" onClick={() => navigation?.navigateToTask?.(task.relatedRobotTask)}>查看关联任务</button></div>])} rowKeys={visionTasks.map((task) => task.visionTaskId)} selectedKey={selectedVisionTaskId} onRowClick={setSelectedVisionTaskId} />
       {notice && <div className="inline-feedback">{notice}</div>}
     </section>
   );
 }
 
-function VisionResultPage({ results }) {
+function VisionResultPage({ navigation, results, runVision, selectedVisionCameraId, selectedVisionResultKey, selectedVisionTaskId, selectVisionTarget, updateResultStatus }) {
+  const selectedResult = results.find((row) => getVisionResultKey(row) === selectedVisionResultKey)
+    ?? results.find((row) => row.visionTaskId === selectedVisionTaskId)
+    ?? results.find((row) => row.cameraId === selectedVisionCameraId)
+    ?? results[0];
+  const task = visionTasks.find((item) => item.visionTaskId === selectedResult.visionTaskId) ?? visionTasks[0];
+  const camera = cameras.find((item) => item.cameraId === selectedResult.cameraId) ?? cameras[0];
   return (
-    <section className="panel page-full vision-result-page">
-      <SectionTitle icon={History} title="识别结果" />
-      <VisionResultTable rows={results} />
-    </section>
+    <div className="vision-result-workspace">
+      <section className="panel vision-result-list-panel">
+        <SectionTitle icon={History} title="识别结果列表" />
+        <VisionRecentRecords compact navigation={navigation} results={results} selectVisionTarget={(payload) => selectVisionTarget({ ...payload, tab: 'results' })} updateResultStatus={updateResultStatus} />
+      </section>
+      <section className="panel vision-result-preview-panel">
+        <SectionTitle icon={MonitorCog} title="结果截图预览" action={selectedResult.screenshot} />
+        <MockVisionFrame camera={camera} result={selectedResult} task={task} variant="snapshot" />
+      </section>
+      <VisionDetailPanel navigation={navigation} result={selectedResult} runVision={runVision} task={task} updateResultStatus={updateResultStatus} />
+    </div>
   );
 }
 
-function VisionResultTable({ rows }) {
-  return <DataTable columns={['时间', '相机', '识别任务', '识别对象', '结果', '置信度', '耗时', '关联任务', '关联设备', '截图', '处理状态']} rows={rows.map((row) => [row.time, row.cameraId, row.visionTaskId, row.object, <StatusText value={row.result} />, row.confidence, row.duration, row.relatedTask, row.relatedDevice, row.screenshot, <StatusText value={row.processStatus} />])} />;
+function VisionRecentRecords({ compact = false, navigation, results, selectVisionTarget, updateResultStatus }) {
+  return (
+    <div className={`vision-record-list ${compact ? 'compact' : ''}`}>
+      {results.map((row) => (
+        <div className="vision-record-row" key={getVisionResultKey(row)} role="button" tabIndex={0} onClick={() => selectVisionTarget({ cameraId: row.cameraId, resultKey: getVisionResultKey(row), taskId: row.visionTaskId })} onKeyDown={(event) => { if (event.key === 'Enter') selectVisionTarget({ cameraId: row.cameraId, resultKey: getVisionResultKey(row), taskId: row.visionTaskId }); }}>
+          <span>{row.time}</span>
+          <strong>{row.cameraId}｜{row.object}</strong>
+          <em>{row.visionTaskId}｜{row.relatedTask}</em>
+          <StatusText value={row.result} />
+          <small>{row.confidence}｜{row.duration}｜{row.processStatus}</small>
+          <span className="vision-record-actions">
+            <button type="button" onClick={(event) => { event.stopPropagation(); selectVisionTarget({ cameraId: row.cameraId, resultKey: getVisionResultKey(row), taskId: row.visionTaskId }); }}>查看截图</button>
+            <button type="button" onClick={(event) => { event.stopPropagation(); navigation?.navigateToTask?.(row.relatedTask); }}>查看任务</button>
+            <button type="button" onClick={(event) => { event.stopPropagation(); navigation?.navigateToDevice?.(row.relatedDevice); }}>查看设备</button>
+            <button type="button" onClick={(event) => { event.stopPropagation(); updateResultStatus(row, '已复核', `已复核视觉结果：${row.visionTaskId}`); }}>复核</button>
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function VisionResultTable({ rows, onPreview }) {
+  return <DataTable columns={['时间', '相机', '识别任务', '识别对象', '结果', '置信度', '耗时', '关联任务', '关联设备', '截图', '处理状态', '操作']} rows={rows.map((row) => [row.time, row.cameraId, row.visionTaskId, row.object, <StatusText value={row.result} />, row.confidence, row.duration, row.relatedTask, row.relatedDevice, row.screenshot, <StatusText value={row.processStatus} />, <button type="button" onClick={() => onPreview?.(row)}>查看截图</button>])} />;
 }
 
 function VisionModelPage() {
@@ -3992,7 +4312,7 @@ function VisionModelPage() {
   );
 }
 
-const JOYSTICK_BASE_SIZE = 140;
+const JOYSTICK_BASE_SIZE = 120;
 const JOYSTICK_MAX_OFFSET = (JOYSTICK_BASE_SIZE / 2) * 0.45;
 
 function getJoystickDirection({ x, y }) {
@@ -4037,13 +4357,11 @@ function getRobotManualSafetyIssues(status) {
   return issues;
 }
 
-function VirtualJoystick({ active, angularSpeed, disabled, disabledReason, direction, joystickDragging, joystickVector, linearSpeed, onMoveChange, onMoveEnd, onMoveStart, onRelease, onTakeover, status }) {
+function VirtualJoystick({ active, angularSpeed, disabled, disabledReason, direction, joystickDragging, joystickVector, linearSpeed, onMoveChange, onMoveEnd, onMoveStart, onRelease, onTakeover }) {
   const baseRef = useRef(null);
   const canDrag = active && !disabled;
   const knobX = `${joystickVector.x * JOYSTICK_MAX_OFFSET}px`;
   const knobY = `${joystickVector.y * JOYSTICK_MAX_OFFSET}px`;
-  const panelStatus = disabled ? '不可操作' : status;
-  const helperText = disabled ? disabledReason : active ? '拖动摇杆控制底盘' : '请先接管后控制';
 
   const getVectorFromEvent = (event) => {
     const base = baseRef.current;
@@ -4089,14 +4407,15 @@ function VirtualJoystick({ active, angularSpeed, disabled, disabledReason, direc
   }, [joystickDragging, onMoveChange, onMoveEnd]);
 
   return (
-    <div className={`virtual-joystick-panel ${disabled ? 'is-disabled' : ''}`} aria-label="地图内虚拟摇杆">
-      <div className="virtual-joystick-status">
-        <div>
-          <span>当前状态：{panelStatus}</span>
-          <span className="virtual-joystick-helper">{helperText}</span>
-        </div>
-        <button type="button" className="takeover-button" disabled={disabled} onClick={active ? onRelease : onTakeover}>{active ? '释放' : '接管'}</button>
-      </div>
+    <div className={`virtual-joystick-panel ${active ? 'is-expanded' : 'is-collapsed'} ${disabled ? 'is-disabled' : ''}`} aria-label="地图内虚拟摇杆">
+      {!active && (
+        <>
+          <button type="button" className="takeover-button" disabled={disabled} onClick={onTakeover}>手动接管</button>
+          {disabled && <span className="virtual-joystick-tip">{disabledReason}</span>}
+        </>
+      )}
+      {active && (
+        <>
       <div className="virtual-joystick-base-wrap">
         <div
           ref={baseRef}
@@ -4119,10 +4438,12 @@ function VirtualJoystick({ active, angularSpeed, disabled, disabledReason, direc
         </div>
       </div>
       <div className="virtual-joystick-direction">
-        <span>方向：{direction}</span>
-        <span>速度：{formatMotionValue(linearSpeed)} m/s</span>
-        <span>角速度：{formatMotionValue(angularSpeed)} rad/s</span>
+        <span>{direction}</span>
+        <span>{formatMotionValue(linearSpeed)} m/s</span>
       </div>
+          <button type="button" className="joystick-release-button" onClick={onRelease}>释放</button>
+        </>
+      )}
     </div>
   );
 }
@@ -4148,8 +4469,7 @@ function RobotMonitorPage({ currentUser, navigation, onRobotCommandEvent, robotR
   const canManualControl = can(currentUser, PERMISSIONS.TASK_ACTION);
   const safetyIssues = getRobotManualSafetyIssues(status);
   const manualAvailable = canManualControl && safetyIssues.length === 0;
-  const controlStatus = !manualAvailable ? '不可操作' : manualControlActive ? '手动控制中' : '待接管';
-  const disabledHint = !canManualControl ? (currentUser ? permissionReason(currentUser, '手动控制') : '无权限：请登录后再执行手动控制') : safetyIssues.length ? '不可操作：当前机器人不满足手动控制条件' : '';
+  const joystickDisabledReason = !canManualControl && !currentUser ? '请登录后手动接管' : !manualAvailable ? '当前状态不可操作' : '';
   const robotLogs = [...robotRuntimeLogs, ...telemetryLogs, ...auditLogs]
     .filter((row) => ['机器人', '底盘', '巡检', '建图', '地图', '路线', '手动控制', '手动接管'].includes(row.logType) || row.deviceId === status.robotId)
     .slice(0, 8);
@@ -4286,7 +4606,7 @@ function RobotMonitorPage({ currentUser, navigation, onRobotCommandEvent, robotR
               active={manualControlActive}
               angularSpeed={angularSpeed}
               disabled={!manualAvailable}
-              disabledReason={disabledHint}
+              disabledReason={joystickDisabledReason}
               direction={joystickDirection}
               joystickDragging={joystickDragging}
               joystickVector={joystickVector}
@@ -4296,7 +4616,6 @@ function RobotMonitorPage({ currentUser, navigation, onRobotCommandEvent, robotR
               onMoveStart={startJoystickMove}
               onRelease={releaseManualControl}
               onTakeover={takeoverManualControl}
-              status={controlStatus}
             />
           </div>
         </div>

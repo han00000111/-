@@ -582,10 +582,10 @@ export const visionTasks = [
 ];
 
 export const visionResults = [
-  { time: '09:14:08', cameraId: 'CAM-001', visionTaskId: 'VT-001', object: '物料 A-102', result: '通过', confidence: '96%', duration: '128 ms', relatedTask: 'TASK-008', relatedDevice: 'CNC-002', screenshot: 'mock://vision/CAM-001/001', processStatus: '已上传' },
-  { time: '09:13:50', cameraId: 'CAM-002', visionTaskId: 'VT-002', object: '夹爪姿态', result: '低置信度', confidence: '62%', duration: '156 ms', relatedTask: 'TASK-008', relatedDevice: 'ARM-001', screenshot: 'mock://vision/CAM-002/002', processStatus: '待复核' },
-  { time: '09:10:12', cameraId: 'CAM-003', visionTaskId: 'VT-003', object: '安全区域', result: '异常', confidence: '0%', duration: '-', relatedTask: 'TASK-006', relatedDevice: 'AMR-001', screenshot: 'mock://vision/CAM-003/offline', processStatus: '处理中' },
-  { time: '09:13:20', cameraId: 'CAM-001', visionTaskId: 'VT-004', object: '二维码 / 条码', result: '待执行', confidence: '-', duration: '-', relatedTask: 'TASK-009', relatedDevice: 'CNC-002', screenshot: 'mock://vision/CAM-001/code', processStatus: '待识别' },
+  { time: '09:14:08', cameraId: 'CAM-001', visionTaskId: 'VT-001', object: '物料 A-102', result: '通过', confidence: '96%', duration: '128 ms', relatedTask: 'TASK-008', relatedDevice: 'CNC-002', screenshot: 'mock://vision/CAM-001/001', processStatus: '已上传', imageType: 'material-position', frameStatus: 'SNAPSHOT', bbox: { x: 36, y: 32, width: 28, height: 24, label: '物料 A-102 / 96%' }, roi: { x: 24, y: 22, width: 56, height: 48 } },
+  { time: '09:13:50', cameraId: 'CAM-002', visionTaskId: 'VT-002', object: '夹爪姿态', result: '低置信度', confidence: '62%', duration: '156 ms', relatedTask: 'TASK-008', relatedDevice: 'ARM-001', screenshot: 'mock://vision/CAM-002/002', processStatus: '待复核', imageType: 'gripper-pose', frameStatus: 'SNAPSHOT', bbox: { x: 44, y: 28, width: 24, height: 34, label: '夹爪姿态 / 62%' }, roi: { x: 30, y: 18, width: 52, height: 58 } },
+  { time: '09:10:12', cameraId: 'CAM-003', visionTaskId: 'VT-003', object: '安全区域', result: '异常', confidence: '0%', duration: '-', relatedTask: 'TASK-006', relatedDevice: 'AMR-001', screenshot: 'mock://vision/CAM-003/offline', processStatus: '处理中', imageType: 'safety-area', frameStatus: 'OFFLINE', bbox: { x: 18, y: 20, width: 64, height: 52, label: '安全区域异常 / 0%' }, roi: { x: 12, y: 16, width: 76, height: 62 } },
+  { time: '09:13:20', cameraId: 'CAM-001', visionTaskId: 'VT-004', object: '二维码 / 条码', result: '待执行', confidence: '-', duration: '-', relatedTask: 'TASK-009', relatedDevice: 'CNC-002', screenshot: 'mock://vision/CAM-001/code', processStatus: '待识别', imageType: 'code-read', frameStatus: 'LIVE', bbox: { x: 58, y: 34, width: 18, height: 18, label: '二维码区域' }, roi: { x: 48, y: 24, width: 36, height: 36 } },
 ];
 
 export const visionModels = [
