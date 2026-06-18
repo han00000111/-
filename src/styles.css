@@ -8123,7 +8123,7 @@ td .status-badge,
   }
 }
 
-/* —— 1180：1366/1280 工控屏重点，两列工作台收敛为单列，杜绝横向溢出 —— */
+/* —— 1180：窄工作区优先保留可用的两列，地图类工作台改单列 —— */
 @media (max-width: 1180px) {
   .robot-monitor-grid,
   .map-editor-grid,
@@ -8137,9 +8137,79 @@ td .status-badge,
   .robot-monitor-grid .robot-log-panel {
     grid-area: auto;
   }
+
+  .vision-monitor-workbench {
+    grid-template-columns: minmax(240px, 0.75fr) minmax(0, 1.45fr);
+    grid-template-areas:
+      'summary summary'
+      'targets screen'
+      'detail records';
+  }
+
+  .vision-workbench-summary,
+  .vision-target-panel,
+  .vision-screen-panel,
+  .vision-detail-panel,
+  .vision-record-panel {
+    min-width: 0;
+  }
+
+  .vision-workbench-summary {
+    grid-area: summary;
+  }
+
+  .vision-target-panel {
+    grid-area: targets;
+  }
+
+  .vision-screen-panel {
+    grid-area: screen;
+  }
+
+  .vision-detail-panel {
+    grid-area: detail;
+  }
+
+  .vision-record-panel {
+    grid-area: records;
+  }
+
+  .vision-record-row {
+    grid-template-columns: 72px minmax(0, 1fr) auto;
+  }
+
+  .vision-record-actions {
+    grid-column: 1 / -1;
+  }
+
+  .section-title,
+  .section-actions,
+  .button-row,
+  .table-actions {
+    max-width: 100%;
+  }
+
+  .section-title,
+  .section-actions {
+    flex-wrap: wrap;
+  }
+
+  .section-title > div,
+  .section-title h2,
+  .section-actions {
+    min-width: 0;
+  }
+
+  .device-overview-page .device-type-overview-panel .table-wrap {
+    overflow-x: auto;
+  }
+
+  .device-overview-page .device-type-overview-panel table {
+    min-width: 460px;
+  }
 }
 
-/* —— 1024：平板/小工控屏：导航压缩为图标，KPI 两列，残余多列单列 —— */
+/* —— 1024：导航压缩为图标，统计卡两列，工作台保持紧凑两列 —— */
 @media (max-width: 1024px) {
   .app-shell,
   .app-shell.sidebar-collapsed {
@@ -8170,16 +8240,28 @@ td .status-badge,
 
   .arm-teaching-workspace,
   .arm-template-workspace {
-    grid-template-columns: minmax(0, 1fr);
+    grid-template-columns: minmax(220px, 280px) minmax(0, 1fr);
     grid-template-areas:
-      'summary'
-      'list'
-      'detail'
-      'side'
-      'records';
+      'summary summary'
+      'list detail'
+      'list side'
+      'records records';
   }
+
+  .device-overview-page .summary-strip,
+  .task-summary-panel .summary-strip,
+  .task-overview-main-panel .summary-strip,
+  .arm-teaching-summary .summary-strip,
+  .vision-workbench-summary .summary-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .pose-param-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .vision-frame-body {
+    min-height: 300px;
   }
 
   .topbar {
@@ -8230,6 +8312,24 @@ td .status-badge,
 
   .status-bar {
     grid-template-columns: minmax(0, 1fr);
+  }
+  .arm-teaching-workspace,
+  .arm-template-workspace,
+  .vision-monitor-workbench {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: none;
+  }
+  .arm-teaching-summary,
+  .arm-teaching-list,
+  .arm-teaching-detail,
+  .arm-teaching-side,
+  .arm-teaching-records,
+  .vision-workbench-summary,
+  .vision-target-panel,
+  .vision-screen-panel,
+  .vision-detail-panel,
+  .vision-record-panel {
+    grid-area: auto;
   }
   .pose-param-grid {
     grid-template-columns: minmax(0, 1fr);
