@@ -94,10 +94,93 @@ const BAD_STATUSES = new Set([
   '高危',
 ]);
 
+const INFO_STATUSES = new Set([
+  '处理中',
+  '执行中',
+  '识别中',
+  '下发中',
+  '建图中',
+  'LIVE',
+  'SNAPSHOT',
+]);
+
+[
+  '正常',
+  '在线',
+  '运行中',
+  '已启用',
+  '启用',
+  '已完成',
+  '已校验',
+  '通过',
+  '识别通过',
+  '成功',
+  '已上传',
+  '已下发',
+  '已确认',
+  '已处理',
+  '已恢复',
+  '已归档',
+  '满足',
+  '良好',
+  '无报警',
+].forEach((item) => OK_STATUSES.add(item));
+
+[
+  '维护中',
+  '维护',
+  '待机',
+  '排队中',
+  '暂停',
+  '待审核',
+  '待触发',
+  '待执行',
+  '待处理',
+  '未处理',
+  '待确认',
+  '待回执',
+  '待下发',
+  '中危',
+  '低危',
+  '低置信度',
+  '充电中',
+  '导航中',
+  '巡检中',
+  '未启用',
+].forEach((item) => WARN_STATUSES.add(item));
+
+[
+  '异常',
+  '配置异常',
+  '离线',
+  '失败',
+  '下发失败',
+  '停止',
+  '急停',
+  '未满足',
+  '不满足',
+  '互锁不满足',
+  '高危',
+  '超时',
+  '模型加载失败',
+  '报警',
+  '未通过',
+  'OFFLINE',
+].forEach((item) => BAD_STATUSES.add(item));
+
+const NEUTRAL_STATUSES = new Set(['空闲', '未登录', '未配置', '暂无', '无', '未知', '-']);
+
 export function getStatusTone(status) {
-  if (OK_STATUSES.has(status)) return 'ok';
-  if (WARN_STATUSES.has(status)) return 'warn';
-  if (BAD_STATUSES.has(status)) return 'bad';
+  const value = String(status ?? '').trim();
+  if (!value || NEUTRAL_STATUSES.has(value)) return 'neutral';
+  if (OK_STATUSES.has(value)) return 'ok';
+  if (WARN_STATUSES.has(value)) return 'warn';
+  if (BAD_STATUSES.has(value)) return 'bad';
+  if (INFO_STATUSES.has(value)) return 'info';
+  if (['异常', '失败', '离线', '急停', '超时', '不满足', '未通过', '模型加载失败'].some((keyword) => value.includes(keyword))) return 'bad';
+  if (value.includes('报警') && value !== '无报警') return 'bad';
+  if (['待', '排队', '暂停', '维护', '中危', '低置信度', '充电中', '导航中', '巡检中'].some((keyword) => value.includes(keyword))) return 'warn';
+  if (['正常', '在线', '完成', '确认', '恢复', '成功', '通过', '满足', '良好', '启用', '上传', '下发'].some((keyword) => value.includes(keyword))) return 'ok';
   return 'neutral';
 }
 

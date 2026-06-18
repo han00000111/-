@@ -1,5 +1,1 @@
-import React from 'react';
-
-export function CommandsPage({ implementation: Implementation, ...props }) {
-  return <Implementation {...props} />;
-}
+export { default, CommandsPageImpl as CommandsPage } from '../CommandsPage';

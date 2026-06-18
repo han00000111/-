@@ -1,0 +1,66 @@
+
+> dev:local
+> vite --host 127.0.0.1 --port 5173 --strictPort
+
+[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.[39m
+
+  [32m[1mVITE[22m v5.4.21[39m  [2mready in [0m[1m642[22m[2m[0m ms[22m
+
+  [32m➜[39m  [1mLocal[22m:   [36mhttp://127.0.0.1:[1m5173[22m/[39m
+[2m[32m  ➜[39m[22m[2m  press [22m[1mh + enter[22m[2m to show help[22m
+[2m14:58:13[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/AppRuntime.jsx[22m
+[2m14:58:13[22m [36m[1m[vite][22m[39m [33mhmr invalidate [39m[2m/src/AppRuntime.jsx[22m Could not Fast Refresh ("DEVICE_OVERVIEW_SORT_OPTIONS" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+[2m14:58:13[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.jsx, /src/pages/LogsPage.jsx, /src/pages/RobotMonitorPage.jsx, /src/pages/AlarmsPage.jsx, /src/pages/SettingsPage.jsx, /src/pages/MapManagementPage.jsx, /src/pages/OverviewPage.jsx, /src/pages/TasksPage.jsx, /src/pages/CommandsPage.jsx, /src/pages/VisionRecognitionPage.jsx, /src/pages/DevicesPage.jsx, /src/pages/ArmControlPage.jsx[22m
+[2m14:58:13[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/AppRuntime.jsx[22m
+[2m14:58:14[22m [36m[1m[vite][22m[39m [33mhmr invalidate [39m[2m/src/AppRuntime.jsx[22m Could not Fast Refresh ("DEVICE_OVERVIEW_SORT_OPTIONS" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+[2m14:58:14[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.jsx, /src/pages/LogsPage.jsx, /src/pages/RobotMonitorPage.jsx, /src/pages/AlarmsPage.jsx, /src/pages/SettingsPage.jsx, /src/pages/MapManagementPage.jsx, /src/pages/OverviewPage.jsx, /src/pages/TasksPage.jsx, /src/pages/CommandsPage.jsx, /src/pages/VisionRecognitionPage.jsx, /src/pages/DevicesPage.jsx, /src/pages/ArmControlPage.jsx[22m
+[2m14:59:22[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/styles.css[22m
+[2m14:59:46[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/AppRuntime.jsx[22m
+[2m14:59:46[22m [36m[1m[vite][22m[39m [33mhmr invalidate [39m[2m/src/AppRuntime.jsx[22m Could not Fast Refresh (new export)
+[2m14:59:46[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.jsx, /src/pages/LogsPage.jsx, /src/pages/RobotMonitorPage.jsx, /src/pages/AlarmsPage.jsx, /src/pages/SettingsPage.jsx, /src/pages/MapManagementPage.jsx, /src/pages/OverviewPage.jsx, /src/pages/TasksPage.jsx, /src/pages/CommandsPage.jsx, /src/pages/VisionRecognitionPage.jsx, /src/pages/DevicesPage.jsx, /src/pages/ArmControlPage.jsx[22m
+[2m15:01:16[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/AppRuntime.jsx[22m
+[2m15:01:16[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.jsx[22m
+[2m15:01:16[22m [36m[1m[vite][22m[39m [33mhmr invalidate [39m[2m/src/AppRuntime.jsx[22m Could not Fast Refresh (new export)
+[2m15:01:16[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.jsx, /src/pages/LogsPage.jsx, /src/pages/RobotMonitorPage.jsx, /src/pages/AlarmsPage.jsx, /src/pages/SettingsPage.jsx, /src/pages/MapManagementPage.jsx, /src/pages/OverviewPage.jsx, /src/pages/TasksPage.jsx, /src/pages/CommandsPage.jsx, /src/pages/VisionRecognitionPage.jsx, /src/pages/DevicesPage.jsx, /src/pages/ArmControlPage.jsx[22m
+[2m15:03:16[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/OverviewPage.jsx[22m
+[2m15:03:16[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/DevicesPage.jsx[22m
+[2m15:06:22[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/TasksPage.jsx[22m
+[2m15:06:23[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/VisionRecognitionPage.jsx[22m
+[2m15:06:23[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/CommandsPage.jsx[22m
+[2m15:27:15[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/OverviewPage.jsx[22m
+[2m15:33:02[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/TasksPage.jsx[22m
+[2m15:33:02[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/DevicesPage.jsx[22m
+[2m15:33:02[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/VisionRecognitionPage.jsx[22m
+[2m15:33:02[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/RobotMonitorPage.jsx[22m
+[2m15:35:21[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/TasksPage.jsx[22m
+[2m15:35:21[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/DevicesPage.jsx[22m
+[2m15:35:21[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/VisionRecognitionPage.jsx[22m
+[2m15:35:21[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/RobotMonitorPage.jsx[22m
+[2m15:45:09[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/DevicesPage.jsx[22m
+[2m15:45:09[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/VisionRecognitionPage.jsx[22m
+[2m15:48:52[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/VisionRecognitionPage.jsx[22m
+[2m15:54:23[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/AppRuntime.jsx[22m
+[2m15:54:23[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/AppRuntime.jsx[22m
+[2m15:54:23[22m [36m[1m[vite][22m[39m [33mhmr invalidate [39m[2m/src/AppRuntime.jsx[22m Could not Fast Refresh ("DEVICE_OVERVIEW_SORT_OPTIONS" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+[2m15:54:23[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.jsx, /src/pages/LogsPage.jsx, /src/pages/RobotMonitorPage.jsx, /src/pages/AlarmsPage.jsx, /src/pages/SettingsPage.jsx, /src/pages/MapManagementPage.jsx, /src/pages/OverviewPage.jsx, /src/pages/TasksPage.jsx, /src/pages/CommandsPage.jsx, /src/pages/VisionRecognitionPage.jsx, /src/pages/DevicesPage.jsx, /src/pages/ArmControlPage.jsx[22m
+[2m16:15:13[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/AppRuntime.jsx[22m
+[2m16:15:13[22m [36m[1m[vite][22m[39m [33mhmr invalidate [39m[2m/src/AppRuntime.jsx[22m Could not Fast Refresh ("DEVICE_OVERVIEW_SORT_OPTIONS" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+[2m16:15:13[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.jsx, /src/pages/LogsPage.jsx, /src/pages/RobotMonitorPage.jsx, /src/pages/AlarmsPage.jsx, /src/pages/SettingsPage.jsx, /src/pages/MapManagementPage.jsx, /src/pages/OverviewPage.jsx, /src/pages/TasksPage.jsx, /src/pages/CommandsPage.jsx, /src/pages/VisionRecognitionPage.jsx, /src/pages/DevicesPage.jsx, /src/pages/ArmControlPage.jsx[22m
+[2m16:15:35[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/AppRuntime.jsx[22m
+[2m16:15:35[22m [36m[1m[vite][22m[39m [33mhmr invalidate [39m[2m/src/AppRuntime.jsx[22m Could not Fast Refresh (new export)
+[2m16:15:35[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.jsx, /src/pages/LogsPage.jsx, /src/pages/RobotMonitorPage.jsx, /src/pages/AlarmsPage.jsx, /src/pages/SettingsPage.jsx, /src/pages/MapManagementPage.jsx, /src/pages/OverviewPage.jsx, /src/pages/TasksPage.jsx, /src/pages/CommandsPage.jsx, /src/pages/VisionRecognitionPage.jsx, /src/pages/DevicesPage.jsx, /src/pages/ArmControlPage.jsx[22m
+[2m16:15:56[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/RobotMonitorPage.jsx[22m
+[2m16:16:07[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/ArmControlPage.jsx[22m
+[2m16:39:10[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/styles.css[22m
+[2m16:50:57[22m [36m[1m[vite][22m[39m [32mvite.config.js changed, restarting server...[39m
+Re-optimizing dependencies because vite config has changed
+[2m16:50:57[22m [36m[1m[vite][22m[39m server restarted.
+[2m16:51:57[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/AppRuntime.jsx[22m
+[2m16:51:57[22m [36m[1m[vite][22m[39m [33mhmr invalidate [39m[2m/src/AppRuntime.jsx[22m Could not Fast Refresh ("DEVICE_OVERVIEW_SORT_OPTIONS" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+[2m16:51:57[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.jsx, /src/pages/LogsPage.jsx, /src/pages/RobotMonitorPage.jsx, /src/pages/CommandsPage.jsx, /src/pages/TasksPage.jsx, /src/pages/SettingsPage.jsx, /src/pages/AlarmsPage.jsx, /src/pages/MapManagementPage.jsx, /src/pages/OverviewPage.jsx, /src/pages/VisionRecognitionPage.jsx, /src/pages/DevicesPage.jsx, /src/pages/ArmControlPage.jsx[22m
+[2m16:53:39[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2mdist-demo/snapshot.html[22m
+[2m16:53:39[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2mdist-demo/debug.html[22m
+[2m16:53:39[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2mdist-demo/readable.html[22m
+[2m16:53:39[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2mdist-demo/index.html[22m
+[2m16:53:39[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2mdist-demo/index.html[22m
+[2m16:53:40[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2mdist-demo/404.html[22m
