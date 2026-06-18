@@ -2,15 +2,14 @@
 // 后续接入真实后端时，只替换本文件内部实现，页面不直接改 mockData。
 import { commandLogs, robotCommandLogs } from '../mockData.js';
 import { API_CONFIG, post, unwrapResponse } from '../api';
-import { normalizeCommand, normalizeCommands } from './adapters';
+import { normalizeCommands, normalizeLogRecords } from './adapters';
 
 export function getCommands() {
   return normalizeCommands(commandLogs);
 }
 
 export function getCommandById(id) {
-  const found = commandLogs.find((command) => command.id === id || command.commandId === id);
-  return found ? normalizeCommand(found) : found;
+  return getCommands().find((command) => command.id === id || command.commandId === id);
 }
 
 export function getCommandRecords() {
@@ -24,11 +23,11 @@ export function getCommandSummary() {
 }
 
 export function getCommandLogs() {
-  return commandLogs;
+  return normalizeLogRecords(commandLogs);
 }
 
 export function getRobotCommandLogs() {
-  return robotCommandLogs;
+  return normalizeLogRecords(robotCommandLogs);
 }
 
 async function runCommandAction(commandId, action, message) {

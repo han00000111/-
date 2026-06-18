@@ -2,15 +2,14 @@
 // Replace only the async branch when the real backend is connected.
 import { stepLogs, stepsByTask, taskAttachments, taskPoints, tasks } from '../mockData.js';
 import { API_CONFIG, get, post, unwrapResponse } from '../api';
-import { normalizeTask, normalizeTasks } from './adapters';
+import { normalizeLogRecords, normalizeTask, normalizeTasks } from './adapters';
 
 export function getTasks() {
   return normalizeTasks(tasks);
 }
 
 export function getTaskById(id) {
-  const found = tasks.find((task) => task.id === id);
-  return found ? normalizeTask(found) : found;
+  return getTasks().find((task) => task.id === id || task.taskId === id || task.orderId === id || task.orderNo === id);
 }
 
 export function getTaskQueue() {
@@ -18,15 +17,15 @@ export function getTaskQueue() {
 }
 
 export function getCurrentTask() {
-  return tasks[0] ? normalizeTask(tasks[0]) : tasks[0];
+  return getTasks()[0];
 }
 
 export function getTaskRecords() {
-  return stepLogs;
+  return normalizeLogRecords(stepLogs);
 }
 
 export function getStepLogs() {
-  return stepLogs;
+  return normalizeLogRecords(stepLogs);
 }
 
 export function getStepsByTask() {
@@ -42,13 +41,14 @@ export function getTaskPoints() {
 }
 
 export function getTaskSummary() {
+  const rows = getTasks();
   return {
-    total: tasks.length,
-    running: tasks.filter((task) => task.status === '\u8fd0\u884c\u4e2d').length,
-    queued: tasks.filter((task) => task.status === '\u6392\u961f\u4e2d').length,
-    paused: tasks.filter((task) => task.status === '\u6682\u505c').length,
-    failed: tasks.filter((task) => task.status === '\u5931\u8d25').length,
-    alarmTasks: tasks.filter((task) => task.alarmCount > 0).length,
+    total: rows.length,
+    running: rows.filter((task) => task.status === '\u8fd0\u884c\u4e2d').length,
+    queued: rows.filter((task) => task.status === '\u6392\u961f\u4e2d').length,
+    paused: rows.filter((task) => task.status === '\u6682\u505c').length,
+    failed: rows.filter((task) => task.status === '\u5931\u8d25').length,
+    alarmTasks: rows.filter((task) => task.alarmCount > 0).length,
   };
 }
 
@@ -96,7 +96,7 @@ export async function fetchTaskRecords(params = {}) {
 
   const url = '/api/tasks/records';
   const response = await get(url, { query: params });
-  return unwrapList(response, url);
+  return normalizeLogRecords(unwrapList(response, url));
 }
 
 async function runTaskAction(taskId, action, mockResult) {

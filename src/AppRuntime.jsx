@@ -28,10 +28,9 @@ import { ErrorState } from './components/common/ErrorState';
 import { LoadingState } from './components/common/LoadingState';
 import { PageErrorBoundary } from './components/common/PageErrorBoundary';
 import { ActionFeedback } from './components/common/ActionFeedback';
-import { useTopBarStatusResource } from './hooks';
 import { useActionRequest } from './hooks/useActionRequest';
 import * as Services from './services';
-import { RUNTIME_CONFIG, useMockRuntime, useRuntimeConnectionStatus } from './runtime';
+import { useMockRuntime, useRuntime, useRuntimeConnectionStatus } from './runtime';
 
 // 实时通道（/ws/runtime）连接状态 → 顶栏文案与色调。
 const REALTIME_BADGE = {
@@ -262,14 +261,11 @@ function Sidebar({ activeArmTab, activeDeviceTab, activeMapTab, activeVisionTab,
 
 function TopBar({ title, currentUser, onLoginRequest, onLogout, onAccountSettings }) {
   const [menuOpen, setMenuOpen] = useState(false);
-  const runtimeStatus = useMockRuntime((state) => state.systemStatus);
+  const runtimeStatus = useRuntime((state) => state.systemStatus);
   const realtimeStatus = useRuntimeConnectionStatus();
   const realtimeBadge = REALTIME_BADGE[realtimeStatus] ?? REALTIME_BADGE.idle;
-  const topBarResource = useTopBarStatusResource();
-  const topBarStatus = RUNTIME_CONFIG.enableMockRuntime
-    ? runtimeStatus
-    : (topBarResource.data ?? {});
-  const currentTime = topBarStatus.now ?? runtimeStatus.now;
+  const topBarStatus = runtimeStatus ?? {};
+  const currentTime = topBarStatus.now;
   const openLogin = () => {
     setMenuOpen(false);
     onLoginRequest?.();
@@ -288,9 +284,9 @@ function TopBar({ title, currentUser, onLoginRequest, onLogout, onAccountSetting
       <div className="link-status">
         <StatusBadge label="工位" status={topBarStatus.workstation ?? 'WS-001'} tone="neutral" />
         <StatusBadge label="公共机" status={topBarStatus.ipc ?? 'IPC-001'} tone="neutral" />
-        <StatusBadge label="后台" status={topBarResource.error && !RUNTIME_CONFIG.enableMockRuntime ? '未知' : (topBarStatus.backend ?? '未知')} />
-        <StatusBadge label="MQTT" status={topBarResource.error && !RUNTIME_CONFIG.enableMockRuntime ? '未知' : (topBarStatus.mqtt ?? '未知')} />
-        <StatusBadge label="日志上传" status={topBarResource.error && !RUNTIME_CONFIG.enableMockRuntime ? '未知' : (topBarStatus.logUpload ?? '未知')} />
+        <StatusBadge label="后台" status={topBarStatus.backend ?? '未知'} />
+        <StatusBadge label="MQTT" status={topBarStatus.mqtt ?? '未知'} />
+        <StatusBadge label="日志上传" status={topBarStatus.logUpload ?? '未知'} />
         <StatusBadge label="本地缓存" status={topBarStatus.cache ?? '未知'} tone="neutral" />
         <StatusBadge label="实时" status={realtimeBadge.text} tone={realtimeBadge.tone} />
         <div className={`user-entry-wrap ${menuOpen ? 'open' : ''}`} onBlur={closeMenuOnBlur}>

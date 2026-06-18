@@ -3,7 +3,7 @@
 import { cameras, visionLogs, visionModels, visionResults, visionTasks } from '../mockData.js';
 import { API_CONFIG, post, unwrapResponse } from '../api';
 // 注意：此处 normalizeVisionResult 为「字段适配」，与 AppRuntime 负责 bbox/roi 渲染的同名函数不同。
-import { normalizeVisionResult, normalizeVisionResults } from './adapters';
+import { normalizeLogRecords, normalizeVisionResults } from './adapters';
 
 export function getCameras() {
   return cameras;
@@ -22,11 +22,11 @@ export function getVisionModels() {
 }
 
 export function getCurrentVisionResult() {
-  return visionResults[0] ? normalizeVisionResult(visionResults[0]) : visionResults[0];
+  return getVisionResults()[0];
 }
 
 export function getVisionLogs() {
-  return visionLogs;
+  return normalizeLogRecords(visionLogs);
 }
 
 async function runVisionAction(url, result) {

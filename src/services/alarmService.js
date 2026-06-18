@@ -9,8 +9,7 @@ export function getAlarms() {
 }
 
 export function getAlarmById(id) {
-  const found = alarms.find((alarm) => alarm.id === id || alarm.name === id);
-  return found ? normalizeAlarm(found) : found;
+  return getAlarms().find((alarm) => alarm.id === id || alarm.alarmId === id || alarm.code === id || alarm.name === id);
 }
 
 export function getActiveAlarms() {
@@ -22,12 +21,13 @@ export function getInterlocks() {
 }
 
 export function getAlarmSummary() {
+  const rows = getAlarms();
   return {
-    total: alarms.length,
-    active: alarms.filter((alarm) => alarm.status !== '\u5df2\u6062\u590d').length,
-    high: alarms.filter((alarm) => alarm.level === '\u9ad8\u5371').length,
-    medium: alarms.filter((alarm) => alarm.level === '\u4e2d\u5371').length,
-    unhandled: alarms.filter((alarm) => alarm.status === '\u672a\u5904\u7406').length,
+    total: rows.length,
+    active: rows.filter((alarm) => alarm.status !== '\u5df2\u6062\u590d').length,
+    high: rows.filter((alarm) => alarm.level === '\u9ad8\u5371').length,
+    medium: rows.filter((alarm) => alarm.level === '\u4e2d\u5371').length,
+    unhandled: rows.filter((alarm) => alarm.status === '\u672a\u5904\u7406').length,
   };
 }
 

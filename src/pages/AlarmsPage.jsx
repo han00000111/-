@@ -2,12 +2,9 @@ import React, { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import * as Runtime from '../AppRuntime';
 import { API_CONFIG } from '../api';
 import { DataStateBlock } from '../components/common';
-import {
-  useActiveAlarmsResource,
-  useAlarmSummaryResource,
-  useInterlocksResource,
-} from '../hooks';
-import { RUNTIME_CONFIG, useMockRuntime } from '../runtime';
+import { useInterlocksResource } from '../hooks';
+import { RUNTIME_CONFIG, useRuntime } from '../runtime';
+import { normalizeAlarms } from '../services/adapters';
 
 const {
   Activity,
@@ -306,19 +303,21 @@ const {
   visionTasks,
 } = Runtime;
 
+function getAlarmIdentity(alarm) {
+  return alarm?.id ?? alarm?.alarmId ?? alarm?.code ?? alarm?.name;
+}
+
 export function AlarmsPage({ setPage, setSelectedTaskId, setSelectedDeviceId, setLogFilter, setLogTypeFilter, currentUser, extraAlarms = [], navigation }) {
   const [selectedAlarmName, setSelectedAlarmName] = useState(alarms[0]?.name ?? '');
   const [alarmFilter, setAlarmFilter] = useState('当前待办');
   const [recordFilter, setRecordFilter] = useState('全部');
   const [alarmStatusOverrides, setAlarmStatusOverrides] = useState({});
   const [handlingRecords, setHandlingRecords] = useState([]);
-  const runtime = useMockRuntime();
-  const activeAlarmsResource = useActiveAlarmsResource();
-  const alarmSummaryResource = useAlarmSummaryResource();
+  const runtime = useRuntime();
   const interlocksResource = useInterlocksResource();
-  const sourceAlarms = RUNTIME_CONFIG.enableMockRuntime ? runtime.alarms : (activeAlarmsResource.data ?? []);
+  const sourceAlarms = runtime.alarms ?? [];
   const alarmRows = useMemo(
-    () => [...extraAlarms, ...sourceAlarms].map((alarm) => ({ ...alarm, status: alarmStatusOverrides[alarm.name] ?? alarm.status })),
+    () => normalizeAlarms([...extraAlarms, ...sourceAlarms]).map((alarm) => ({ ...alarm, status: alarmStatusOverrides[getAlarmIdentity(alarm)] ?? alarm.status })),
     [alarmStatusOverrides, extraAlarms, sourceAlarms],
   );
   const filteredAlarms = useMemo(() => filterAlarms(alarmRows, alarmFilter), [alarmRows, alarmFilter]);
@@ -339,18 +338,9 @@ export function AlarmsPage({ setPage, setSelectedTaskId, setSelectedDeviceId, se
     <div className="page-grid alarms-grid alarms-layout">
       <section className="panel alarm-overview-panel">
         <SectionTitle icon={AlertTriangle} title="报警总览" />
-        <DataStateBlock
-          error={!RUNTIME_CONFIG.enableMockRuntime ? (alarmSummaryResource.error ?? activeAlarmsResource.error) : null}
-          errorMessage="报警总览暂时无法获取，请稍后重试。"
-          onRetry={() => {
-            alarmSummaryResource.reload();
-            activeAlarmsResource.reload();
-          }}
-          compact
-        >
+        <DataStateBlock compact>
           <AlarmOverviewBar
             alarms={alarmRows}
-            summary={!RUNTIME_CONFIG.enableMockRuntime ? alarmSummaryResource.data : undefined}
             filter={alarmFilter}
             onFilterChange={setAlarmFilter}
           />
@@ -363,11 +353,8 @@ export function AlarmsPage({ setPage, setSelectedTaskId, setSelectedDeviceId, se
           action={<ExportButton pageName="报警互锁" columns={alarmExportColumns} getRows={() => filteredAlarms.map((alarm) => buildAlarmExportRow(alarm, handlingRecords))} currentUser={currentUser} />}
         />
         <DataStateBlock
-          error={!RUNTIME_CONFIG.enableMockRuntime ? activeAlarmsResource.error : null}
           empty={!filteredAlarms.length}
           emptyTitle={alarmFilter === '当前待办' ? '暂无待处理报警' : '无匹配报警'}
-          errorMessage="报警列表暂时无法获取，请稍后重试。"
-          onRetry={activeAlarmsResource.reload}
           compact
         >
           <AlarmCardList alarms={filteredAlarms} filter={alarmFilter} selectedAlarmName={selectedAlarmName} onSelect={setSelectedAlarmName} />
@@ -381,7 +368,7 @@ export function AlarmsPage({ setPage, setSelectedTaskId, setSelectedDeviceId, se
             onRecord={(record, nextStatus) => {
               setHandlingRecords((records) => [record, ...records]);
               if (nextStatus) {
-                setAlarmStatusOverrides((overrides) => ({ ...overrides, [selectedAlarm.name]: nextStatus }));
+                setAlarmStatusOverrides((overrides) => ({ ...overrides, [getAlarmIdentity(selectedAlarm)]: nextStatus }));
               }
             }}
             onNavigate={(target, payload) => {

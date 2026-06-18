@@ -1,15 +1,8 @@
 ﻿import React, { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import * as Runtime from '../AppRuntime';
-import { API_CONFIG } from '../api';
 import { ActionFeedback, DataStateBlock } from '../components/common';
-import {
-  useActionRequest,
-  useActiveDeviceIssuesResource,
-  useDevicesResource,
-  useDeviceSummaryResource,
-  useDeviceTypesResource,
-} from '../hooks';
-import { RUNTIME_CONFIG } from '../runtime';
+import { useActionRequest } from '../hooks';
+import { useRuntime } from '../runtime';
 import { checkDeviceConnection, refreshDeviceStatus } from '../services';
 import {
   ACTION_KEYS,
@@ -308,7 +301,6 @@ const {
   telemetryLogs,
   toChineseStep,
   trendSeries,
-  useMockRuntime,
   visionLogs,
   visionModels,
   visionResults,
@@ -411,44 +403,28 @@ function DeviceOverviewPage({ currentUser, onSelectDevice, selectedDeviceId }) {
   const [filter, setFilter] = useState('全部');
   const [detailSort, setDetailSort] = useState('异常优先');
   const [showAllAttention, setShowAllAttention] = useState(false);
-  const liveDevices = useMockRuntime((state) => state.devices);
-  const devicesResource = useDevicesResource();
-  const deviceSummaryResource = useDeviceSummaryResource();
-  const activeIssuesResource = useActiveDeviceIssuesResource();
-  const deviceTypesResource = useDeviceTypesResource();
-  const sourceDevices = RUNTIME_CONFIG.enableMockRuntime ? liveDevices : (devicesResource.data ?? []);
-  const rows = useMemo(() => sortDeviceOverviewRows(sourceDevices.map(getDeviceOverviewRow)), [sourceDevices]);
+  const sourceDevices = useRuntime((state) => state.devices ?? []);
+  const rows = useMemo(
+    () => sortDeviceOverviewRows(sourceDevices.map((device) => getDeviceOverviewRow({
+      ...device,
+      id: device.id ?? device.deviceId ?? device.code,
+      online: device.onlineStatus ?? device.online,
+      runStatus: device.status ?? device.runStatus,
+      updatedAt: device.updatedAt ?? device.createdAt ?? device.time,
+    }))),
+    [sourceDevices],
+  );
   const filteredRows = useMemo(() => sortDeviceOverviewDetailRows(filterDeviceOverviewRows(rows, filter), detailSort), [rows, filter, detailSort]);
-  const derivedStats = useMemo(() => getDeviceOverviewStats(rows), [rows]);
-  const stats = RUNTIME_CONFIG.enableMockRuntime
-    ? derivedStats
-    : { ...derivedStats, ...(deviceSummaryResource.data ?? {}) };
-  const attentionRows = useMemo(() => {
-    if (RUNTIME_CONFIG.enableMockRuntime || API_CONFIG.useMockService) {
-      return rows.filter(isDeviceNeedAttention);
-    }
-    const issueIds = new Set((activeIssuesResource.data ?? []).map((item) => item.id ?? item.deviceId));
-    return rows.filter((row) => issueIds.has(row.id));
-  }, [activeIssuesResource.data, rows]);
+  const stats = useMemo(() => getDeviceOverviewStats(rows), [rows]);
+  const attentionRows = useMemo(() => rows.filter(isDeviceNeedAttention), [rows]);
   const visibleAttentionRows = showAllAttention ? attentionRows : attentionRows.slice(0, 4);
-  const derivedTypeRows = useMemo(() => getDeviceTypeOverviewRows(rows), [rows]);
-  const typeRows =
-    !RUNTIME_CONFIG.enableMockRuntime &&
-    Array.isArray(deviceTypesResource.data) &&
-    deviceTypesResource.data.every((item) => item && typeof item === 'object')
-      ? deviceTypesResource.data
-      : derivedTypeRows;
+  const typeRows = useMemo(() => getDeviceTypeOverviewRows(rows), [rows]);
   const overviewText = useMemo(() => getDeviceOverviewSummaryText(rows, attentionRows), [rows, attentionRows]);
 
   return (
     <section className="panel page-full device-overview-page">
       <SectionTitle icon={Cpu} title="设备总览" />
-      <DataStateBlock
-        error={!RUNTIME_CONFIG.enableMockRuntime ? deviceSummaryResource.error : null}
-        errorMessage="设备统计暂时无法获取，请稍后重试。"
-        onRetry={deviceSummaryResource.reload}
-        compact
-      >
+      <DataStateBlock compact>
         <>
           <SummaryStrip
             items={[
@@ -468,12 +444,7 @@ function DeviceOverviewPage({ currentUser, onSelectDevice, selectedDeviceId }) {
           <div className="subsection-title">
             <strong>异常设备</strong>
           </div>
-          <DataStateBlock
-            error={!RUNTIME_CONFIG.enableMockRuntime ? activeIssuesResource.error : null}
-            errorMessage="异常设备暂时无法获取，请稍后重试。"
-            onRetry={activeIssuesResource.reload}
-            compact
-          >
+          <DataStateBlock compact>
           {attentionRows.length ? (
             <div className="attention-device-list">
               {visibleAttentionRows.map((row, index) => (
@@ -505,10 +476,6 @@ function DeviceOverviewPage({ currentUser, onSelectDevice, selectedDeviceId }) {
           <DataTable
             compact
             emptyText="暂无设备类型数据"
-            error={!RUNTIME_CONFIG.enableMockRuntime ? deviceTypesResource.error : null}
-            errorMessage="设备类型暂时无法获取，请稍后重试。"
-            loading={!RUNTIME_CONFIG.enableMockRuntime && deviceTypesResource.loading}
-            onRetry={deviceTypesResource.reload}
             columns={['设备类型', '数量', '运行', '异常', '离线']}
             rows={typeRows.map((row) => [
               row.type,
@@ -541,10 +508,6 @@ function DeviceOverviewPage({ currentUser, onSelectDevice, selectedDeviceId }) {
         columnWidths={[120, 100, 90, 90, 110, 80, 100, 120, 180, 100, 100]}
         columns={['设备编号', '类型', '在线状态', '运行状态', '当前任务', '报警数', '互锁状态', '关键点位异常数', '状态摘要', '更新时间', '操作']}
         emptyText="暂无设备数据"
-        error={!RUNTIME_CONFIG.enableMockRuntime ? devicesResource.error : null}
-        errorMessage="设备明细暂时无法获取，请稍后重试。"
-        loading={!RUNTIME_CONFIG.enableMockRuntime && devicesResource.loading}
-        onRetry={devicesResource.reload}
         rows={filteredRows.map((row) => [
           row.id,
           row.type,
@@ -561,7 +524,6 @@ function DeviceOverviewPage({ currentUser, onSelectDevice, selectedDeviceId }) {
             currentUser={currentUser}
             device={row}
             onOpenDetail={() => onSelectDevice(row.id)}
-            onRefresh={devicesResource.reload}
           />,
         ])}
         rowKeys={filteredRows.map((row) => row.id)}

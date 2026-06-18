@@ -9,23 +9,23 @@ export function getDevices() {
 }
 
 export function getDeviceById(id) {
-  const found = devices.find((device) => device.id === id);
-  return found ? normalizeDevice(found) : found;
+  return getDevices().find((device) => device.id === id || device.deviceId === id || device.code === id);
 }
 
 export function getDeviceSummary() {
+  const rows = getDevices();
   return {
-    total: devices.length,
-    online: devices.filter((device) => device.online === '\u5728\u7ebf').length,
-    running: devices.filter((device) => device.runStatus === '\u8fd0\u884c\u4e2d').length,
-    offline: devices.filter((device) => device.online === '\u79bb\u7ebf').length,
-    abnormal: devices.filter((device) => device.alarmCount > 0).length,
-    maintenance: devices.filter((device) => device.runStatus === '\u7ef4\u62a4\u4e2d').length,
+    total: rows.length,
+    online: rows.filter((device) => device.onlineStatus === '\u5728\u7ebf').length,
+    running: rows.filter((device) => device.status === '\u8fd0\u884c\u4e2d').length,
+    offline: rows.filter((device) => device.onlineStatus === '\u79bb\u7ebf').length,
+    abnormal: rows.filter((device) => device.alarmCount > 0).length,
+    maintenance: rows.filter((device) => device.status === '\u7ef4\u62a4\u4e2d').length,
   };
 }
 
 export function getDeviceTypes() {
-  return [...new Set(devices.map((device) => device.type))];
+  return [...new Set(getDevices().map((device) => device.type))];
 }
 
 export function getDevicePoints(deviceId) {
@@ -53,13 +53,11 @@ export function getDeviceAttachments() {
 }
 
 export function getActiveDeviceIssues() {
-  return normalizeDevices(
-    devices.filter(
-      (device) =>
-        device.online === '\u79bb\u7ebf' ||
-        device.alarmCount > 0 ||
-        device.runStatus === '\u7ef4\u62a4\u4e2d',
-    ),
+  return getDevices().filter(
+    (device) =>
+      device.onlineStatus === '\u79bb\u7ebf' ||
+      device.alarmCount > 0 ||
+      device.status === '\u7ef4\u62a4\u4e2d',
   );
 }
 

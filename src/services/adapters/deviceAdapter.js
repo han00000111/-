@@ -3,17 +3,21 @@
 import { warnMissingFields } from '../../utils/schemaCheck.js';
 
 export function normalizeDevice(raw = {}) {
+  const id = raw.id ?? raw.deviceId ?? raw.code ?? raw.deviceCode;
+  const status = raw.status ?? raw.runStatus ?? raw.runningStatus ?? raw.onlineStatus ?? raw.online;
   const normalized = {
     ...raw,
-    id: raw.id ?? raw.deviceId ?? raw.code ?? raw.deviceCode,
-    name: raw.name ?? raw.deviceName,
-    type: raw.type ?? raw.deviceType,
+    id,
+    name: raw.name ?? raw.deviceName ?? id,
+    type: raw.type ?? raw.deviceType ?? raw.category,
+    status,
     onlineStatus: raw.onlineStatus ?? raw.online ?? raw.status,
-    runStatus: raw.runStatus ?? raw.runningStatus ?? raw.status,
+    runStatus: raw.runStatus ?? raw.runningStatus ?? status,
     currentTaskId: raw.currentTaskId ?? raw.taskId ?? null,
     battery: raw.battery ?? null,
     alarmCount: raw.alarmCount ?? raw.issueCount ?? 0,
     location: raw.location ?? raw.position ?? null,
+    createdAt: raw.createdAt ?? raw.createTime ?? raw.time,
     updatedAt: raw.updatedAt ?? raw.updateTime ?? raw.time,
   };
   if (import.meta.env?.DEV) {

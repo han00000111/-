@@ -4,9 +4,14 @@ import { ActionFeedback } from '../components/common';
 import { useActionRequest } from '../hooks';
 import {
   cancelCommand,
+  getAlarms,
+  getCommands,
+  getDevices,
+  getTasks,
   resendCommand as resendCommandRequest,
   retryCommand,
 } from '../services';
+import { normalizeCommands } from '../services/adapters';
 import {
   ACTION_KEYS,
   canOperate,
@@ -332,8 +337,9 @@ export function CommandsPageImpl({ currentUser, externalCommandRows = [], initia
 
   useEffect(() => {
     if (!externalCommandRows.length) return;
-    setCommands((rows) => mergeRowsById(externalCommandRows, rows));
-    setRecords((rows) => mergeRowsById(getInitialCommandReceiptRecords(externalCommandRows), rows));
+    const normalizedRows = normalizeCommands(externalCommandRows).map(toCommandWorkbenchRow);
+    setCommands((rows) => mergeRowsById(normalizedRows, rows));
+    setRecords((rows) => mergeRowsById(getInitialCommandReceiptRecords(normalizedRows), rows));
   }, [externalCommandRows]);
 
   useEffect(() => {
@@ -362,16 +368,21 @@ export function CommandsPageImpl({ currentUser, externalCommandRows = [], initia
     setRecords((rows) => [
       {
         id: `${command.id}-${type}-${Date.now()}`,
+        createdAt: '09:12:20',
         time: '09:12:20',
         deviceId: command.deviceId,
         commandId: command.id,
-        commandName: command.commandName,
+        name: command.name ?? command.commandName,
+        commandName: command.name ?? command.commandName,
         params: command.params,
         sendResult: nextResult,
+        status: nextStatus,
         receiptStatus: nextStatus,
         duration,
-        relatedTask: command.relatedTask,
+        taskId: command.taskId ?? command.relatedTask,
+        relatedTask: command.taskId ?? command.relatedTask,
         type,
+        message: content,
         content,
       },
       ...rows,
@@ -379,7 +390,11 @@ export function CommandsPageImpl({ currentUser, externalCommandRows = [], initia
   };
 
   const updateCommand = (commandId, patch) => {
-    setCommands((rows) => rows.map((row) => (row.id === commandId ? { ...row, ...patch } : row)));
+    setCommands((rows) => rows.map((row) => (
+      row.id === commandId
+        ? { ...row, ...patch, status: patch.receiptStatus ?? patch.status ?? row.status }
+        : row
+    )));
   };
 
   const commandActionRequest = useActionRequest(
@@ -457,12 +472,13 @@ export function CommandsPageImpl({ currentUser, externalCommandRows = [], initia
   };
 
   const openTask = () => {
-    if (!selectedCommand?.relatedTask || selectedCommand.relatedTask === '无') return;
+    const taskId = selectedCommand?.taskId ?? selectedCommand?.relatedTask;
+    if (!taskId || taskId === '无') return;
     if (navigation?.navigateToTask) {
-      navigation.navigateToTask(selectedCommand.relatedTask);
+      navigation.navigateToTask(taskId);
       return;
     }
-    setSelectedTaskId(selectedCommand.relatedTask);
+    setSelectedTaskId(taskId);
     setPage('tasks');
   };
 
@@ -509,12 +525,12 @@ export function CommandsPageImpl({ currentUser, externalCommandRows = [], initia
             rows={filteredCommands.map((row) => [
               row.id,
               row.deviceId,
-              row.commandName,
+              row.name ?? row.commandName,
               row.params,
-              row.sendTime,
+              row.createdAt ?? row.sendTime,
               <StatusText value={row.sendResult} />,
-              <StatusText value={row.receiptStatus} />,
-              row.relatedTask,
+              <StatusText value={row.status ?? row.receiptStatus} />,
+              row.taskId ?? row.relatedTask,
             ])}
             rowKeys={filteredCommands.map((row) => row.id)}
             selectedKey={selectedCommand?.id}
@@ -552,16 +568,16 @@ export function CommandsPageImpl({ currentUser, externalCommandRows = [], initia
           highlightedKeys={visibleRecords.filter((row) => row.commandId === selectedCommand?.id).map((row) => row.id)}
           rowKeys={visibleRecords.map((row) => row.id)}
           rows={visibleRecords.map((row) => [
-            row.time,
+            row.createdAt ?? row.time,
             row.deviceId,
             row.commandId,
-            row.commandName,
+            row.name ?? row.commandName,
             row.params,
             <StatusText value={row.sendResult} />,
-            <StatusText value={row.receiptStatus} />,
+            <StatusText value={row.status ?? row.receiptStatus} />,
             row.duration,
-            row.relatedTask,
-            row.content,
+            row.taskId ?? row.relatedTask,
+            row.message ?? row.content,
           ])}
           emptyText="暂无指令记录"
           className="command-record-table"
@@ -594,8 +610,8 @@ function CommandSummaryStrip({ activeFilter, onSelect, stats }) {
 
 function CommandDetailPanel({ actionRequest, command, currentUser, onLogs, onMarkHandled, onOpenDevice, onOpenTask, onRunAction }) {
   if (!command) return <section className="command-detail-panel"><EmptyState title="请选择指令" compact /></section>;
-  const device = devices.find((item) => item.id === command.deviceId);
-  const relatedAlarms = alarms.filter((alarm) => alarm.device === command.deviceId && alarm.status !== '已恢复');
+  const device = getDevices().find((item) => item.id === command.deviceId);
+  const relatedAlarms = getAlarms().filter((alarm) => alarm.deviceId === command.deviceId && alarm.status !== '已恢复');
   const canMaintain = hasPermission(currentUser, 'command-send');
   const permissionContext = {
     requireLogin: true,
@@ -620,11 +636,11 @@ function CommandDetailPanel({ actionRequest, command, currentUser, onLogs, onMar
           <Info label="目标模型" value={getCommandTargetModel(command)} />
           <Info label="目标地图" value={getCommandTargetMap(command)} />
           <Info label="目标路线" value={getCommandTargetRoute(command)} />
-          <Info label="指令名称" value={command.commandName} />
+          <Info label="指令名称" value={command.name ?? command.commandName} />
           <Info label="参数" value={command.params} />
-          <Info label="关联任务" value={command.relatedTask} />
+          <Info label="关联任务" value={command.taskId ?? command.relatedTask} />
           <Info label="下发人" value={command.sender} />
-          <Info label="下发时间" value={command.sendTime} />
+          <Info label="下发时间" value={command.createdAt ?? command.sendTime} />
         </div>
       </div>
       <div className="command-detail-section">
@@ -643,8 +659,8 @@ function CommandDetailPanel({ actionRequest, command, currentUser, onLogs, onMar
       <div className="command-detail-section">
         <h4>设备状态</h4>
         <div className="command-detail-grid">
-          <Info label="在线状态" value={<StatusText value={device?.online ?? '-'} />} />
-          <Info label="运行状态" value={<StatusText value={device?.runStatus ?? '-'} />} />
+          <Info label="在线状态" value={<StatusText value={device?.onlineStatus ?? device?.online ?? '-'} />} />
+          <Info label="运行状态" value={<StatusText value={device?.status ?? device?.runStatus ?? '-'} />} />
           <Info label="互锁状态" value={getDeviceInterlockStatus(device, getDevicePointsFor(device))} />
           <Info label="关联报警" value={relatedAlarms.length ? `${relatedAlarms.length} 条` : '无'} />
         </div>
@@ -694,8 +710,8 @@ function isVisionCommandDevice(deviceId = '', commandName = '') {
 }
 
 function getCommandRelatedTask(command) {
-  const taskId = command?.relatedTask || command?.taskId;
-  return tasks.find((task) => task.id === taskId);
+  const taskId = command?.taskId || command?.relatedTask;
+  return getTasks().find((task) => task.id === taskId);
 }
 
 function getCommandTargetRobot(command) {
@@ -742,37 +758,56 @@ function getCommandTargetRoute(command) {
   if (routeParam) return mapRoutes.find((route) => route.routeId === routeParam)?.routeName ?? routeParam;
   return getCommandRelatedTask(command)?.targetRoute ?? '-';
 }
+
+function toCommandWorkbenchRow(row) {
+  return {
+    ...row,
+    deviceId: row.deviceId ?? row.targetId,
+    name: row.name ?? row.command ?? row.commandName,
+    commandName: row.name ?? row.command ?? row.commandName,
+    sendResult: row.sendStatus ?? row.sendResult ?? row.result,
+    receiptStatus: row.status ?? row.receiptStatus ?? row.ackStatus,
+    taskId: row.taskId ?? row.relatedTask,
+    relatedTask: row.taskId ?? row.relatedTask ?? '无',
+    createdAt: row.createdAt ?? row.sendTime ?? row.time,
+    sendTime: row.createdAt ?? row.sendTime ?? row.time,
+  };
+}
+
 function getInitialCommandWorkbenchRows() {
-  const baseRows = commandLogs.map((row, index) => ({
-    id: `CMD-${String(index + 1).padStart(3, '0')}`,
-    commandId: `CMD-${String(index + 1).padStart(3, '0')}`,
-    deviceId: row.deviceId,
-    deviceType: devices.find((device) => device.id === row.deviceId)?.type ?? '-',
+  const baseRows = getCommands().map((row, index) => ({
+    ...row,
+    id: row.commandId ?? `CMD-${String(index + 1).padStart(3, '0')}`,
+    commandId: row.commandId ?? `CMD-${String(index + 1).padStart(3, '0')}`,
+    deviceId: row.deviceId ?? row.targetId,
+    deviceType: getDevices().find((device) => device.id === row.deviceId)?.type ?? '-',
     objectType: row.objectType,
     objectId: row.objectId,
-    commandName: row.content,
+    name: row.name ?? row.command ?? row.content,
+    commandName: row.name ?? row.command ?? row.content,
     params: row.params,
-    sendResult: row.result,
-    receiptStatus: row.status,
+    sendResult: row.sendStatus ?? row.result,
+    receiptStatus: row.status ?? row.ackStatus,
     stage: row.status === '已确认' ? '设备已确认' : '等待回执',
     relatedTask: row.taskId || '无',
     sender: index === 0 ? 'operator01' : 'system',
-    sendTime: row.time,
-    receiptTime: row.status === '已确认' ? addSecondsToTime(row.time, index + 2) : '-',
+    createdAt: row.createdAt ?? row.time,
+    sendTime: row.createdAt ?? row.time,
+    receiptTime: row.status === '已确认' ? addSecondsToTime(row.createdAt ?? row.time, index + 2) : '-',
     duration: row.status === '已确认' ? `${(1.8 + index * 0.3).toFixed(1)}s` : '-',
     failReason: '-',
     suggestion: row.status === '已确认' ? '设备已确认执行，当前无需处理。' : '等待设备回执，如超过阈值请检查设备连接。',
     handledBy: '-',
     handledAt: '-',
   }));
-  return [
+  return normalizeCommands([
     ...baseRows,
     { id: 'CMD-901', commandId: 'CMD-901', deviceId: 'ROBOT-001', deviceType: '工业机器人', commandName: '机器人搬运', params: 'A区→B区', sendResult: '下发失败', receiptStatus: '失败', stage: '异常待处理', relatedTask: 'TASK-002', sender: 'operator01', sendTime: '09:09:45', receiptTime: '-', duration: '-', failReason: '设备不在安全区', suggestion: '下发失败，建议检查参数和设备状态后重新下发。', handledBy: '-', handledAt: '-' },
     { id: 'CMD-902', commandId: 'CMD-902', deviceId: 'CNC-003', deviceType: '数控机床', commandName: '程序装载', params: 'O3007', sendResult: '已下发', receiptStatus: '超时', stage: '异常待处理', relatedTask: 'TASK-004', sender: 'system', sendTime: '09:08:20', receiptTime: '-', duration: '-', failReason: '设备离线，回执超时', suggestion: '回执超时，建议检查设备连接后重新下发。', handledBy: '-', handledAt: '-' },
     { id: 'CMD-903', commandId: 'CMD-903', deviceId: 'PLC-002', deviceType: '控制器', commandName: '防护门复位', params: 'reset=true', sendResult: '已下发', receiptStatus: '已处理', stage: '已处理', relatedTask: 'TASK-003', sender: 'engineer01', sendTime: '09:07:42', receiptTime: '09:08:10', duration: '28.0s', failReason: '-', suggestion: '异常回执已处理，可继续观察后续指令。', handledBy: 'engineer01', handledAt: '09:08:10' },
     { id: 'CMD-904', commandId: 'CMD-904', deviceId: 'CNC-004', deviceType: '数控机床', commandName: '启动加工', params: 'O4001', sendResult: '已下发', receiptStatus: '待回执', stage: '等待回执', relatedTask: 'TASK-001', sender: 'system', sendTime: '09:06:58', receiptTime: '-', duration: '-', failReason: '-', suggestion: '等待设备回执，如超过阈值请检查设备连接。', handledBy: '-', handledAt: '-' },
     { id: 'CMD-905', commandId: 'CMD-905', deviceId: 'ROBOT-002', deviceType: '工业机器人', commandName: '回原点', params: 'home', sendResult: '已下发', receiptStatus: '待回执', stage: '等待回执', relatedTask: 'TASK-002', sender: 'operator01', sendTime: '09:06:20', receiptTime: '-', duration: '-', failReason: '-', suggestion: '等待设备回执，如超过阈值请检查设备连接。', handledBy: '-', handledAt: '-' },
-  ];
+  ]).map(toCommandWorkbenchRow);
 }
 
 function getInitialCommandReceiptRecords(commandRows = getInitialCommandWorkbenchRows()) {
@@ -780,30 +815,35 @@ function getInitialCommandReceiptRecords(commandRows = getInitialCommandWorkbenc
     .flatMap((command) => {
       const records = [{
         id: `${command.id}-send`,
+        createdAt: command.createdAt ?? command.sendTime,
         time: command.sendTime,
         deviceId: command.deviceId,
         commandId: command.id,
-        commandName: command.commandName,
+        name: command.name ?? command.commandName,
+        commandName: command.name ?? command.commandName,
         params: command.params,
         sendResult: command.sendResult,
+        status: command.status ?? command.receiptStatus,
         receiptStatus: command.receiptStatus,
         duration: command.duration,
-        relatedTask: command.relatedTask,
+        taskId: command.taskId ?? command.relatedTask,
+        relatedTask: command.taskId ?? command.relatedTask,
         type: command.sendResult === '下发失败' ? '失败' : '下发',
-        content: command.sendResult === '下发失败' ? command.failReason : `已下发${command.commandName}`,
+        message: command.sendResult === '下发失败' ? command.failReason : `已下发${command.name ?? command.commandName}`,
+        content: command.sendResult === '下发失败' ? command.failReason : `已下发${command.name ?? command.commandName}`,
       }];
       if (command.receiptStatus === '已确认') {
-        records.push({ ...records[0], id: `${command.id}-receipt`, time: command.receiptTime, type: '回执', content: `设备确认${command.commandName}` });
+        records.push({ ...records[0], id: `${command.id}-receipt`, createdAt: command.receiptTime, time: command.receiptTime, type: '回执', message: `设备确认${command.name ?? command.commandName}`, content: `设备确认${command.name ?? command.commandName}` });
       }
       if (['失败', '超时'].includes(command.receiptStatus)) {
-        records.push({ ...records[0], id: `${command.id}-fail`, type: '失败', content: command.failReason });
+        records.push({ ...records[0], id: `${command.id}-fail`, type: '失败', message: command.failReason, content: command.failReason });
       }
       if (command.receiptStatus === '已处理') {
-        records.push({ ...records[0], id: `${command.id}-handle`, type: '处理', content: '异常回执已处理' });
+        records.push({ ...records[0], id: `${command.id}-handle`, type: '处理', message: '异常回执已处理', content: '异常回执已处理' });
       }
       return records;
     })
-    .sort((a, b) => b.time.localeCompare(a.time));
+    .sort((a, b) => (b.createdAt ?? b.time).localeCompare(a.createdAt ?? a.time));
 }
 
 function mergeRowsById(incoming, existing) {

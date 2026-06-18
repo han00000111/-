@@ -14,7 +14,7 @@ export function getLogs() {
 }
 
 export function getAuditLogs() {
-  return auditLogs;
+  return normalizeLogRecords(auditLogs);
 }
 
 export function getRecentLogs() {
@@ -22,17 +22,17 @@ export function getRecentLogs() {
 }
 
 export function getCommandLogs() {
-  return commandLogs;
+  return normalizeLogRecords(commandLogs);
 }
 
 export function getStepLogs() {
-  return stepLogs;
+  return normalizeLogRecords(stepLogs);
 }
 
 export function getTelemetryLogs() {
-  return telemetryLogs;
+  return normalizeLogRecords(telemetryLogs);
 }
 
 export function getVisionLogs() {
-  return visionLogs;
+  return normalizeLogRecords(visionLogs);
 }

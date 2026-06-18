@@ -1,15 +1,9 @@
 ﻿import React, { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import * as Runtime from '../AppRuntime';
 import { ActionFeedback, DataStateBlock } from '../components/common';
-import {
-  useActionRequest,
-  useCurrentTaskResource,
-  useTaskRecordsResource,
-  useTasksResource,
-  useTaskSummaryResource,
-} from '../hooks';
-import { RUNTIME_CONFIG } from '../runtime';
-import { cancelTask, dispatchTask, pauseTask, resumeTask } from '../services';
+import { useActionRequest } from '../hooks';
+import { useRuntime } from '../runtime';
+import { cancelTask, dispatchTask, getAlarms, getVisionResults, pauseTask, resumeTask } from '../services';
 import {
   ACTION_KEYS,
   canOperate,
@@ -307,7 +301,6 @@ const {
   telemetryLogs,
   toChineseStep,
   trendSeries,
-  useMockRuntime,
   visionLogs,
   visionModels,
   visionResults,
@@ -335,25 +328,17 @@ export function TasksPageImpl({
   const [scope, setScope] = useState('全部');
   const [recordScope, setRecordScope] = useState('当前任务');
   const [activeTaskTab, setActiveTaskTab] = useState('任务总览');
-  const runtime = useMockRuntime();
-  const tasksResource = useTasksResource();
-  const taskSummaryResource = useTaskSummaryResource();
-  const currentTaskResource = useCurrentTaskResource();
-  const taskRecordsResource = useTaskRecordsResource();
-  const liveTaskList = RUNTIME_CONFIG.enableMockRuntime
-    ? (runtime.tasks.length ? runtime.tasks : taskList)
-    : (tasksResource.data ?? []);
+  const runtime = useRuntime();
+  const liveTaskList = runtime.tasks?.length ? runtime.tasks : taskList;
   const liveSelectedTask =
     liveTaskList.find((task) => task.id === selectedTaskId) ??
-    (RUNTIME_CONFIG.enableMockRuntime ? liveTaskList[0] ?? selectedTask : currentTaskResource.data);
+    liveTaskList[0] ??
+    selectedTask;
   const filteredTasks = useMemo(() => filterTasks(liveTaskList, query, scope), [liveTaskList, query, scope]);
   const visibleSelectedTask = filteredTasks.some((task) => task.id === selectedTaskId) ? selectedTaskId : undefined;
   const currentStepDetail = liveSelectedTask ? getTaskCurrentStepDetail(liveSelectedTask) : null;
-  const derivedStats = useMemo(() => getTaskStats(liveTaskList), [liveTaskList]);
-  const stats = RUNTIME_CONFIG.enableMockRuntime
-    ? derivedStats
-    : { ...derivedStats, ...(taskSummaryResource.data ?? {}) };
-  const sourceLogs = RUNTIME_CONFIG.enableMockRuntime ? runtime.logs : (taskRecordsResource.data ?? []);
+  const stats = useMemo(() => getTaskStats(liveTaskList), [liveTaskList]);
+  const sourceLogs = runtime.logs ?? [];
   const visibleLogs = useMemo(
     () => (recordScope === '当前任务' ? sourceLogs.filter((row) => row.taskId === liveSelectedTask?.id) : sourceLogs),
     [recordScope, liveSelectedTask?.id, sourceLogs],
@@ -399,12 +384,7 @@ export function TasksPageImpl({
     <div className="page-grid tasks-grid task-management-grid">
       <section className="panel task-summary-panel">
         <SectionTitle icon={ClipboardList} title="任务管理总览" />
-        <DataStateBlock
-          error={!RUNTIME_CONFIG.enableMockRuntime ? taskSummaryResource.error : null}
-          errorMessage="任务统计暂时无法获取，请稍后重试。"
-          onRetry={taskSummaryResource.reload}
-          compact
-        >
+        <DataStateBlock compact>
           <SummaryStrip
             items={[
               { label: '任务总数', value: stats.total, active: scope === '全部', onClick: () => selectSummaryScope('全部') },
@@ -425,19 +405,8 @@ export function TasksPageImpl({
         />
       </section>
       <DataStateBlock
-        error={!RUNTIME_CONFIG.enableMockRuntime
-          ? (activeTaskTab === '任务记录'
-              ? taskRecordsResource.error
-              : (tasksResource.error ?? (!liveSelectedTask ? currentTaskResource.error : null)))
-          : null}
         empty={!liveSelectedTask}
         emptyTitle="暂无任务"
-        errorMessage="任务数据暂时无法获取，请稍后重试。"
-        onRetry={() => {
-          tasksResource.reload();
-          currentTaskResource.reload();
-          if (activeTaskTab === '任务记录') taskRecordsResource.reload();
-        }}
       >
         <>
           {activeTaskTab === '任务总览' && <TaskOverviewSection {...sharedTaskProps} />}
@@ -460,7 +429,7 @@ function TaskOverviewSection({ currentStepDetail, filteredTasks, selectedTask, s
       <section className="panel task-overview-main-panel">
         <SectionTitle icon={ClipboardList} title="任务总览" />
         <div className="detail-list dense task-overview-detail">
-          <Info label="当前任务" value={`${selectedTask.id} / ${selectedTask.orderNo ?? '-'}`} />
+          <Info label="当前任务" value={`${selectedTask.id} / ${selectedTask.orderId ?? selectedTask.orderNo ?? '-'}`} />
           <Info
             label="目标设备"
             value={(
@@ -518,20 +487,27 @@ function TaskQueueSection({ currentUser, filteredTasks, query, scope, selectedTa
 }
 
 function TaskDetailSection({ currentStepDetail, currentUser, navigation, onAlarms, onDevice, onLogs, onTaskAction, selectedTask, setPreviewAttachment }) {
-  const visionRows = visionResults.filter((row) => row.relatedTask === selectedTask.id || row.visionTaskId === selectedTask.visionTaskId).map(normalizeVisionResult);
+  const visionRows = getVisionResults()
+    .filter((row) => row.relatedTask === selectedTask.id || (row.taskId ?? row.visionTaskId) === selectedTask.visionTaskId)
+    .map((row) => normalizeVisionResult({
+      ...row,
+      visionTaskId: row.taskId ?? row.visionTaskId,
+      screenshot: row.snapshotUrl ?? row.screenshot,
+      time: row.createdAt ?? row.time,
+    }));
   const recentVisionRow = visionRows[0];
   const recentVisionTask = visionTasks.find((task) => task.visionTaskId === recentVisionRow?.visionTaskId) ?? visionTasks.find((task) => task.visionTaskId === selectedTask.visionTaskId) ?? visionTasks[0];
   const recentVisionCamera = cameras.find((camera) => camera.cameraId === recentVisionRow?.cameraId) ?? cameras.find((camera) => camera.cameraId === recentVisionTask?.cameraId) ?? cameras[0];
   const hasVisionRisk = visionRows.some((row) => ['异常', '低置信度', '失败'].includes(row.result) || ['待复核', '处理中', '转人工处理'].includes(row.processStatus));
-  const taskAlarms = alarms.filter((alarm) => alarm.relatedTask === selectedTask.id || selectedTask.devices.includes(alarm.device));
+  const taskAlarms = getAlarms().filter((alarm) => alarm.taskId === selectedTask.id || selectedTask.devices.includes(alarm.deviceId ?? alarm.device));
   return (
     <div className="task-management-layout">
       <section className="panel task-detail-info-panel">
         <SectionTitle icon={ClipboardList} title="基础信息" />
         <div className="detail-list dense">
           <Info label="任务编号" value={selectedTask.id} />
-          <Info label="订单编号" value={selectedTask.orderNo ?? '-'} />
-          <Info label="任务类型" value={selectedTask.taskType ?? '生产任务'} />
+          <Info label="订单编号" value={selectedTask.orderId ?? selectedTask.orderNo ?? '-'} />
+          <Info label="任务类型" value={selectedTask.type ?? selectedTask.taskType ?? '生产任务'} />
           <Info label="目标设备" value={selectedTask.targetDevice ?? getTaskPrimaryDevice(selectedTask)} />
           <Info label="处理状态" value={<StatusText value={selectedTask.processStatus ?? '待处理'} />} />
           <Info label="开始时间" value={selectedTask.startedAt} />
@@ -573,7 +549,7 @@ function TaskDetailSection({ currentStepDetail, currentUser, navigation, onAlarm
               <DataTable
                 compact
                 columns={['时间', '相机', '对象', '结果', '置信度', '处理状态', '操作']}
-                rows={visionRows.map((row) => [row.time, row.cameraId, row.object, <StatusText value={row.result} />, row.confidence, <StatusText value={row.processStatus} />, <button type="button" onClick={() => navigation?.navigateToVision?.(getVisionResultKey(row))}>查看截图</button>])}
+                rows={visionRows.map((row) => [row.createdAt ?? row.updatedAt ?? row.time, row.cameraId, row.name ?? row.object, <StatusText value={row.result} />, row.confidence ?? row.score, <StatusText value={row.status ?? row.processStatus} />, <button type="button" onClick={() => navigation?.navigateToVision?.(row.id ?? row.snapshotUrl ?? getVisionResultKey(row))}>查看截图</button>])}
               />
             </div>
           </div>
@@ -602,7 +578,7 @@ function TaskDetailSection({ currentStepDetail, currentUser, navigation, onAlarm
           compact
           columns={['异常对象', '类型', '状态', '处理建议']}
           rows={(taskAlarms.length ? taskAlarms : [{ device: selectedTask.targetDevice ?? '-', type: '任务状态', status: selectedTask.processStatus ?? '正常处理' }]).map((row) => [
-            row.device,
+            row.deviceId ?? row.device,
             row.type,
             <StatusText value={row.status} />,
             selectedTask.alarmCount > 0 ? '进入人工接管处理' : '继续自动执行',
@@ -667,8 +643,8 @@ function TaskHandoverSection({ currentUser, onAlarms, onDevice, onLogs, onTaskAc
           columnWidths={[150, 120, 130, 160, 100, 110]}
           columns={['订单编号', '任务类型', '目标设备', '异常/确认项', '任务状态', '处理状态']}
           rows={handoverTasks.map((task) => [
-            task.orderNo ?? task.id,
-            task.taskType ?? '生产任务',
+            task.orderId ?? task.orderNo ?? task.id,
+            task.type ?? task.taskType ?? '生产任务',
             task.targetDevice ?? getTaskPrimaryDevice(task),
             task.alarmCount > 0 ? `${task.alarmCount} 条异常` : task.command,
             <StatusText value={task.status} />,
@@ -708,7 +684,7 @@ function TaskRecordsSection({ recordScope, selectedTask, setRecordScope, visible
           columnWidths={[130, 120, 140, 'auto', 100]}
           columns={['时间', '记录分类', '对象', '内容', '状态']}
           emptyText="暂无任务记录"
-          rows={rows.map((row) => [row.time, row.category, row.objectId, row.content, <StatusText value={row.status} />])}
+          rows={rows.map((row) => [row.createdAt ?? row.updatedAt ?? row.time, row.category, row.target ?? row.objectId, row.message ?? row.content, <StatusText value={row.status} />])}
         />
       </section>
     </div>
@@ -725,7 +701,7 @@ function TaskExecutionWorkbench({ currentStepDetail, currentUser, navigation, on
           <span>{stepSummary}｜{currentStepDetail.command}</span>
         </div>
         <p>
-          类型：{task.taskType ?? '生产任务'}｜机器人：{task.robotId ?? '-'}｜目标：{[task.targetMap, task.targetRoute, task.targetPoint].filter((item) => item && item !== '-').join(' / ') || '-'}｜关联设备：{task.devices.replaceAll(',', '、')}｜报警 {task.alarmCount} 条｜下发 {currentStepDetail.dispatchStatus}｜回执 {currentStepDetail.receiptStatus}
+          类型：{task.type ?? task.taskType ?? '生产任务'}｜机器人：{task.robotId ?? '-'}｜目标：{[task.targetMap, task.targetRoute, task.targetPoint].filter((item) => item && item !== '-').join(' / ') || '-'}｜关联设备：{task.devices.replaceAll(',', '、')}｜报警 {task.alarmCount} 条｜下发 {currentStepDetail.dispatchStatus}｜回执 {currentStepDetail.receiptStatus}
         </p>
       </div>
       <div className="task-workbench-body">
