@@ -3,12 +3,13 @@
 > 本文档说明真实后端接入时 `src/services/*` 与 `src/runtime/*` 的替换策略。
 > 原则：**只换内部实现，不换对外签名**，页面层零改动。
 
-## 1. 当前定位：services 是 mock 适配层
+## 1. 当前定位：services 是可切换适配层
 
-- `src/services/*` 当前同步、纯函数，从 `src/mockData.js` 读取并返回。
+- `src/services/*` 保留同步 mock 查询函数，同时为系统状态、设备、任务和报警提供异步 `fetchXxx` 查询。
+- 操作类接口统一通过 service 在 mock 成功结果与真实 REST 请求之间切换。
 - `src/services/index.js` 是统一出口（barrel），并提供 `getLive*` 从 runtime 快照取实时值。
 - `src/runtime/mockRuntimeStore.js` 调用 7 个 service 构建初始状态，按 `RUNTIME_CONFIG.tickMs` 定时生成新快照，模拟实时。
-- 每个 service 顶部已有「mock 数据适配层 / 后续接入真实后端时只替换本文件内部实现」注释，作为接入锚点。
+- 当前环境的 `VITE_USE_MOCK_SERVICE=true`，因此实际交付仍默认读取本地 mock 数据。
 
 ## 2. 接入时怎么改（关键约束）
 
@@ -16,9 +17,11 @@
 2. **页面不应直接 import `mockData`**：当前已通过 services / AppRuntime 间接获取，保持该边界。
 3. **不改 service 函数签名**：例如 `getDevices()` 接入后仍叫 `getDevices()`。
    - 若改真实请求需异步，建议**新增** `getDevicesAsync()` / `fetchDevices()` 并行存在，逐步迁移；**本轮不动**现有同步签名（详见「异步迁移策略」）。
-4. **runtime 从 mock 定时器逐步替换为 WebSocket store**：
-   - 替换 `mockRuntimeStore` 的 `setInterval` tick 为 `/ws/runtime` 消息分发；
-   - `useMockRuntime` 对外接口不变，页面无感知。
+4. **runtime 通过统一 store 选择数据源**：
+   - `mock` 委托现有 mock 定时器；
+   - `static` 使用静态初始数据；
+   - `ws` 使用静态数据打底并消费 `/ws/runtime` 增量。
+   - 页面应逐步从 `useMockRuntime` 迁移到 `useRuntime`；机器人监控仍未完成该迁移。
 5. **loading / error / empty 已就位**：`createResourceState.js`（success/loading/error/empty 工厂）与 `useResourceState.js`（带 loading/error 的加载 Hook）已存在，异步接入时直接复用，页面兜底 UI 不必重写。
 
 ## 3. 异步迁移策略（避免破坏同步签名）

@@ -1,6 +1,6 @@
 # API Client 使用说明
 
-> 位置：`src/api/`。本轮只新增「可切换 mock / real 的底层请求能力」，**尚未启用真实请求**，所有页面仍用 mock。
+> 位置：`src/api/`。底层请求能力已就位；当前环境仍默认使用 mock service。系统状态、设备、任务、报警查询已具备真实 API 切换骨架，其他业务域按 `service-adapter-plan.md` 继续接入。
 
 ## 1. httpClient 的职责
 
@@ -87,11 +87,12 @@ import { unwrapResponse } from '../api';
 | B | `{ "success": true, "data": {}, "message": "ok" }` | `success === false` 抛 `ApiError`，否则返回 `data` |
 | C | 直接数组 / 对象 | 原样返回（不破坏 mock 数据）|
 
-## 6. 为什么当前没有启用真实请求
+## 6. 当前启用状态
 
 - 项目当前无真实后端；`VITE_USE_MOCK_SERVICE` 在 `.env.demo` / `.env.production` 均为 `true`。
-- services 仍同步返回 mock（页面无感）；`src/api/` 仅作为底层能力**待命**。
-- 仅在 `deviceService.getDevices` 中预留了 `API_CONFIG.useMockService` 分支作为样板（两个分支当前都回退 mock，未发起任何 fetch）。
+- 系统状态、设备、任务和报警已提供 `fetchXxx` 与 resource hook；关闭 mock service 后会请求真实接口。
+- 指令、视觉、地图、机械臂和设置已具备部分操作类 REST 调用，但查询侧尚未全部切换为异步真实接口。
+- 未完成的范围见 `service-adapter-plan.md` 和 `known-issues.md`。
 
 ## 7. 启用真实请求的最小改动示例
 
@@ -113,4 +114,4 @@ export async function getDevices() {
 2. 页面用 `useResourceState(() => getDevices())` 接 loading/error（三态兜底已就位）；
 3. 其余 service 逐域照此改造，顺序见 `service-adapter-plan.md`。
 
-> 本轮不做以上 2/3 步，仅提供能力与样板，保持页面无感、构建不受影响。
+接入时按业务域逐项验证，不应仅修改环境变量后直接上线。

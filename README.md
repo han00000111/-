@@ -1,60 +1,96 @@
-# Robot Integrated Management Platform
+# 机器人综合管理平台
 
-机器人综合管理平台。Vite + React 前端，当前为前端 mock 演示版本。
+Vite + React 前端。当前交付版本默认使用本地 mock service；demo 模式提供动态 runtime，production 模式默认使用静态数据。
 
-## 构建与部署
+## 环境要求
 
-提供两套构建模式，区分「正式部署」与「内网/离线演示」。
+- Node.js 22（见 `.nvmrc`、`.node-version` 和 `package.json#engines`）
+- npm
 
-### 开发运行
+首次运行：
 
 ```bash
 npm install
+```
+
+## 启动方式
+
+```bash
 npm run dev
 ```
 
-### 正式构建（推荐用于部署）
+默认地址：`http://127.0.0.1:5173/`。局域网调试可运行 `npm run dev:lan`。
+
+## 构建模式
+
+### production 模式
 
 ```bash
 npm run build:prod
 ```
 
 - 输出目录：`dist`
-- 使用 Vite 默认分包，`index.html` + `assets/`（JS / CSS 独立文件，含 `vendor` chunk）
-- 适合部署到 nginx / 静态服务器，可有效利用浏览器缓存
-- mock runtime 默认**关闭**（数据不再实时跳动），页面仍使用 services 静态数据
+- 使用常规 Vite 分包，适合 nginx、GitHub Pages 等静态服务器
+- `.env.production` 默认 `runtimeSource=static`
+- mock runtime 定时器和 WebSocket 默认关闭
+- 当前尚无完整真实后端，因此 mock service 默认仍开启
 - `npm run build` 等价于 `npm run build:prod`
 
-### 演示构建（现场拷贝 / 离线单文件）
+### demo 模式
 
 ```bash
 npm run build:demo
 ```
 
 - 输出目录：`dist-demo`
-- 使用 `vite-plugin-singlefile`，JS / CSS 全部内联进单个 `index.html`
-- 适合拷贝单文件到现场、离线演示、直接双击打开
-- mock runtime 默认**开启**（数据实时演示）
+- JS/CSS 内联到单个 HTML，适合离线演示
+- `.env.demo` 默认 `runtimeSource=mock`
+- mock runtime 默认开启，页面数据会按定时器动态变化
+- 构建后可直接打开 `dist-demo/index.html`
 
-### 预览构建产物
+### 预览与检查
 
 ```bash
 npm run preview:prod   # 预览 dist
 npm run preview:demo   # 预览 dist-demo
+npm run lint           # ESLint 检查
+npm run format         # 仅格式化 src 下 JS/JSX/CSS
+npm run check          # lint + production 构建 + demo 构建
 ```
 
-### mock runtime 开关
+## runtime 与 mock 开关
 
-由环境变量 `VITE_ENABLE_MOCK_RUNTIME` 控制（见 `src/runtime/runtimeConfig.js`）：
+| 变量 | 作用 | demo 默认 | production 默认 |
+|---|---|---|---|
+| `VITE_ENABLE_MOCK_RUNTIME` | 是否启动旧 mock runtime 定时器 | `true` | `false` |
+| `VITE_RUNTIME_SOURCE` | 统一 runtime 数据源：`mock` / `static` / `ws` | `mock` | `static` |
+| `VITE_USE_MOCK_SERVICE` | services 是否返回本地 mock 数据 | `true` | `true` |
+| `VITE_API_BASE_URL` | 真实 REST API 基础地址 | 空 | 空 |
+| `VITE_ENABLE_WS_RUNTIME` | 是否允许建立 WS runtime 连接 | `false` | `false` |
+| `VITE_WS_RUNTIME_URL` | WS runtime 地址 | 空 | 空 |
 
-- `.env.demo`：`VITE_ENABLE_MOCK_RUNTIME=true`（演示模式实时跳动）
-- `.env.production`：`VITE_ENABLE_MOCK_RUNTIME=false`（正式模式静态数据）
-- 未设置时默认开启；如需正式构建也保留动态演示，把 `.env.production` 改为 `true` 即可
-- 当前尚未接入真实后端，故两套模式 `VITE_USE_MOCK_SERVICE` 均为 `true`
+`VITE_RUNTIME_SOURCE=ws` 时，还必须设置：
 
-### 依赖注意
+```dotenv
+VITE_ENABLE_MOCK_RUNTIME=false
+VITE_RUNTIME_SOURCE=ws
+VITE_ENABLE_WS_RUNTIME=true
+VITE_WS_RUNTIME_URL=ws://后端地址/ws/runtime
+```
 
-`vite-plugin-singlefile` 与 `vite` 存在 peer 依赖关系，升级时需保证 `vite` 版本满足该插件要求（当前 vite `^5.4.21`）。
+WS 连接失败会保留静态初始数据并有限次重连，不会导致整页白屏。当前 WS 接入范围见 `docs/known-issues.md`。
+
+## API 接入
+
+当前页面通过 `src/services/` 访问数据，HTTP 基础能力位于 `src/api/`。接入真实后端时：
+
+1. 在 `.env.production` 设置 `VITE_USE_MOCK_SERVICE=false`。
+2. 填写 `VITE_API_BASE_URL` 和请求超时。
+3. 按业务域完成 service 的异步接口适配。
+4. 按 `docs/api-contract.md`、`docs/api-client.md` 和 `docs/service-adapter-plan.md` 验证字段、错误态及加载态。
+5. 实时增量按 `/ws/runtime` 契约接入。
+
+目前系统状态、设备、任务和报警查询已具备真实 API 切换骨架；其他业务域仍需继续接入，不能仅修改环境变量后视为完成生产对接。
 
 ## 部署
 
@@ -72,7 +108,7 @@ GitHub Pages 的 Source 应设置为 GitHub Actions，不直接发布 `main` 分
 - 健康检查：https://han00000111.github.io/robot-integrated-management-platform/health.json
 - 静态快照：https://han00000111.github.io/robot-integrated-management-platform/snapshot.html
 
-## 本地开发稳定启动
+## Windows 本地辅助脚本
 
 ### 开发时固定本地地址
 
@@ -110,15 +146,39 @@ http://127.0.0.1:5173/robot-integrated-management-platform/
 
 http://本机IP:5173/robot-integrated-management-platform/
 
-### 注意
+## 常见问题
 
-不要直接双击 `dist/index.html` 作为开发方式。
-开发时不要用 `serve dist`。
-开发时应使用 Vite dev server，这样修改源码后页面才能实时更新。
+### 为什么不能直接双击 `dist/index.html`？
 
-## 本地双击打开方式
+production 产物包含 ES module 和 `assets/`，应通过 `npm run preview:prod` 或静态服务器访问。需要离线双击时使用 `npm run build:demo` 生成的 `dist-demo/index.html`。
 
-仅用于查看已构建的静态产物，不适合开发调试。
+### production 为什么仍显示 mock 数据？
 
-- 离线单文件双击：先执行 `npm run build:demo`，再双击 `dist-demo/index.html`（推荐，单文件无外部依赖）
-- 正式产物 `dist`（`npm run build:prod`）使用 ES module 分包，需通过 HTTP 服务访问（如 `npm run preview:prod`），直接 `file://` 双击可能无法加载脚本
+`.env.production` 当前设置 `VITE_USE_MOCK_SERVICE=true`，这是因为真实后端尚未完整接入。完成对应 service 适配并配置 API 地址后才能关闭。
+
+### mock runtime 与 mock service 有什么区别？
+
+mock service 决定查询和操作是否使用本地数据；mock runtime 决定演示数据是否按定时器动态变化。production 默认使用静态 mock service，不启动动态 runtime。
+
+### WS 地址已配置但没有连接？
+
+需要同时设置 `VITE_RUNTIME_SOURCE=ws`、`VITE_ENABLE_WS_RUNTIME=true` 和非空 `VITE_WS_RUNTIME_URL`。连接失败后页面保留静态数据，并在有限次数重连后显示异常状态。
+
+### 构建出现 `spawn EPERM` 怎么处理？
+
+这是 Windows 环境中常见的进程权限或安全软件限制。先关闭占用进程，或在具备权限的终端重新执行原构建命令；不要因此回退业务代码。
+
+### 依赖升级后 demo 构建失败怎么办？
+
+检查 `vite-plugin-singlefile` 与 Vite 的 peer dependency 是否兼容，再执行 `npm install` 和 `npm run build:demo`。
+
+## 交付资料
+
+- API 契约：`docs/api-contract.md`
+- 数据模型：`docs/data-models.md`
+- Service 接入计划：`docs/service-adapter-plan.md`
+- API Client：`docs/api-client.md`
+- 操作接口计划：`docs/action-api-plan.md`
+- 字段标准化：`docs/field-normalization.md`
+- 交付验收：`docs/delivery-checklist.md`
+- 遗留问题：`docs/known-issues.md`
