@@ -10159,6 +10159,118 @@ body {
   grid-template-rows: auto auto;
 }
 
+/* ==========================================================================
+   布局收口补丁：图形 contain、内层可收缩、设备详情单一纵向滚动
+   （位于规范层基础规则区，<1180px 媒体查询仍可覆盖）
+   ========================================================================== */
+
+/* 1) 地图 / 建图预览：按可用区域完整缩放（contain），不再以宽度强制纵横比
+   而在高度不足时被裁切。SVG 自带 viewBox + preserveAspectRatio(meet)，
+   容器铺满即可完整居中显示，多余空间留白而非裁剪。仅限这两处画布，
+   不影响地图编辑画布。 */
+.robot-map-panel,
+.mapping-preview-panel {
+  display: flex;
+  flex-direction: column;
+}
+.robot-map-panel .robot-map-with-joystick,
+.mapping-preview-panel .mapping-preview-slam {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+.robot-map-panel .robot-map-stage,
+.mapping-preview-panel .robot-map-stage {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  max-height: 100%;
+  aspect-ratio: auto;
+}
+/* 把更多高度让给建图轨迹预览（1fr 行），日志区改为更小的内部滚动。 */
+.mapping-grid.page-workspace .mapping-log-list {
+  max-height: 150px;
+}
+
+/* 2) 机械臂动作控制：中部工作区可随可用高度收缩，内部各栏自行滚动，
+   不再用 min-height 撑破列高导致整页被裁。 */
+.arm-action-control .arm-action-workbench {
+  min-height: 0;
+}
+
+/* 3) 设备详情：页面单一纵向滚动，内层面板与滚动体一律自然高度，
+   避免 overflow:hidden 把设备列表、点位、详情底部直接截断。
+   表格自身的内部滚动保留（属正常内容区滚动，非假装一屏的裁切）。 */
+.page-frame[data-page="devices"][data-subpage="detail"] :is(
+  .device-list-panel,
+  .device-overview-card-panel,
+  .key-points-panel,
+  .trend-panel,
+  .related-panel,
+  .device-main-panel,
+  .device-side-panel,
+  .point-workspace-grid,
+  .point-workspace-panel,
+  .point-workspace-table,
+  .point-workspace-detail,
+  .collapsible-section
+) {
+  height: auto;
+  min-height: 0;
+  max-height: none;
+  overflow: visible;
+}
+.page-frame[data-page="devices"][data-subpage="detail"] :is(
+  .device-detail-scroll,
+  .device-side-scroll,
+  .compact-device-list
+) {
+  max-height: none;
+  overflow: visible;
+}
+.page-frame[data-page="devices"][data-subpage="detail"] :is(
+  .device-main-panel,
+  .device-side-panel
+) {
+  grid-template-rows: auto;
+}
+
+/* 4) 视觉实时画面：两路画面平分可用高度，画面主体可收缩并完整缩放，
+   不再用固定 min-height 撑破画框底部导致截断。 */
+.vision-screen-panel .vision-screen-stack {
+  grid-auto-rows: minmax(0, 1fr);
+}
+.vision-frame {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.vision-frame-body {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+/* 5) 内层卡片滚动列表（动作链、机械臂列表等）：用纯 CSS 滚动阴影。
+   当下方还有内容时底部出现柔和渐隐阴影，滚到底则消失——
+   被截断的小卡片读起来是"还有更多、可滚动"，而不是生硬截断在卡片边缘。
+   面板底色为白，列表透明，覆盖渐变用白色与之吻合。 */
+.arm-chain-list,
+.arm-card-list,
+.arm-template-list,
+.arm-exception-list,
+.point-group-list,
+.device-overview-page .attention-device-list,
+.compact-device-list,
+.vision-record-list,
+.vision-target-panel-list {
+  background:
+    linear-gradient(#fff 30%, rgba(255, 255, 255, 0)) 0 0 / 100% 22px,
+    linear-gradient(rgba(255, 255, 255, 0), #fff 70%) 0 100% / 100% 22px,
+    radial-gradient(farthest-side at 50% 0, rgba(15, 23, 42, 0.14), rgba(15, 23, 42, 0)) 0 0 / 100% 9px,
+    radial-gradient(farthest-side at 50% 100%, rgba(15, 23, 42, 0.14), rgba(15, 23, 42, 0)) 0 100% / 100% 9px;
+  background-repeat: no-repeat;
+  background-attachment: local, local, scroll, scroll;
+}
+
 /* 内容宽度不足时先把高密度三栏降为两栏。 */
 @media (min-width: 1181px) and (max-width: 1440px) {
   .arm-teaching-workspace,
