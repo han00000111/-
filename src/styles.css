@@ -5465,23 +5465,10 @@ button:disabled,
   overflow-y: auto;
   overflow-x: hidden;
 }
-/* 设备详情：占满视口、整块在卡片内滚动；行用 max-content 防止被固定高度压扁
-   （否则底部「数值点位详情/附件」会被挤成一条）。 */
-.device-detail-grid.page-grid {
-  height: calc(100vh - 150px);
-  min-height: 480px;
-  overflow-y: auto;
-  overflow-x: hidden;
-  align-content: start;
-}
-.device-detail-grid {
-  grid-template-rows: 260px 390px max-content max-content;
-}
 @media (max-width: 1180px) {
   .device-overview-page.page-full,
   .point-management-page.page-full,
-  .history-compare-page.page-full,
-  .device-detail-grid.page-grid {
+  .history-compare-page.page-full {
     height: auto;
     min-height: 0;
     overflow: visible;
@@ -9518,5 +9505,420 @@ td .status-badge,
 
   .record-section .table-wrap {
     max-height: 260px;
+  }
+}
+
+/* 设备详情工作台 */
+.device-detail-page {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  gap: 16px;
+  min-width: 0;
+  align-content: start;
+}
+
+.device-detail-workspace {
+  display: grid;
+  grid-template-rows: minmax(584px, 1fr) 204px;
+  gap: 16px;
+  height: calc(100vh - 150px);
+  min-height: 804px;
+  min-width: 0;
+}
+
+.device-detail-main-grid {
+  display: grid;
+  grid-template-columns: 250px minmax(0, 1fr) 310px;
+  gap: 16px;
+  min-width: 0;
+  min-height: 0;
+  align-items: stretch;
+}
+
+.device-detail-panel,
+.device-main-panel,
+.device-side-panel {
+  min-width: 0;
+  min-height: 0;
+}
+
+.device-main-panel,
+.device-side-panel {
+  display: grid;
+  gap: 16px;
+}
+
+.device-main-panel {
+  grid-template-rows: auto minmax(384px, 1fr);
+}
+
+.device-side-panel {
+  grid-template-rows: minmax(230px, 1.15fr) minmax(180px, 0.85fr);
+}
+
+.device-detail-page .device-list-panel,
+.device-detail-page .device-overview-card-panel,
+.device-detail-page .key-points-panel,
+.device-detail-page .trend-panel,
+.device-detail-page .related-panel {
+  grid-column: auto;
+  grid-row: auto;
+  width: auto;
+  height: auto;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.device-detail-page .device-list-panel {
+  display: flex;
+  flex-direction: column;
+  padding: 14px;
+}
+
+.device-detail-page .device-search-row {
+  flex: 0 0 auto;
+  grid-template-columns: auto minmax(0, 1fr);
+  margin-bottom: 10px;
+}
+
+.device-detail-page .device-search-row > :last-child {
+  grid-column: 2;
+}
+
+.device-detail-scroll,
+.device-side-scroll {
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-gutter: stable;
+}
+
+.device-detail-page .compact-device-list {
+  flex: 1;
+  padding-right: 3px;
+}
+
+.device-detail-page .compact-device-row {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 7px;
+  min-height: 82px;
+  padding: 10px;
+}
+
+.device-detail-page .device-row-main {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.device-detail-page .device-row-main small {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.device-detail-page .device-row-sub {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.device-detail-page .device-row-sub > .device-row-type {
+  flex: 1 0 100%;
+  max-width: none;
+  justify-self: auto;
+  overflow: hidden;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.device-detail-page .device-row-sub > .status-text {
+  flex: 0 0 auto;
+  width: auto;
+  justify-self: auto;
+}
+
+.device-detail-page .device-overview-card-panel {
+  position: relative;
+  padding: 12px 14px;
+  overflow: visible;
+}
+
+.device-detail-page .device-overview-card-panel .section-title,
+.device-detail-page .trend-panel .section-title {
+  margin-bottom: 6px;
+}
+
+.device-detail-page .device-action-controls {
+  min-height: 30px;
+  margin-bottom: 4px;
+}
+
+.device-detail-page .device-action-controls .table-actions {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.device-detail-page .device-overview-card-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px 14px;
+}
+
+.device-detail-page .device-overview-card-grid .info-row {
+  display: grid;
+  justify-content: stretch;
+  gap: 1px;
+  min-height: 34px;
+  padding: 2px 0 3px;
+  font-size: 11.5px;
+  line-height: 1.1;
+}
+
+.device-detail-page .device-overview-card-grid .info-row strong {
+  overflow: hidden;
+  font-size: 12px;
+  line-height: 1.15;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.device-detail-page .trend-panel {
+  display: flex;
+  flex-direction: column;
+  padding: 12px 14px;
+}
+
+.device-detail-page .trend-history-layout {
+  flex: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: 260px 58px;
+  gap: 8px;
+  min-height: 0;
+}
+
+.device-detail-page .trend-history-layout .trend-layout {
+  min-width: 0;
+  min-height: 0;
+}
+
+.device-detail-page .main-trend {
+  width: 100%;
+  height: 100%;
+  min-height: 260px;
+}
+
+.device-detail-page .history-inline-summary {
+  display: grid;
+  grid-template-columns: auto repeat(3, minmax(0, 1fr));
+  align-items: stretch;
+  gap: 8px;
+}
+
+.device-detail-page .history-inline-summary h3 {
+  align-self: center;
+  margin: 0 2px 0 0;
+  writing-mode: vertical-rl;
+  letter-spacing: 2px;
+}
+
+.device-detail-page .history-inline-row {
+  min-height: 58px;
+  padding: 5px 7px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  font-size: 11px;
+}
+
+.device-detail-page .history-inline-row strong {
+  grid-column: 1 / -1;
+}
+
+.device-detail-page .history-inline-row span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.device-detail-page .key-points-panel,
+.device-detail-page .related-panel {
+  display: flex;
+  flex-direction: column;
+  padding: 14px;
+}
+
+.device-detail-page .key-point-list {
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+
+.device-detail-page .key-point-item {
+  min-height: 58px;
+  padding: 8px 10px;
+}
+
+.device-detail-page .related-info-grid.compact {
+  flex: 1;
+  max-height: none;
+  padding-right: 3px;
+}
+
+.device-detail-page .related-info-grid.compact.device-side-scroll {
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.device-detail-page .related-info-grid.compact .related-info-card {
+  min-height: 62px;
+}
+
+.device-detail-page .device-point-section {
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.device-detail-page .point-workspace-panel {
+  grid-column: auto;
+  grid-row: auto;
+  padding: 0;
+}
+
+.device-detail-page .point-workspace-grid {
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 16px;
+  height: 100%;
+  min-height: 0;
+}
+
+.device-detail-page .point-workspace-table,
+.device-detail-page .point-workspace-detail {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  padding: 14px 16px;
+  overflow: hidden;
+}
+
+.device-detail-page .point-workspace-table .point-block {
+  flex: 1;
+  min-height: 0;
+}
+
+.device-detail-page .point-workspace-table .table-wrap {
+  height: 100%;
+  max-height: none;
+  overflow: auto;
+}
+
+.device-detail-page .point-workspace-detail .detail-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.device-detail-secondary-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.55fr) minmax(320px, 0.85fr);
+  gap: 16px;
+  min-width: 0;
+}
+
+.device-detail-page .device-detail-secondary-grid .attachment-panel,
+.device-detail-page .device-detail-secondary-grid .collect-log-panel {
+  grid-column: auto;
+  grid-row: auto;
+  min-width: 0;
+  min-height: 0;
+  max-height: none;
+  overflow: visible;
+}
+
+@media (max-width: 1280px) {
+  .device-detail-main-grid {
+    grid-template-columns: 240px minmax(0, 1fr) 290px;
+    gap: 12px;
+  }
+
+  .device-main-panel,
+  .device-side-panel,
+  .device-detail-workspace,
+  .device-detail-secondary-grid,
+  .device-detail-page .point-workspace-grid {
+    gap: 12px;
+  }
+}
+
+@media (max-width: 1180px) {
+  .device-detail-workspace {
+    height: auto;
+    min-height: 0;
+    grid-template-rows: auto auto;
+  }
+
+  .device-detail-main-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .device-main-panel,
+  .device-side-panel {
+    grid-template-rows: auto;
+  }
+
+  .device-detail-page .device-list-panel {
+    height: 300px;
+  }
+
+  .device-detail-page .trend-panel {
+    min-height: 440px;
+  }
+
+  .device-detail-page .key-points-panel,
+  .device-detail-page .related-panel {
+    max-height: 320px;
+  }
+
+  .device-detail-page .point-workspace-grid {
+    grid-template-columns: minmax(0, 1fr) 300px;
+    height: 240px;
+  }
+
+  .device-detail-secondary-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 760px) {
+  .device-detail-page .device-overview-card-grid,
+  .device-detail-page .point-workspace-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .device-detail-page .history-inline-summary {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .device-detail-page .history-inline-summary h3 {
+    writing-mode: horizontal-tb;
+    letter-spacing: normal;
+  }
+
+  .device-detail-page .point-workspace-grid {
+    height: auto;
+  }
+
+  .device-detail-page .point-workspace-table,
+  .device-detail-page .point-workspace-detail {
+    height: 240px;
   }
 }

@@ -554,7 +554,6 @@ function DeviceDetailPage({
   setSelectedDeviceId,
   setSelectedPointCode,
 }) {
-  const mappingSummary = getPointMappingSummary(selectedDevice);
   const historySummary = getDeviceHistorySummary(selectedDevice);
   const relatedAlarms = alarms.filter((alarm) => alarm.device === selectedDevice.id);
   const relatedLogs = [
@@ -566,164 +565,172 @@ function DeviceDetailPage({
   const [keyPointCompareRange, setKeyPointCompareRange] = useState('5分钟均值');
 
   return (
-    <div className="page-grid device-detail-grid">
-      <section className="panel device-list-panel">
-        <SectionTitle icon={Cpu} title="设备选择" />
-        <div className="device-search-row">
-          <Search size={16} />
-          <SearchableFilterField
-            label="设备"
-            value={deviceSearch || '全部'}
-            options={['全部', ...devices.map((device) => ({ label: `${device.id}｜${device.type}`, value: device.id }))]}
-            onChange={(value) => setDeviceSearch(value === '全部' ? '' : value)}
-            commitOnType
-          />
-          <SearchableFilterField
-            label="状态"
-            value={deviceFilter}
-            options={deviceFilterOptions}
-            onChange={setDeviceFilter}
-            commitOnType={false}
-          />
-        </div>
-        <div className="compact-device-list">
-          {filteredDevices.map((device) => (
-            <button
-              className={`compact-device-row ${selectedDeviceId === device.id ? 'selected' : ''}`}
-              key={device.id}
-              onClick={() => setSelectedDeviceId(device.id)}
-              type="button"
-            >
-              <div className="device-row-main">
-                <strong>{device.id}</strong>
-                <small>{device.updatedAt}</small>
+    <div className="device-detail-page device-detail-grid">
+      <div className="device-detail-workspace">
+        <div className="device-detail-main-grid">
+          <section className="panel device-list-panel device-detail-panel">
+            <SectionTitle icon={Cpu} title="设备选择" />
+            <div className="device-search-row">
+              <Search size={16} />
+              <SearchableFilterField
+                label="设备"
+                value={deviceSearch || '全部'}
+                options={['全部', ...devices.map((device) => ({ label: `${device.id}｜${device.type}`, value: device.id }))]}
+                onChange={(value) => setDeviceSearch(value === '全部' ? '' : value)}
+                commitOnType
+              />
+              <SearchableFilterField
+                label="状态"
+                value={deviceFilter}
+                options={deviceFilterOptions}
+                onChange={setDeviceFilter}
+                commitOnType={false}
+              />
+            </div>
+            <div className="compact-device-list device-detail-scroll">
+              {filteredDevices.map((device) => (
+                <button
+                  className={`compact-device-row ${selectedDeviceId === device.id ? 'selected' : ''}`}
+                  key={device.id}
+                  onClick={() => setSelectedDeviceId(device.id)}
+                  type="button"
+                >
+                  <div className="device-row-main">
+                    <strong>{device.id}</strong>
+                    <small>{device.updatedAt}</small>
               </div>
               <div className="device-row-sub">
-                <span>{device.type}</span>
+                <span className="device-row-type">{device.type}</span>
                 <StatusText value={device.online} />
                 <StatusText value={device.runStatus} />
               </div>
-            </button>
-          ))}
-          {!filteredDevices.length && <div className="attachment-empty">暂无设备状态数据</div>}
-        </div>
-      </section>
-
-      <section className="panel device-overview-card-panel">
-        <SectionTitle icon={MonitorCog} title="设备概况" />
-        <DeviceActionControls
-          currentUser={currentUser}
-          device={selectedDevice}
-        />
-        <div className="device-overview-card-grid">
-          <Info label="设备编号" value={selectedDevice.id} />
-          <Info label="设备类型" value={selectedDevice.type} />
-          <Info label="在线状态" value={<StatusText value={selectedDevice.online} />} />
-          <Info label="运行状态" value={<StatusText value={selectedDevice.runStatus} />} />
-          <Info label="当前任务" value={overview.currentTask} />
-          <Info label="报警数" value={selectedDevice.alarmCount} />
-          <Info label="互锁状态" value={<StatusText value={overview.interlockStatus} />} />
-          <Info label="更新时间" value={selectedDevice.updatedAt} />
-          <Info label="已配置点位" value={mappingSummary.total} />
-          <Info label="启用点位" value={mappingSummary.enabled} />
-          <Info label="异常点位" value={mappingSummary.abnormal} />
-          <Info label="数据来源" value={mappingSummary.source} />
-          <Info label="采集状态" value={<StatusText value={mappingSummary.collectStatus} />} />
-        </div>
-      </section>
-
-      <section className="panel key-points-panel">
-        <SectionTitle
-          icon={Activity}
-          title="关键点位"
-          action={(
-            <select className="section-action-select" value={keyPointCompareRange} onChange={(event) => setKeyPointCompareRange(event.target.value)}>
-              {['5分钟均值', '30分钟均值', '1小时均值'].map((option) => (
-                <option key={option} value={option}>{option}</option>
+                </button>
               ))}
-            </select>
-          )}
-        />
-        <KeyPointOverview compareRange={keyPointCompareRange} device={selectedDevice} />
-      </section>
+              {!filteredDevices.length && <div className="attachment-empty">暂无设备状态数据</div>}
+            </div>
+          </section>
 
-      <section className="panel related-panel">
-        <SectionTitle icon={ClipboardList} title="关联信息" />
-        <div className="related-info-grid compact">
-          <div className="related-info-card">
-            <span>当前任务</span>
-            <strong>{currentTask?.id ?? '无'}</strong>
-            <small>{currentTask ? `${currentTask.status}｜${currentTask.command}` : '暂无关联任务'}</small>
-          </div>
-          <div className="related-info-card">
-            <span>关联报警</span>
-            <strong>{relatedAlarms.length ? `${relatedAlarms.length} 条` : '无'}</strong>
-            <small>{relatedAlarms[0] ? `${relatedAlarms[0].name}｜${relatedAlarms[0].status}` : '暂无关联报警'}</small>
-          </div>
-          <div className="related-info-card">
-            <span>采集日志摘要</span>
-            <strong>{relatedLogs.length ? `${relatedLogs.length} 条` : '无'}</strong>
-            <small>{relatedLogs[0] ? `${relatedLogs[0].time}｜${relatedLogs[0].content}` : '暂无采集日志'}</small>
-          </div>
-        </div>
-      </section>
+          <div className="device-main-panel">
+            <section className="panel device-overview-card-panel">
+              <SectionTitle icon={MonitorCog} title="设备概况" />
+              <DeviceActionControls
+                currentUser={currentUser}
+                device={selectedDevice}
+              />
+              <div className="device-overview-card-grid">
+                <Info label="设备编号" value={selectedDevice.id} />
+                <Info label="设备类型" value={selectedDevice.type} />
+                <Info label="在线状态" value={<StatusText value={selectedDevice.online} />} />
+                <Info label="运行状态" value={<StatusText value={selectedDevice.runStatus} />} />
+                <Info label="当前任务" value={overview.currentTask} />
+                <Info label="互锁状态" value={<StatusText value={overview.interlockStatus} />} />
+                <Info label="报警数" value={selectedDevice.alarmCount} />
+                <Info label="更新时间" value={selectedDevice.updatedAt} />
+              </div>
+            </section>
 
-      <section className="panel trend-panel">
-        <SectionTitle icon={Activity} title="趋势图" />
-        <div className="trend-history-layout">
-          <TrendChart device={selectedDevice} showMini={false} />
-          <div className="history-inline-summary">
-            <h3>历史摘要</h3>
-            {historySummary.length ? (
-              historySummary.slice(0, 3).map((item) => (
-                <div className="history-inline-row" key={item.name}>
-                  <strong>{item.name}</strong>
-                  <span>当前值{item.current}</span>
-                  <span>上一值{item.previous}</span>
-                  <span>5分钟均值{item.average}</span>
-                  <span>变化幅度 {item.delta}</span>
+            <section className="panel trend-panel">
+              <SectionTitle icon={Activity} title="趋势图" />
+              <div className="trend-history-layout">
+                <TrendChart device={selectedDevice} showMini={false} />
+                <div className="history-inline-summary">
+                  <h3>历史摘要</h3>
+                  {historySummary.length ? (
+                    historySummary.slice(0, 3).map((item) => (
+                      <div className="history-inline-row" key={item.name}>
+                        <strong>{item.name}</strong>
+                        <span>当前值{item.current}</span>
+                        <span>上一值{item.previous}</span>
+                        <span>5分钟均值{item.average}</span>
+                        <span>变化幅度 {item.delta}</span>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="attachment-empty">暂无历史对比数据</div>
+                  )}
                 </div>
-              ))
-            ) : (
-              <div className="attachment-empty">暂无历史对比数据</div>
-            )}
+              </div>
+            </section>
           </div>
-        </div>
-      </section>
 
-      <section className="panel point-workspace-panel">
-        <div className="point-workspace-grid">
-          <div className="point-workspace-table collapsible-section">
-            <SectionTitle icon={Database} title={selectedDevice.id + ' 点位表'} />
-            {points.length ? <PointTable points={points} selectedPointCode={selectedPointCode} onSelectPoint={setSelectedPointCode} /> : <div className="attachment-empty">暂无点位映射数据</div>}
-          </div>
-          <div className="point-workspace-detail collapsible-section">
-            <SectionTitle icon={Search} title={getPointDetailTitle(selectedPoint)} action={selectedPoint?.name ?? '-'} />
-            <PointDetail point={selectedPoint} device={selectedDevice} />
+          <div className="device-side-panel">
+            <section className="panel key-points-panel device-detail-panel">
+              <SectionTitle
+                icon={Activity}
+                title="关键点位"
+                action={(
+                  <select className="section-action-select" value={keyPointCompareRange} onChange={(event) => setKeyPointCompareRange(event.target.value)}>
+                    {['5分钟均值', '30分钟均值', '1小时均值'].map((option) => (
+                      <option key={option} value={option}>{option}</option>
+                    ))}
+                  </select>
+                )}
+              />
+              <div className="device-side-scroll">
+                <KeyPointOverview compareRange={keyPointCompareRange} device={selectedDevice} />
+              </div>
+            </section>
+
+            <section className="panel related-panel device-detail-panel">
+              <SectionTitle icon={ClipboardList} title="关联信息" />
+              <div className="related-info-grid compact device-side-scroll">
+                <div className="related-info-card">
+                  <span>当前任务</span>
+                  <strong>{currentTask?.id ?? '无'}</strong>
+                  <small>{currentTask ? `${currentTask.status}｜${currentTask.command}` : '暂无关联任务'}</small>
+                </div>
+                <div className="related-info-card">
+                  <span>关联报警</span>
+                  <strong>{relatedAlarms.length ? `${relatedAlarms.length} 条` : '无'}</strong>
+                  <small>{relatedAlarms[0] ? `${relatedAlarms[0].name}｜${relatedAlarms[0].status}` : '暂无关联报警'}</small>
+                </div>
+                <div className="related-info-card">
+                  <span>采集日志摘要</span>
+                  <strong>{relatedLogs.length ? `${relatedLogs.length} 条` : '无'}</strong>
+                  <small>{relatedLogs[0] ? `${relatedLogs[0].time}｜${relatedLogs[0].content}` : '暂无采集日志'}</small>
+                </div>
+              </div>
+            </section>
           </div>
         </div>
-      </section>
-      <section className="panel attachment-panel">
-        <SectionTitle icon={FileClock} title="设备附件管理" />
-        <DeviceAttachmentManager
-          currentUser={currentUser}
-          device={selectedDevice}
-          items={attachmentItems}
-          onChange={onAttachmentChange}
-          onPreview={onPreviewAttachment}
-        />
-      </section>
-      <section className="panel collect-log-panel">
-        <SectionTitle icon={FileClock} title="采集日志" />
-        {relatedLogs.length ? (
-          <DataTable
-            columns={['时间', '对象', '类型', '内容']}
-            rows={relatedLogs.map((row) => [row.time, row.objectId ?? row.deviceId, row.logType, row.content])}
+
+        <section className="point-workspace-panel device-point-section">
+          <div className="point-workspace-grid">
+            <div className="point-workspace-table collapsible-section">
+              <SectionTitle icon={Database} title={selectedDevice.id + ' 点位表'} />
+              {points.length ? <PointTable points={points} selectedPointCode={selectedPointCode} onSelectPoint={setSelectedPointCode} /> : <div className="attachment-empty">暂无点位映射数据</div>}
+            </div>
+            <div className="point-workspace-detail collapsible-section">
+              <SectionTitle icon={Search} title={getPointDetailTitle(selectedPoint)} action={selectedPoint?.name ?? '-'} />
+              <PointDetail point={selectedPoint} device={selectedDevice} />
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <div className="device-detail-secondary-grid">
+        <section className="panel attachment-panel">
+          <SectionTitle icon={FileClock} title="设备附件管理" />
+          <DeviceAttachmentManager
+            currentUser={currentUser}
+            device={selectedDevice}
+            items={attachmentItems}
+            onChange={onAttachmentChange}
+            onPreview={onPreviewAttachment}
           />
-        ) : (
-          <div className="attachment-empty">暂无采集日志</div>
-        )}
-      </section>
+        </section>
+        <section className="panel collect-log-panel">
+          <SectionTitle icon={FileClock} title="采集日志" />
+          {relatedLogs.length ? (
+            <DataTable
+              columns={['时间', '对象', '类型', '内容']}
+              rows={relatedLogs.map((row) => [row.time, row.objectId ?? row.deviceId, row.logType, row.content])}
+            />
+          ) : (
+            <div className="attachment-empty">暂无采集日志</div>
+          )}
+        </section>
+      </div>
     </div>
   );
 }
