@@ -1,5 +1,6 @@
 import React, { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import * as Runtime from '../AppRuntime';
+import { PageToolbar } from '../components/common';
 
 const {
   Activity,
@@ -308,7 +309,7 @@ export function LogsPage({ filter, setFilter, typeFilter, setTypeFilter, rows = 
         action={<ExportButton pageName="日志审计" columns={logExportColumns} getRows={() => filtered.map(buildLogExportRow)} currentUser={currentUser} />}
       />
       <SegmentedFilter options={['全部', '指令', '报警', '任务', '审计', '设备', '机器人', '地图', '路线', '建图', '巡检', '底盘', '机械臂', '末端工具', '视觉识别', '相机', '模型']} value={typeFilter} onChange={setTypeFilter} />
-      <div className="filterbar">
+      <PageToolbar className="filterbar">
         <Search size={17} />
         <input value={filter} onChange={(event) => setFilter(event.target.value)} placeholder="输入任务、设备、状态筛选" />
         {filter && (
@@ -316,7 +317,7 @@ export function LogsPage({ filter, setFilter, typeFilter, setTypeFilter, rows = 
             清除
           </button>
         )}
-      </div>
+      </PageToolbar>
       <LogTable rows={filtered} />
     </section>
   );

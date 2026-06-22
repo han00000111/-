@@ -12,6 +12,7 @@ import CommandsPage from './pages/CommandsPage';
 import AlarmsPage from './pages/AlarmsPage';
 import LogsPage from './pages/LogsPage';
 import SettingsPage from './pages/SettingsPage';
+import { AppShell, PageFrame, PageSubnav } from './components/layout';
 
 const {
   Activity,
@@ -359,6 +360,25 @@ export default function App() {
         : page === 'vision-recognition'
           ? `视觉识别 / ${visionTabs.find((tab) => tab.key === activeVisionTab)?.label ?? '视觉总览'}`
           : pageTitle[page];
+  const secondaryNavigation = page === 'devices'
+    ? { label: '设备与点位', tabs: deviceTabs, value: activeDeviceTab, onChange: setActiveDeviceTab }
+    : page === 'map-management'
+      ? { label: '地图管理', tabs: mapTabs, value: activeMapTab, onChange: setActiveMapTab }
+      : page === 'arm-control'
+        ? { label: '机械臂控制', tabs: armTabs, value: activeArmTab, onChange: setActiveArmTab }
+        : page === 'vision-recognition'
+          ? { label: '视觉识别', tabs: visionTabs, value: activeVisionTab, onChange: setActiveVisionTab }
+          : null;
+  const pageFrameMode = page === 'settings' ? 'content' : 'workbench';
+  const activeSubpage = page === 'devices'
+    ? activeDeviceTab
+    : page === 'map-management'
+      ? activeMapTab
+      : page === 'arm-control'
+        ? activeArmTab
+        : page === 'vision-recognition'
+          ? activeVisionTab
+          : undefined;
 
   const writeAccountLog = (user, content) => {
     setAccountLogs((rows) => [
@@ -476,10 +496,15 @@ export default function App() {
   };
 
   return (
-    <div className={`app-shell ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
-      <Sidebar activeArmTab={activeArmTab} activeDeviceTab={activeDeviceTab} activeMapTab={activeMapTab} activeVisionTab={activeVisionTab} collapsed={sidebarCollapsed} onToggleCollapse={() => setSidebarCollapsed((value) => !value)} page={page} setActiveArmTab={setActiveArmTab} setActiveDeviceTab={setActiveDeviceTab} setActiveMapTab={setActiveMapTab} setActiveVisionTab={setActiveVisionTab} setPage={setPage} />
-      <main className={`main ${page === 'overview' ? 'overview-main' : ''}`}>
-        <TopBar title={topbarTitle} currentUser={currentUser} onLoginRequest={() => setLoginModalOpen(true)} onLogout={handleLogout} onAccountSettings={() => setPage('settings')} />
+    <>
+      <AppShell
+        collapsed={sidebarCollapsed}
+        mainClassName={page === 'overview' ? 'overview-main' : ''}
+        sidebar={<Sidebar activeArmTab={activeArmTab} activeDeviceTab={activeDeviceTab} activeMapTab={activeMapTab} activeVisionTab={activeVisionTab} collapsed={sidebarCollapsed} onToggleCollapse={() => setSidebarCollapsed((value) => !value)} page={page} setActiveArmTab={setActiveArmTab} setActiveDeviceTab={setActiveDeviceTab} setActiveMapTab={setActiveMapTab} setActiveVisionTab={setActiveVisionTab} setPage={setPage} />}
+        topbar={<TopBar title={topbarTitle} currentUser={currentUser} onLoginRequest={() => setLoginModalOpen(true)} onLogout={handleLogout} onAccountSettings={() => setPage('settings')} />}
+        subnav={secondaryNavigation ? <PageSubnav {...secondaryNavigation} /> : null}
+      >
+        <PageFrame mode={pageFrameMode} page={page} subpage={activeSubpage}>
         <PageErrorBoundary pageName={topbarTitle}>
           {page === 'overview' && (
             <OverviewPage
@@ -634,8 +659,9 @@ export default function App() {
           )}
           {page === 'settings' && <SettingsPage currentUser={currentUser} onLoginRequest={() => setLoginModalOpen(true)} onLogout={handleLogout} />}
         </PageErrorBoundary>
-      </main>
+        </PageFrame>
+      </AppShell>
       {loginModalOpen && <LoginModal currentUser={currentUser} onSubmit={handleLogin} onClose={() => setLoginModalOpen(false)} />}
-    </div>
+    </>
   );
 }

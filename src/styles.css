@@ -9922,3 +9922,430 @@ td .status-badge,
     height: 240px;
   }
 }
+
+/* ==========================================================================
+   统一应用壳层与页面布局
+   ========================================================================== */
+
+html,
+body,
+#root {
+  width: 100%;
+  height: 100%;
+}
+
+body {
+  overflow: hidden;
+}
+
+.app-shell {
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.app-main-column,
+.main,
+.page-frame,
+.devices-page-route,
+.tasks-page-route,
+.devices-page {
+  min-width: 0;
+  min-height: 0;
+}
+
+.app-main-column {
+  height: 100%;
+  overflow: hidden;
+}
+
+.main {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.topbar {
+  flex: 0 0 auto;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.topbar > div:first-child {
+  min-width: 0;
+}
+
+.topbar h1 {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.link-status {
+  min-width: 0;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-bottom: 2px;
+  scrollbar-width: thin;
+}
+
+.link-status > * {
+  flex: 0 0 auto;
+}
+
+.page-frame {
+  flex: 1 1 auto;
+  width: 100%;
+}
+
+.page-frame-workbench {
+  overflow: hidden;
+}
+
+.page-frame-content {
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+}
+
+.page-frame > *,
+.devices-page-route,
+.tasks-page-route,
+.devices-page-route > *,
+.tasks-page-route > *,
+.devices-page {
+  min-height: 0;
+}
+
+.page-frame > *,
+.devices-page-route,
+.tasks-page-route,
+.devices-page-route > *,
+.tasks-page-route > * {
+  height: 100%;
+}
+
+.page-subnav {
+  display: none;
+  flex: 0 0 auto;
+  min-width: 0;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--panel);
+}
+
+.page-subnav-label {
+  flex: 0 0 auto;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.page-subnav-list {
+  display: flex;
+  min-width: 0;
+  gap: 6px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+}
+
+.page-subnav-list button {
+  flex: 0 0 auto;
+  min-height: 34px;
+  padding: 6px 12px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: #52637a;
+  white-space: nowrap;
+}
+
+.page-subnav-list button:hover,
+.page-subnav-list button.active {
+  border-color: #cfe0f7;
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.page-subnav-list button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.page-toolbar {
+  min-width: 0;
+}
+
+/* 工作台使用主内容区真实可用高度，不再自行扣减不同的固定偏移。 */
+.page-frame-workbench :is(
+  .page-workspace,
+  .overview-v2,
+  .robot-monitor-grid,
+  .map-editor-grid,
+  .mapping-grid,
+  .task-management-grid,
+  .command-workbench-page,
+  .alarms-layout,
+  .logs-audit-page,
+  .arm-overview-workspace,
+  .arm-action-control,
+  .arm-teaching-workspace,
+  .arm-template-workspace,
+  .vision-monitor-workbench,
+  .vision-result-workspace,
+  .page-full
+) {
+  height: 100%;
+  min-height: 0;
+}
+
+.page-frame-workbench :is(
+  .map-overview-page,
+  .route-management-page,
+  .end-effector-page,
+  .camera-config-page,
+  .vision-task-page,
+  .vision-model-page,
+  .logs-audit-page
+) {
+  display: flex;
+  flex-direction: column;
+}
+
+.page-frame-workbench :is(
+  .map-overview-page,
+  .route-management-page,
+  .end-effector-page,
+  .camera-config-page,
+  .vision-task-page,
+  .vision-model-page,
+  .logs-audit-page
+) > .table-wrap {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: none !important;
+}
+
+.map-canvas-panel,
+.mapping-preview-panel {
+  min-height: 0;
+}
+
+.command-record-panel .table-wrap,
+.arm-action-record-panel .table-wrap {
+  max-height: 220px !important;
+}
+
+/* 设备详情采用页面单一纵向滚动，避免最小高度叠加多个内部滚动。 */
+.page-frame[data-page="devices"][data-subpage="detail"] {
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+}
+
+.page-frame[data-page="devices"][data-subpage="detail"] .device-detail-page,
+.page-frame[data-page="devices"][data-subpage="detail"] .device-detail-workspace {
+  height: auto;
+  min-height: 0;
+}
+
+.page-frame[data-page="devices"][data-subpage="detail"] .device-detail-workspace {
+  grid-template-rows: auto auto;
+}
+
+/* 内容宽度不足时先把高密度三栏降为两栏。 */
+@media (min-width: 1181px) and (max-width: 1440px) {
+  .arm-teaching-workspace,
+  .arm-template-workspace {
+    grid-template-columns: minmax(220px, 280px) minmax(0, 1fr);
+    grid-template-areas:
+      "summary summary"
+      "list detail"
+      "list side"
+      "records records";
+  }
+
+  .vision-monitor-workbench {
+    grid-template-columns: minmax(230px, 0.72fr) minmax(0, 1.28fr);
+    grid-template-areas:
+      "summary summary"
+      "targets screen"
+      "detail detail"
+      "records records";
+    overflow-y: auto;
+  }
+
+  .device-detail-main-grid {
+    grid-template-columns: 230px minmax(0, 1fr);
+    grid-template-areas:
+      "device-list device-main"
+      "device-side device-side";
+  }
+
+  .device-detail-page .device-list-panel {
+    grid-area: device-list;
+  }
+
+  .device-detail-page .device-main-panel {
+    grid-area: device-main;
+  }
+
+  .device-detail-page .device-side-panel {
+    grid-area: device-side;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: auto;
+  }
+}
+
+@media (max-width: 1024px) {
+  .page-subnav {
+    display: flex;
+  }
+
+  .status-bar,
+  .overview-v2 .status-bar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1180px) {
+  body {
+    overflow: auto;
+  }
+
+  .app-shell,
+  .app-main-column,
+  .main {
+    height: auto;
+    min-height: 100%;
+    overflow: visible;
+  }
+
+  .page-frame,
+  .page-frame-workbench,
+  .page-frame-content {
+    height: auto;
+    overflow: visible;
+  }
+
+  .page-frame > *,
+  .devices-page-route,
+  .tasks-page-route,
+  .devices-page-route > *,
+  .tasks-page-route > * {
+    height: auto;
+  }
+
+  .page-frame-workbench :is(
+    .page-workspace,
+    .overview-v2,
+    .robot-monitor-grid,
+    .map-editor-grid,
+    .mapping-grid,
+    .task-management-grid,
+    .command-workbench-page,
+    .alarms-layout,
+    .logs-audit-page,
+    .arm-overview-workspace,
+    .arm-action-control,
+    .arm-teaching-workspace,
+    .arm-template-workspace,
+    .vision-monitor-workbench,
+    .vision-result-workspace,
+    .page-full
+  ) {
+    height: auto;
+    min-height: 0;
+  }
+
+  .robot-monitor-grid,
+  .map-editor-grid,
+  .mapping-grid,
+  .vision-monitor-workbench,
+  .vision-result-workspace,
+  .arm-overview-workspace,
+  .arm-action-workbench,
+  .arm-teaching-workspace,
+  .arm-template-workspace,
+  .device-detail-main-grid,
+  .device-detail-secondary-grid,
+  .device-detail-page .point-workspace-grid,
+  .settings-page {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .page-frame-workbench :is(
+    .alarm-card-panel,
+    .interlock-matrix-panel,
+    .alarm-record-panel,
+    .vision-detail-panel,
+    .arm-teaching-side,
+    .settings-page
+  ) {
+    max-height: none;
+    overflow: visible;
+  }
+}
+
+@media (max-width: 768px) {
+  .main {
+    padding: 12px;
+  }
+
+  .topbar {
+    align-items: stretch;
+  }
+
+  .topbar h1 {
+    white-space: normal;
+  }
+
+  .link-status {
+    width: 100%;
+  }
+
+  .page-subnav {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .page-subnav-list button {
+    min-height: 44px;
+  }
+
+  .status-bar,
+  .overview-v2 .status-bar,
+  .summary-strip,
+  .device-overview-page .summary-strip,
+  .history-compare-page .summary-strip,
+  .task-summary-panel .summary-strip,
+  .task-overview-main-panel .summary-strip,
+  .vision-workbench-summary .summary-strip {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .filterbar,
+  .page-toolbar,
+  .section-title,
+  .section-actions {
+    align-items: stretch;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}

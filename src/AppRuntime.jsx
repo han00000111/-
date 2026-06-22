@@ -767,7 +767,7 @@ function MappingPreviewSvg({ progress }) {
   );
 }
 
-function SectionTitle({ icon: Icon, title, action }) {
+function SectionTitle({ icon: Icon, title, action, collapsible = false }) {
   const [collapsed, setCollapsed] = useState(false);
   const togglePanel = (event) => {
     const nextCollapsed = !collapsed;
@@ -786,9 +786,11 @@ function SectionTitle({ icon: Icon, title, action }) {
       </div>
       <div className="section-actions">
         {action && (typeof action === 'string' || typeof action === 'number' ? <span>{action}</span> : action)}
-        <button type="button" className="collapse-icon-button" onClick={togglePanel} aria-label={collapsed ? '展开卡片' : '收起卡片'}>
-          {collapsed ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
-        </button>
+        {collapsible && (
+          <button type="button" className="collapse-icon-button" onClick={togglePanel} aria-label={collapsed ? '展开卡片' : '收起卡片'}>
+            {collapsed ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
+          </button>
+        )}
       </div>
     </div>
   );

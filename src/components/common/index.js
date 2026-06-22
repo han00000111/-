@@ -13,3 +13,4 @@ export { EmptyState } from './EmptyState';
 export { DataStateBlock } from './DataStateBlock';
 export { PageErrorBoundary } from './PageErrorBoundary';
 export { ActionFeedback } from './ActionFeedback';
+export { PageToolbar } from './PageToolbar';

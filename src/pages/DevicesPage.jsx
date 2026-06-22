@@ -1,6 +1,6 @@
 ﻿import React, { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import * as Runtime from '../AppRuntime';
-import { ActionFeedback, DataStateBlock } from '../components/common';
+import { ActionFeedback, DataStateBlock, PageToolbar } from '../components/common';
 import { useActionRequest } from '../hooks';
 import { useRuntime } from '../runtime';
 import { checkDeviceConnection, refreshDeviceStatus } from '../services';
@@ -834,7 +834,7 @@ function PointManagementPage({ allPointRows, currentUser }) {
           { label: '未配置', value: stats.unconfigured, tone: stats.unconfigured ? 'warn' : 'ok', active: activeSummaryFilter === 'unconfigured', onClick: () => applyStatFilter('unconfigured') },
         ]}
       />
-      <div className="filterbar point-management-filter">
+      <PageToolbar className="filterbar point-management-filter">
         <SearchableFilterField label="设备类型" value={filters.type} options={['全部', '数控机床', '工业机器人', '控制器', '公共机']} onChange={(value) => update('type', value)} />
         <SearchableFilterField label="设备编号" value={filters.device} options={deviceIds} onChange={(value) => update('device', value)} />
         <SearchableFilterField label="点位类型" value={filters.pointType} options={['全部', '数值', '状态', '报警']} onChange={(value) => update('pointType', value)} />
@@ -844,7 +844,7 @@ function PointManagementPage({ allPointRows, currentUser }) {
           <Search size={16} />
           <input value={filters.query} onChange={(event) => update('query', event.target.value)} onFocus={(event) => event.target.select()} onMouseUp={(event) => event.preventDefault()} placeholder="搜索设备编号/点位名称/点位编码" />
         </div>
-      </div>
+      </PageToolbar>
       {copyFeedback && <div className="point-copy-toast" role="status">{copyFeedback}</div>}
       {filteredRows.length ? (
         <PointManagementTable
@@ -1150,7 +1150,7 @@ function HistoryComparePage({ allPointRows, selectedDeviceId, setSelectedDeviceI
   return (
     <section className="panel page-full history-compare-page">
       <SectionTitle icon={History} title="历史对比" />
-      <div className="filterbar history-filter">
+      <PageToolbar className="filterbar history-filter">
         <SearchableFilterField label="设备编号" value={selectedDeviceId} options={deviceOptions} onChange={setSelectedDeviceId} commitOnType={false} defaultValue={selectedDeviceId} />
         <SearchableFilterField label="点位名称" value={selectedPointCode} options={pointOptions} onChange={setSelectedPointCode} commitOnType={false} defaultValue={pointOptions[0]?.value ?? ''} />
         <SearchableFilterField label="时间范围" value={selectedTimeRange} options={['近5分钟', '近15分钟', '近30分钟', '近1小时']} onChange={setSelectedTimeRange} commitOnType={false} defaultValue="近5分钟" />
@@ -1158,7 +1158,7 @@ function HistoryComparePage({ allPointRows, selectedDeviceId, setSelectedDeviceI
           setSelectedPointType(value);
           setSelectedPointCode('');
         }} commitOnType={false} defaultValue={selectedDevicePointTypes[0] ?? ''} />
-      </div>
+      </PageToolbar>
       <div className="data-hint">当前为演示数据，真实环境接入时序数据后更新</div>
       <CurrentObjectSummary comparison={comparison} device={selectedDevice} point={selectedRow?.point} timeRange={selectedTimeRange} />
       {selectedRow ? (
