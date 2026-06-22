@@ -2,6 +2,7 @@ import React, { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Activity,
   AlertTriangle,
+  Bot,
   ChevronDown,
   ChevronRight,
   ClipboardList,
@@ -171,15 +172,25 @@ function Sidebar({ activeArmTab, activeDeviceTab, activeMapTab, activeVisionTab,
   return (
     <aside className="sidebar">
       <div className="sidebar-head">
-      <div className="brand">
-        <div className="brand-mark">AI</div>
-        <div>
-          <div className="brand-title">机器人综合管理平台</div>
+        <div className="brand">
+          {collapsed ? (
+            <button aria-label="展开侧边栏" className="brand-mark brand-mark-button" onClick={onToggleCollapse} type="button">
+              <Bot className="brand-mark-icon" />
+            </button>
+          ) : (
+            <div className="brand-mark" aria-hidden="true">
+              <Bot className="brand-mark-icon" />
+            </div>
+          )}
+          <div>
+            <div className="brand-title">机器人综合管理平台</div>
+          </div>
         </div>
-      </div>
-        <button aria-label={collapsed ? '展开侧边导航' : '收起侧边导航'} className="sidebar-toggle" data-tooltip={collapsed ? '展开' : '收起'} onClick={onToggleCollapse} type="button">
-          <span />
-        </button>
+        {!collapsed && (
+          <button aria-label="收起侧边导航" className="sidebar-toggle" data-tooltip="收起" onClick={onToggleCollapse} type="button">
+            <span />
+          </button>
+        )}
       </div>
       <nav className="nav">
         {navItems.map((item) => {
@@ -1372,12 +1383,12 @@ function AlarmCardList({ alarms: alarmRows, filter, selectedAlarmName, onSelect 
 
   return (
     <div className="alarm-card-list">
-      {alarmRows.map((alarm) => {
+      {alarmRows.map((alarm, index) => {
         const context = getAlarmHandlingContext(alarm);
         return (
           <button
             className={`alarm-card ${selectedAlarmName === alarm.name ? 'selected' : ''}`}
-            key={alarm.name}
+            key={`${alarm.id ?? alarm.name}-${alarm.device}-${alarm.time}-${index}`}
             type="button"
             onClick={() => onSelect(alarm.name)}
           >
