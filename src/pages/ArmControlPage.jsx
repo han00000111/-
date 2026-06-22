@@ -826,12 +826,16 @@ function EndEffectorPage() {
 function ArmTemplatePage({ actionRequest, arms, currentUser, executeTemplate, logs, navigation, notice, points, selectedTemplateId, setActiveArmTab, setSelectedTeachingPointId, setSelectedTemplateId, setTemplates, templates }) {
   const [summaryFilter, setSummaryFilter] = useState('全部');
   const [keyword, setKeyword] = useState('');
+  const [selectedStepId, setSelectedStepId] = useState(null);
   const selectedTemplate = templates.find((template) => template.templateId === selectedTemplateId) ?? templates[0];
   const stats = getTemplateStats(templates, points);
   const filteredTemplates = filterTemplates(templates, points, summaryFilter, keyword);
   const arm = arms.find((item) => selectedTemplate?.armId.includes(item.armId)) ?? arms[0];
   const safetyRows = getTemplateSafetyRows(selectedTemplate, points, arm);
   const blockedReason = getTemplateBlockedReason(currentUser, selectedTemplate, safetyRows, arm);
+  const templateSteps = selectedTemplate?.steps ?? [];
+  const selectedStep = templateSteps.find((step) => step.stepId === selectedStepId) ?? templateSteps[0];
+  const selectedStepDetail = selectedStep ? getStepDetail(selectedStep, points) : null;
 
   const updateTemplate = (patch) => {
     setTemplates((rows) => rows.map((template) => template.templateId === selectedTemplate.templateId ? { ...template, ...patch, updatedAt: formatNowTime() } : template));
@@ -859,22 +863,63 @@ function ArmTemplatePage({ actionRequest, arms, currentUser, executeTemplate, lo
       <section className="panel arm-template-steps">
         <SectionTitle icon={TerminalSquare} title="当前模板步骤" action={selectedTemplate.templateId} />
         <div className="template-step-list">
-          {selectedTemplate.steps.map((step, index) => (
-            <div className={`template-step-row ${index === 1 ? 'active' : ''}`} key={step.stepId}>
-              <div><span>第 {index + 1} 步</span><strong>{step.stepName}</strong></div>
-              <StatusText value={getStepConfigStatus(step, points)} />
-              <small>{step.actionType}</small>
-              <button type="button" disabled={step.targetTeachingPoint === '-'} onClick={() => { setSelectedTeachingPointId(step.targetTeachingPoint); setActiveArmTab('teaching'); }}>{step.targetTeachingPoint}</button>
-              <button type="button" disabled={step.relatedVisionMarker === '-'} onClick={() => navigation?.navigateToVision?.('VT-001')}>{step.relatedVisionMarker}</button>
-              <span>{step.condition}</span>
-              <span>{step.timeout}</span>
-              <span>{step.failurePolicy}</span>
-            </div>
-          ))}
+          {templateSteps.map((step, index) => {
+            const detail = getStepDetail(step, points);
+            const stepStatus = getStepConfigStatus(step, points);
+            const active = step.stepId === selectedStep?.stepId;
+            return (
+              <div
+                className={`template-step-card ${active ? 'active' : ''}`}
+                key={step.stepId}
+                role="button"
+                tabIndex={0}
+                onClick={() => setSelectedStepId(step.stepId)}
+                onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); setSelectedStepId(step.stepId); } }}
+              >
+                <div className="template-step-head">
+                  <div className="template-step-head-main">
+                    <span className="template-step-no">第 {index + 1} 步</span>
+                    <strong title={step.stepName}>{step.stepName}</strong>
+                    <span className="template-step-action">{step.actionType}</span>
+                  </div>
+                  <StatusText value={stepStatus} />
+                </div>
+                <div className="template-step-fields">
+                  <div className="template-step-field">
+                    <span>目标点位</span>
+                    {detail.targetPoint === '-'
+                      ? <strong>-</strong>
+                      : <button className="template-step-link" type="button" title={detail.targetPoint} onClick={(event) => { event.stopPropagation(); setSelectedStepId(step.stepId); setSelectedTeachingPointId(detail.targetPoint); setActiveArmTab('teaching'); }}>{detail.targetPoint}</button>}
+                  </div>
+                  <div className="template-step-field">
+                    <span>视觉标识</span>
+                    {detail.visionMarker === '-'
+                      ? <strong>-</strong>
+                      : <button className="template-step-link" type="button" title={detail.visionMarker} onClick={(event) => { event.stopPropagation(); setSelectedStepId(step.stepId); navigation?.navigateToVision?.('VT-001'); }}>{detail.visionMarker}</button>}
+                  </div>
+                  <div className="template-step-field">
+                    <span>末端工具</span>
+                    <strong title={detail.tool}>{detail.tool}</strong>
+                  </div>
+                  <div className="template-step-field template-step-param">
+                    <span>动作参数</span>
+                    <strong title={detail.param}>{detail.param}</strong>
+                  </div>
+                </div>
+                <div className="template-step-foot">
+                  <div className="template-step-field">
+                    <span>校验条件</span>
+                    <strong title={detail.condition}>{detail.condition}</strong>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
         </div>
       </section>
       <section className="panel arm-template-side">
         <SectionTitle icon={ShieldCheck} title="模板详情与操作" />
+        <div className="arm-template-side-body">
         <div className="arm-block-title">模板基础信息</div>
         <div className="detail-list dense">
           <Info label="模板编号" value={selectedTemplate.templateId} />
@@ -887,6 +932,18 @@ function ArmTemplatePage({ actionRequest, arms, currentUser, executeTemplate, lo
           <Info label="更新时间" value={selectedTemplate.updatedAt} />
           <Info label="备注" value={selectedTemplate.remark} />
         </div>
+        {selectedStep && (
+          <>
+            <div className="arm-block-title">当前选中步骤</div>
+            <div className="detail-list dense template-selected-step">
+              <Info label="步骤名称" value={`第 ${templateSteps.indexOf(selectedStep) + 1} 步 · ${selectedStep.stepName}`} />
+              <Info label="目标点位" value={selectedStepDetail.targetPoint} />
+              <Info label="视觉标识" value={selectedStepDetail.visionMarker} />
+              <Info label="末端工具" value={selectedStepDetail.tool} />
+              <Info label="校验条件" value={selectedStepDetail.condition} />
+            </div>
+          </>
+        )}
         <div className="arm-block-title">模板安全条件</div>
         <div className="arm-safety-list">
           {safetyRows.map((row) => <div className="arm-safety-row" key={row.label}><span>{row.label}</span><StatusText value={row.status} /></div>)}
@@ -916,6 +973,7 @@ function ArmTemplatePage({ actionRequest, arms, currentUser, executeTemplate, lo
           success={actionRequest.lastResult}
           successText={actionRequest.lastResult?.message}
         />
+        </div>
       </section>
       <section className="panel arm-template-records">
         <SectionTitle icon={History} title="模板执行记录" />
@@ -984,14 +1042,40 @@ function TemplateSummaryStrip({ activeFilter, stats, onSelect }) {
 
 function TemplateCard({ points, selected, template, onSelect }) {
   const issue = getTemplateHasConfigIssue(template, points);
+  const status = issue ? '配置异常' : template.enabled ? '已启用' : '未启用';
   return (
-    <button className={`arm-list-card ${selected ? 'selected' : ''}`} type="button" onClick={onSelect}>
-      <div className="arm-list-card-head"><strong>{template.templateId}</strong><StatusText value={issue ? '配置异常' : template.enabled ? '已启用' : '未启用'} /></div>
-      <div className="arm-list-card-type">{template.templateName}｜{template.actionType}</div>
-      <div className="arm-list-card-status"><span>{template.armId}</span><span>{template.stepCount} 步</span></div>
-      <div className="arm-list-card-meta"><span>{template.relatedTaskType}</span><time>{template.updatedAt}</time></div>
+    <button className={`template-card ${selected ? 'selected' : ''}`} type="button" onClick={onSelect}>
+      <div className="template-card-title">
+        <strong title={template.templateId}>{template.templateId}</strong>
+        <StatusText value={status} />
+      </div>
+      <div className="template-card-name" title={template.templateName}>{template.templateName}</div>
+      <div className="template-card-meta" title={`${template.armId} · ${template.stepCount} 步`}>{template.armId} · {template.stepCount} 步</div>
+      <div className="template-card-foot">
+        <span className="template-card-type" title={template.relatedTaskType}>{template.relatedTaskType}</span>
+        <time>{template.updatedAt}</time>
+      </div>
     </button>
   );
+}
+
+function getStepEndTool(step, point) {
+  if (step.endTool) return step.endTool;
+  const toolState = point?.toolState ?? '';
+  if (toolState.includes('夹爪')) return '夹爪';
+  if (toolState.includes('吸盘')) return '吸盘';
+  return '-';
+}
+
+function getStepDetail(step, points) {
+  const point = points.find((item) => item.pointId === step.targetTeachingPoint);
+  return {
+    targetPoint: step.targetTeachingPoint || '-',
+    visionMarker: step.relatedVisionMarker || '-',
+    tool: getStepEndTool(step, point),
+    param: step.actionParam || point?.endPose || '-',
+    condition: step.condition || '-',
+  };
 }
 
 function getTeachingPointStats(points) {

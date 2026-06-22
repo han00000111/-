@@ -519,28 +519,28 @@ export const armTeachingPoints = [
 
 export const armActionTemplates = [
   { templateId: 'TPL-DOOR-001', templateName: '设备开门模板', actionType: '开门', armId: 'ARM-001', relatedTaskType: '上下料任务', taskType: '上下料任务', enabled: true, stepCount: 5, updatedAt: '09:13:12', remark: '用于 CNC 设备门把手识别、上抬和外拉开门', steps: [
-    { stepId: 'S1', stepName: '视觉识别把手', actionType: '视觉确认', targetTeachingPoint: '-', relatedVisionMarker: 'MARKER-HANDLE-001', condition: '识别成功', timeout: '5s', failurePolicy: '失败转人工', configStatus: '已配置' },
-    { stepId: 'S2', stepName: '移动到开门点', actionType: '机械臂移动', targetTeachingPoint: 'TP-DOOR-001', relatedVisionMarker: '-', condition: '点位已校验', timeout: '8s', failurePolicy: '重试 1 次', configStatus: '已配置' },
-    { stepId: 'S3', stepName: '上抬把手', actionType: '机械臂动作', targetTeachingPoint: 'TP-HANDLE-001', relatedVisionMarker: '-', condition: '夹爪状态正常', timeout: '6s', failurePolicy: '重试 1 次', configStatus: '已配置' },
-    { stepId: 'S4', stepName: '外拉开门', actionType: '机械臂动作', targetTeachingPoint: 'TP-DOOR-OPEN-001', relatedVisionMarker: '-', condition: '门体未锁定', timeout: '6s', failurePolicy: '失败转人工', configStatus: '已配置' },
-    { stepId: 'S5', stepName: '确认门已打开', actionType: '视觉确认', targetTeachingPoint: '-', relatedVisionMarker: 'MARKER-DOOR-001', condition: '识别通过', timeout: '5s', failurePolicy: '失败报警', configStatus: '已配置' },
+    { stepId: 'S1', stepName: '视觉识别把手', actionType: '视觉确认', targetTeachingPoint: '-', relatedVisionMarker: 'MARKER-HANDLE-001', endTool: '-', actionParam: '识别把手位置', condition: '识别成功', timeout: '5s', failurePolicy: '失败转人工', configStatus: '已配置' },
+    { stepId: 'S2', stepName: '移动到开门点', actionType: '机械臂移动', targetTeachingPoint: 'TP-DOOR-001', relatedVisionMarker: '-', endTool: '夹爪', actionParam: 'X420 Y118 Z264 / RX180 RY0 RZ90', condition: '点位已校验', timeout: '8s', failurePolicy: '重试 1 次', configStatus: '已配置' },
+    { stepId: 'S3', stepName: '上抬把手', actionType: '机械臂动作', targetTeachingPoint: 'TP-HANDLE-001', relatedVisionMarker: '-', endTool: '夹爪', actionParam: '上抬 25mm', condition: '夹爪状态正常', timeout: '6s', failurePolicy: '重试 1 次', configStatus: '已配置' },
+    { stepId: 'S4', stepName: '外拉开门', actionType: '机械臂动作', targetTeachingPoint: 'TP-DOOR-OPEN-001', relatedVisionMarker: '-', endTool: '夹爪', actionParam: '外拉 180mm，开门角度 35°', condition: '门体未锁定', timeout: '6s', failurePolicy: '失败转人工', configStatus: '已配置' },
+    { stepId: 'S5', stepName: '确认门已打开', actionType: '视觉确认', targetTeachingPoint: '-', relatedVisionMarker: 'MARKER-DOOR-001', endTool: '-', actionParam: '门体状态识别', condition: '识别通过', timeout: '5s', failurePolicy: '失败报警', configStatus: '已配置' },
   ] },
   { templateId: 'TPL-PICK-001', templateName: '料盘抓取模板', actionType: '抓取', armId: 'ARM-001', relatedTaskType: '上下料任务', taskType: '上下料任务', enabled: true, stepCount: 4, updatedAt: '09:08:34', remark: '取料工位视觉定位后夹爪抓取', steps: [
-    { stepId: 'S1', stepName: '视觉定位料盘', actionType: '视觉确认', targetTeachingPoint: '-', relatedVisionMarker: 'MARKER-TRAY-001', condition: '识别成功', timeout: '5s', failurePolicy: '失败转人工', configStatus: '已配置' },
-    { stepId: 'S2', stepName: '移动到抓取点', actionType: '机械臂移动', targetTeachingPoint: 'TP-PICK-001', relatedVisionMarker: '-', condition: '点位已校验', timeout: '8s', failurePolicy: '重试 1 次', configStatus: '异常' },
-    { stepId: 'S3', stepName: '关闭夹爪', actionType: '末端工具', targetTeachingPoint: 'TP-PICK-001', relatedVisionMarker: '-', condition: '夹爪状态正常', timeout: '4s', failurePolicy: '失败报警', configStatus: '异常' },
-    { stepId: 'S4', stepName: '抬升复核', actionType: '机械臂动作', targetTeachingPoint: 'TP-PICK-001', relatedVisionMarker: 'MARKER-GRIP-001', condition: '抓取稳定', timeout: '6s', failurePolicy: '失败转人工', configStatus: '异常' },
+    { stepId: 'S1', stepName: '视觉定位料盘', actionType: '视觉确认', targetTeachingPoint: '-', relatedVisionMarker: 'MARKER-TRAY-001', endTool: '-', actionParam: '识别料盘位置', condition: '识别成功', timeout: '5s', failurePolicy: '失败转人工', configStatus: '已配置' },
+    { stepId: 'S2', stepName: '移动到抓取点', actionType: '机械臂移动', targetTeachingPoint: 'TP-PICK-001', relatedVisionMarker: '-', endTool: '夹爪', actionParam: 'X388 Y162 Z102 / RX180 RY0 RZ88', condition: '点位已校验', timeout: '8s', failurePolicy: '重试 1 次', configStatus: '异常' },
+    { stepId: 'S3', stepName: '关闭夹爪', actionType: '末端工具', targetTeachingPoint: 'TP-PICK-001', relatedVisionMarker: '-', endTool: '夹爪', actionParam: '夹爪闭合', condition: '夹爪状态正常', timeout: '4s', failurePolicy: '失败报警', configStatus: '异常' },
+    { stepId: 'S4', stepName: '抬升复核', actionType: '机械臂动作', targetTeachingPoint: 'TP-PICK-001', relatedVisionMarker: 'MARKER-GRIP-001', endTool: '夹爪', actionParam: '抬升 30mm 复核', condition: '抓取稳定', timeout: '6s', failurePolicy: '失败转人工', configStatus: '异常' },
   ] },
   { templateId: 'TPL-PLACE-001', templateName: '物料放置模板', actionType: '放料', armId: 'ARM-001', relatedTaskType: '上下料任务', taskType: '上下料任务', enabled: false, stepCount: 4, updatedAt: '09:04:18', remark: '转运到放料架一号位', steps: [
-    { stepId: 'S1', stepName: '移动到放料点', actionType: '机械臂移动', targetTeachingPoint: 'TP-PLACE-001', relatedVisionMarker: '-', condition: '点位已校验', timeout: '8s', failurePolicy: '重试 1 次', configStatus: '已配置' },
-    { stepId: 'S2', stepName: '打开夹爪', actionType: '末端工具', targetTeachingPoint: 'TP-PLACE-001', relatedVisionMarker: '-', condition: '夹爪状态正常', timeout: '4s', failurePolicy: '失败报警', configStatus: '已配置' },
-    { stepId: 'S3', stepName: '退出放料区', actionType: '机械臂动作', targetTeachingPoint: 'TP-RESET-001', relatedVisionMarker: '-', condition: '路径安全', timeout: '6s', failurePolicy: '重试 1 次', configStatus: '已配置' },
-    { stepId: 'S4', stepName: '视觉确认放料', actionType: '视觉确认', targetTeachingPoint: '-', relatedVisionMarker: 'MARKER-PLACE-001', condition: '识别通过', timeout: '5s', failurePolicy: '失败报警', configStatus: '已配置' },
+    { stepId: 'S1', stepName: '移动到放料点', actionType: '机械臂移动', targetTeachingPoint: 'TP-PLACE-001', relatedVisionMarker: '-', endTool: '夹爪', actionParam: 'X190 Y330 Z140 / RX180 RY0 RZ0', condition: '点位已校验', timeout: '8s', failurePolicy: '重试 1 次', configStatus: '已配置' },
+    { stepId: 'S2', stepName: '打开夹爪', actionType: '末端工具', targetTeachingPoint: 'TP-PLACE-001', relatedVisionMarker: '-', endTool: '夹爪', actionParam: '夹爪打开', condition: '夹爪状态正常', timeout: '4s', failurePolicy: '失败报警', configStatus: '已配置' },
+    { stepId: 'S3', stepName: '退出放料区', actionType: '机械臂动作', targetTeachingPoint: 'TP-RESET-001', relatedVisionMarker: '-', endTool: '夹爪', actionParam: '退出 120mm', condition: '路径安全', timeout: '6s', failurePolicy: '重试 1 次', configStatus: '已配置' },
+    { stepId: 'S4', stepName: '视觉确认放料', actionType: '视觉确认', targetTeachingPoint: '-', relatedVisionMarker: 'MARKER-PLACE-001', endTool: '-', actionParam: '识别放料结果', condition: '识别通过', timeout: '5s', failurePolicy: '失败报警', configStatus: '已配置' },
   ] },
   { templateId: 'TPL-RESET-001', templateName: '夹爪复位模板', actionType: '复位', armId: 'ARM-001, ARM-002', relatedTaskType: '通用', taskType: '通用', enabled: true, stepCount: 3, updatedAt: '08:52:16', remark: '夹爪和机械臂退回安全位', steps: [
-    { stepId: 'S1', stepName: '停止当前动作', actionType: '安全控制', targetTeachingPoint: '-', relatedVisionMarker: '-', condition: '允许复位', timeout: '3s', failurePolicy: '失败报警', configStatus: '已配置' },
-    { stepId: 'S2', stepName: '移动到复位点', actionType: '机械臂移动', targetTeachingPoint: 'TP-RESET-001', relatedVisionMarker: '-', condition: '点位已校验', timeout: '8s', failurePolicy: '重试 1 次', configStatus: '已配置' },
-    { stepId: 'S3', stepName: '释放末端工具', actionType: '末端工具', targetTeachingPoint: 'TP-RESET-001', relatedVisionMarker: '-', condition: '工具在线', timeout: '4s', failurePolicy: '失败报警', configStatus: '已配置' },
+    { stepId: 'S1', stepName: '停止当前动作', actionType: '安全控制', targetTeachingPoint: '-', relatedVisionMarker: '-', endTool: '-', actionParam: '保持当前姿态', condition: '允许复位', timeout: '3s', failurePolicy: '失败报警', configStatus: '已配置' },
+    { stepId: 'S2', stepName: '移动到复位点', actionType: '机械臂移动', targetTeachingPoint: 'TP-RESET-001', relatedVisionMarker: '-', endTool: '吸盘', actionParam: 'X210 Y260 Z220 / RX180 RY0 RZ0', condition: '点位已校验', timeout: '8s', failurePolicy: '重试 1 次', configStatus: '已配置' },
+    { stepId: 'S3', stepName: '释放末端工具', actionType: '末端工具', targetTeachingPoint: 'TP-RESET-001', relatedVisionMarker: '-', endTool: '吸盘', actionParam: '吸盘释放', condition: '工具在线', timeout: '4s', failurePolicy: '失败报警', configStatus: '已配置' },
   ] },
 ];
 
