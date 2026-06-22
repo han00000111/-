@@ -8421,12 +8421,11 @@ textarea:focus,
 
 /* ===== 总览页 v2（卡片式重构）===== */
 .overview-v2 {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  height: calc(100vh - 120px);
-  min-height: 560px;
-  overflow: hidden;
+  display: grid;
+  grid-template-rows: auto minmax(556px, 1fr);
+  gap: 16px;
+  min-height: calc(100vh - 120px);
+  overflow: visible;
   padding: 4px;
 }
 .status-bar {
@@ -8464,24 +8463,28 @@ textarea:focus,
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
   align-items: stretch;
-  gap: 12px;
-  flex: 1;
+  gap: 16px;
   min-height: 0;
 }
 .overview-v2-col {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+  display: grid;
+  gap: 16px;
   min-width: 0;
   min-height: 0;
-  overflow-y: auto;
-  overflow-x: hidden;
-  padding-right: 2px;
+}
+.overview-v2-left {
+  grid-template-rows: minmax(280px, 0.52fr) minmax(260px, 0.48fr);
+}
+.overview-v2-right {
+  grid-template-rows: minmax(540px, 0.72fr) minmax(220px, 0.28fr);
 }
 .overview-card {
   display: flex;
   flex-direction: column;
+  height: 100%;
   min-width: 0;
+  min-height: 0;
+  overflow: visible;
   padding: 12px 14px;
 }
 /* 卡片标题右上角动作按钮：强制横排、不换行、不出框 */
@@ -8504,11 +8507,15 @@ textarea:focus,
 .overview-card .link-btn:hover { color: var(--accent-hover); background: none; border: none; }
 .empty-hint { padding: 24px; text-align: center; color: var(--muted); font-size: 13px; }
 
-/* 异常流：卡片内部滚动，标题区固定 */
-.exceptions-card { max-height: 560px; }
+/* 异常流：首屏只承载少量高优先级事项，标题区固定 */
+.exceptions-card {
+  height: 100%;
+  max-height: none;
+}
 .exceptions-card .exception-feed {
-  flex: 1 1 auto;
+  flex: 1 1 0;
   min-height: 0;
+  max-height: none;
   overflow-y: auto;
   padding-right: 4px;
 }
@@ -8542,8 +8549,24 @@ textarea:focus,
 .exception-time { font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
 
 /* 任务迷你队列 */
-.task-mini-queue { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; }
+.task-mini-queue {
+  display: flex;
+  flex: 1 1 230px;
+  flex-direction: column;
+  gap: 6px;
+  min-height: 230px;
+  overflow: hidden;
+}
 .task-mini-head { display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: var(--muted); margin-bottom: 2px; }
+.task-mini-list {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  gap: 6px;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 4px;
+}
 .task-mini-item {
   display: grid;
   grid-template-columns: minmax(0, 1.4fr) minmax(0, 0.9fr) minmax(0, 1fr) auto auto;
@@ -8568,75 +8591,135 @@ textarea:focus,
 .task-mini-step { font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
 
 /* 当前任务卡片：上摘要 / 中两列字段 / 下操作 */
-.overview-v2 .current-task { background: var(--panel-2); }
-.overview-v2 .current-task-head strong { font-size: 22px; color: var(--text); }
-.overview-v2 .current-task-body {
+.focus-card {
+  max-height: none;
+  overflow: visible;
+}
+.overview-task-content {
   display: flex;
+  flex: 1 1 0;
   flex-direction: column;
   gap: 10px;
+  min-height: 0;
+  overflow: visible;
 }
-.overview-v2 .current-task-detail {
-  order: 1;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 6px 16px;
-}
-.overview-v2 .current-task-detail .info-row {
+.overview-current-task {
+  display: flex;
+  flex-direction: column;
+  flex: 0 0 auto;
+  gap: 8px;
   min-width: 0;
-  padding-bottom: 5px;
+}
+.overview-current-task-summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 4px 18px;
+  max-height: 140px;
+  padding: 10px 12px;
+  overflow: visible;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--panel-2);
+}
+.overview-current-task-summary .info-row {
+  min-width: 0;
+  min-height: 24px;
+  padding-bottom: 3px;
   font-size: 12px;
 }
-.overview-v2 .current-task-detail .info-row span { flex: 0 0 auto; }
-.overview-v2 .current-task-detail .info-row strong {
+.overview-current-task-summary .info-row span { flex: 0 0 auto; }
+.overview-current-task-summary .info-row strong {
   min-width: 0;
   text-align: right;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.overview-v2 .current-task-body .action-area { order: 2; }
-.overview-v2 .current-task-body .action-area > div:first-child { font-size: 11px; }
-.overview-v2 .current-task-body .button-row {
+.overview-current-task-actions {
+  flex: 0 0 auto;
+  min-width: 0;
+}
+.overview-current-task-actions .action-area {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.overview-current-task-actions .action-area > div:first-child { font-size: 11px; }
+.overview-current-task-actions .button-row {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
 }
-.overview-v2 .current-task-body .button-row button {
+.overview-current-task-actions .button-row button {
   width: auto;
   min-height: 28px;
   padding: 4px 10px;
 }
-.overview-v2 .action-disabled-reason {
+.overview-current-task-actions .action-disabled-reason {
   margin-top: 4px;
   font-size: 11px;
-  line-height: 1.4;
+  line-height: 1.3;
 }
 
 /* 设备健康网格 */
-.device-health-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.health-card {
+  height: 100%;
+  max-height: none;
+}
+.health-card .data-state-block {
+  min-height: 0;
+}
+.device-health-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 10px;
+  flex: 1 1 0;
+  min-height: 0;
+  max-height: none;
+  overflow-y: auto;
+  padding-right: 4px;
+  align-content: start;
+}
 .device-health-cell {
   display: flex;
   flex-direction: column;
+  justify-content: space-between;
   gap: 6px;
   min-width: 0;
+  min-height: 88px;
   padding: 10px 12px;
+  overflow: visible;
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
   background: var(--panel-2);
   cursor: pointer;
   text-align: left;
+  line-height: 1.35;
 }
 .device-health-cell.bad { border-color: var(--danger); background: var(--danger-soft); }
 .device-health-cell:hover { box-shadow: var(--shadow); }
-.device-health-type { font-size: 12px; color: var(--text); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.device-health-count { font-size: 18px; color: var(--text); font-variant-numeric: tabular-nums; }
-.device-health-tags { display: flex; flex-wrap: wrap; gap: 4px; }
-.dh-tag { font-size: 10px; padding: 1px 6px; border-radius: 999px; }
+.device-health-type { flex-shrink: 0; font-size: 12px; line-height: 1.35; color: var(--text); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.device-health-count { font-size: 17px; line-height: 1.35; color: var(--text); font-variant-numeric: tabular-nums; }
+.device-health-count, .device-health-tags { flex-shrink: 0; }
+.device-health-tags { display: flex; flex-wrap: nowrap; gap: 6px; min-height: 18px; }
+.dh-tag { font-size: 10px; line-height: 1.35; padding: 2px 6px; border-radius: 999px; white-space: nowrap; }
 .dh-tag.ok { background: var(--success-soft); color: var(--success); }
 .dh-tag.warn { background: var(--warning-soft); color: var(--warning); }
 .dh-tag.bad { background: var(--danger-soft); color: var(--danger); }
 
 /* 最近动态 */
-.recent-activity { display: flex; flex-direction: column; }
+.recent-card {
+  max-height: none;
+  overflow: hidden;
+}
+.recent-activity {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 4px;
+}
 .activity-item { display: flex; align-items: center; gap: 10px; padding: 8px 4px; border-bottom: 1px solid var(--line); font-size: 12px; }
 .activity-item:last-child { border-bottom: none; }
 .activity-tag { font-size: 11px; padding: 1px 8px; border-radius: 999px; background: var(--line); color: var(--text); flex: 0 0 auto; }
@@ -8646,11 +8729,21 @@ textarea:focus,
 .activity-time { color: var(--muted); font-variant-numeric: tabular-nums; flex: 0 0 auto; }
 
 /* 窄屏单列 */
-@media (max-width: 1180px) {
+@media (max-width: 900px) {
   .status-bar { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .overview-v2-body { grid-template-columns: minmax(0, 1fr); }
-  .overview-v2 { height: auto; min-height: 0; overflow: visible; }
-  .overview-v2-col { overflow-y: visible; min-height: 0; }
+  .overview-v2 {
+    grid-template-rows: auto auto;
+    min-height: 0;
+  }
+  .overview-v2-left,
+  .overview-v2-right {
+    grid-template-rows: auto;
+  }
+  .overview-card {
+    min-height: 280px;
+    height: auto;
+  }
 }
 
 /* ===== 全局布局工具类 ===== */
@@ -8887,7 +8980,7 @@ td .status-badge,
   }
 
   .status-bar {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(5, minmax(0, 1fr));
   }
 
   .device-overview-page .attention-device-row {
@@ -9058,6 +9151,12 @@ td .status-badge,
   }
 }
 
+@media (min-width: 769px) and (max-width: 900px) {
+  .overview-v2 .status-bar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 /* —— 1024：导航压缩为图标，统计卡两列，工作台保持紧凑两列 —— */
 @media (max-width: 1024px) {
   .app-shell,
@@ -9080,7 +9179,7 @@ td .status-badge,
   }
 
   .status-bar {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(5, minmax(0, 1fr));
   }
 
   .command-workbench-main {
