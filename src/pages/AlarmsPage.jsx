@@ -362,45 +362,47 @@ export function AlarmsPage({ setPage, setSelectedTaskId, setSelectedDeviceId, se
       </section>
       <section className="panel alarm-current-panel">
         <SectionTitle icon={MonitorCog} title="处理工作台" />
-        <DataStateBlock empty={!selectedAlarm} emptyTitle="请选择报警" compact>
-          <AlarmActionPanel
-            alarm={selectedAlarm}
-            onRecord={(record, nextStatus) => {
-              setHandlingRecords((records) => [record, ...records]);
-              if (nextStatus) {
-                setAlarmStatusOverrides((overrides) => ({ ...overrides, [getAlarmIdentity(selectedAlarm)]: nextStatus }));
-              }
-            }}
-            onNavigate={(target, payload) => {
-              if (target === 'tasks' && payload) {
-                setSelectedTaskId(payload);
-                setPage('tasks');
-              }
-              if (target === 'devices' && payload) {
-                setSelectedDeviceId(payload);
-                setPage('devices');
-              }
-              if (target === 'robot-monitor') {
-                setPage('robot-monitor');
-              }
-              if (target === 'map-management') {
-                setPage('map-management');
-              }
-              if (target === 'arm-control') {
-                navigation?.navigateToArm?.(payload);
-              }
-              if (target === 'vision-recognition') {
-                navigation?.navigateToVision?.(payload);
-              }
-              if (target === 'logs') {
-                setLogFilter(payload);
-                setLogTypeFilter('全部');
-                setPage('logs');
-              }
-            }}
-            currentUser={currentUser}
-          />
-        </DataStateBlock>
+        <div className="workbench-body-scroll">
+          <DataStateBlock empty={!selectedAlarm} emptyTitle="请选择报警" compact>
+            <AlarmActionPanel
+              alarm={selectedAlarm}
+              onRecord={(record, nextStatus) => {
+                setHandlingRecords((records) => [record, ...records]);
+                if (nextStatus) {
+                  setAlarmStatusOverrides((overrides) => ({ ...overrides, [getAlarmIdentity(selectedAlarm)]: nextStatus }));
+                }
+              }}
+              onNavigate={(target, payload) => {
+                if (target === 'tasks' && payload) {
+                  setSelectedTaskId(payload);
+                  setPage('tasks');
+                }
+                if (target === 'devices' && payload) {
+                  setSelectedDeviceId(payload);
+                  setPage('devices');
+                }
+                if (target === 'robot-monitor') {
+                  setPage('robot-monitor');
+                }
+                if (target === 'map-management') {
+                  setPage('map-management');
+                }
+                if (target === 'arm-control') {
+                  navigation?.navigateToArm?.(payload);
+                }
+                if (target === 'vision-recognition') {
+                  navigation?.navigateToVision?.(payload);
+                }
+                if (target === 'logs') {
+                  setLogFilter(payload);
+                  setLogTypeFilter('全部');
+                  setPage('logs');
+                }
+              }}
+              currentUser={currentUser}
+            />
+          </DataStateBlock>
+        </div>
       </section>
       <section className="panel interlock-matrix-panel">
         <SectionTitle icon={ShieldCheck} title="互锁状态总览" />

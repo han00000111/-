@@ -1835,12 +1835,26 @@ button {
   min-height: 0;
 }
 .alarms-layout .alarm-card-panel,
-.alarms-layout .alarm-current-panel,
 .alarms-layout .interlock-matrix-panel,
 .alarms-layout .alarm-record-panel {
   min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
+}
+
+.alarms-layout .alarm-current-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.alarms-layout .alarm-current-panel > .section-title {
+  flex: 0 0 auto;
+}
+
+.alarms-layout .alarm-current-panel > .workbench-body-scroll {
+  padding-right: 2px;
 }
 
 @media (max-width: 1180px) {
@@ -1850,9 +1864,13 @@ button {
     grid-template-rows: none;
   }
   .alarms-layout .alarm-card-panel,
-  .alarms-layout .alarm-current-panel,
   .alarms-layout .interlock-matrix-panel,
   .alarms-layout .alarm-record-panel {
+    overflow: visible;
+  }
+
+  .alarms-layout .alarm-current-panel,
+  .alarms-layout .alarm-current-panel > .workbench-body-scroll {
     overflow: visible;
   }
 }
@@ -4537,9 +4555,12 @@ button:disabled,
   display: flex;
   align-items: center;
   gap: 8px;
+  min-width: 0;
 }
 
 .alarm-card-title strong {
+  flex: 1;
+  min-width: 0;
   font-size: 16px;
 }
 
@@ -9300,6 +9321,11 @@ td .status-badge,
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.table-wrap td > .text-clip {
+  display: block;
+  max-width: 100%;
 }
 
 /* 操作按钮网格：两列，按钮不换行、不被挤压 */

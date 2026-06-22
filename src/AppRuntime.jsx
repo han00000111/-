@@ -1394,12 +1394,12 @@ function AlarmCardList({ alarms: alarmRows, filter, selectedAlarmName, onSelect 
           >
             <div className="alarm-card-title">
               <StatusText value={alarm.level} />
-              <strong>{alarm.name}</strong>
+              <strong className="text-clip" title={alarm.name}>{alarm.name}</strong>
             </div>
-            <div className="alarm-card-meta">
+            <div className="alarm-card-meta text-clip" title={`${alarm.device}｜${alarm.status}｜${alarm.time}`}>
               {alarm.device}｜{alarm.status}｜{alarm.time}
             </div>
-            <div className="alarm-card-task">{context.task}</div>
+            <div className="alarm-card-task text-clip" title={context.task}>{context.task}</div>
           </button>
         );
       })}
@@ -1495,7 +1495,7 @@ function AlarmActionPanel({ alarm, onNavigate, onRecord, currentUser }) {
     <div className="alarm-action-panel">
       <div className="alarm-process-summary">
         <span>当前对象</span>
-        <p>{alarm.device}｜{context.task}｜{alarm.level}｜{alarm.status}</p>
+        <p className="text-clip" title={`${alarm.device}｜${context.task}｜${alarm.level}｜${alarm.status}`}>{alarm.device}｜{context.task}｜{alarm.level}｜{alarm.status}</p>
       </div>
       <div className="alarm-workbench-body">
         <div className="alarm-workbench-cards">
@@ -1512,8 +1512,8 @@ function AlarmActionPanel({ alarm, onNavigate, onRecord, currentUser }) {
             <strong>{operation.reason || operation.precondition}</strong>
           </div>
         </div>
-        <div className="workbench-record">最近记录：{context.latestRecord}</div>
-        <div className="alarm-action-buttons">
+        <div className="workbench-record text-clip" title={`最近记录：${context.latestRecord}`}>最近记录：{context.latestRecord}</div>
+        <div className="alarm-action-buttons action-grid">
           <h3>处理操作</h3>
           {actions.map((label) => {
             const actionKey =
@@ -3616,7 +3616,11 @@ function DataTable({
                 >
                   {row.map((cell, cellIndex) => {
                     const title = typeof cell === 'string' || typeof cell === 'number' ? String(cell) : undefined;
-                    const renderedCell = shouldRenderStatusCell(columns[cellIndex], cell) ? <StatusBadge status={cell} size="sm" /> : cell;
+                    const renderedCell = shouldRenderStatusCell(columns[cellIndex], cell)
+                      ? <StatusBadge status={cell} size="sm" />
+                      : title
+                        ? <span className="text-clip">{cell}</span>
+                        : cell;
                     return <td key={`${key}-${cellIndex}`} title={title}>{renderedCell}</td>;
                   })}
                 </tr>
