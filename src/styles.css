@@ -1824,7 +1824,37 @@ button {
 
 .alarms-layout {
   grid-template-columns: minmax(360px, 0.9fr) minmax(520px, 1.1fr);
-  align-items: start;
+  grid-template-rows: auto minmax(0, 1.05fr) minmax(0, 0.95fr);
+  align-items: stretch;
+  height: calc(100vh - 128px);
+  min-height: 560px;
+}
+
+/* 报警互锁：列表 / 处理工作台 / 互锁矩阵 / 处理记录各自卡片内部滚动，整页一屏 */
+.alarms-layout > .panel {
+  min-height: 0;
+}
+.alarms-layout .alarm-card-panel,
+.alarms-layout .alarm-current-panel,
+.alarms-layout .interlock-matrix-panel,
+.alarms-layout .alarm-record-panel {
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+@media (max-width: 1180px) {
+  .alarms-layout {
+    height: auto;
+    min-height: 0;
+    grid-template-rows: none;
+  }
+  .alarms-layout .alarm-card-panel,
+  .alarms-layout .alarm-current-panel,
+  .alarms-layout .interlock-matrix-panel,
+  .alarms-layout .alarm-record-panel {
+    overflow: visible;
+  }
 }
 
 .alarm-overview-panel {
@@ -2495,7 +2525,15 @@ tr.row-flash {
   z-index: 30;
   display: grid;
   place-items: center;
+  padding: 16px;
   background: rgba(31, 41, 51, 0.38);
+}
+
+/* 弹窗统一不超出视口：内容过长时弹窗内部滚动 */
+.modal-backdrop > * {
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .confirm-modal {
@@ -3143,6 +3181,45 @@ button:disabled,
 .command-workbench-page {
   display: grid;
   gap: 12px;
+  height: calc(100vh - 128px);
+  min-height: 560px;
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+}
+/* 指令回执：队列填充并内部滚动，回执记录横跨全宽、内部滚动，整页一屏 */
+.command-workbench-main {
+  min-height: 0;
+}
+.command-queue-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.command-queue-panel .table-wrap {
+  flex: 1;
+  min-height: 0;
+  max-height: none !important;
+}
+.command-detail-panel {
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+.command-record-panel {
+  min-height: 0;
+}
+.command-record-panel .table-wrap {
+  max-height: 180px !important;
+}
+@media (max-width: 1180px) {
+  .command-workbench-page {
+    height: auto;
+    min-height: 0;
+    grid-template-rows: none;
+  }
+  .command-queue-panel .table-wrap {
+    flex: none;
+    max-height: 420px !important;
+  }
 }
 
 .command-summary-strip {
@@ -3681,7 +3758,23 @@ button:disabled,
 }
 
 .settings-page {
-  grid-template-columns: 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-content: start;
+  align-items: start;
+  height: calc(100vh - 128px);
+  min-height: 480px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 4px;
+}
+
+@media (max-width: 1180px) {
+  .settings-page {
+    grid-template-columns: 1fr;
+    height: auto;
+    min-height: 0;
+    overflow: visible;
+  }
 }
 
 .runtime-grid {
@@ -4594,15 +4687,17 @@ button:disabled,
 
 .robot-monitor-grid {
   grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.8fr);
+  grid-template-rows: auto minmax(0, 1fr) minmax(0, 1fr);
   grid-template-areas:
     "status status"
     "map chassis"
     "map logs";
-  align-items: start;
+  align-items: stretch;
 }
 
+.robot-monitor-grid > .panel { min-height: 0; min-width: 0; }
 .robot-status-panel { grid-area: status; }
-.robot-map-panel { grid-area: map; }
+.robot-map-panel { grid-area: map; min-height: 0; overflow: hidden; }
 .robot-chassis-panel { grid-area: chassis; }
 .robot-log-panel { grid-area: logs; }
 
@@ -5091,9 +5186,45 @@ button:disabled,
   grid-template-columns: minmax(0, 1.25fr) minmax(320px, 0.75fr);
 }
 
+/* 地图编辑 / 自动建图：占满可视高度、左右栏等高，画布与日志内部不撑页 */
+.map-editor-grid.page-workspace,
+.mapping-grid.page-workspace {
+  --workspace-offset: 160px;
+  align-items: stretch;
+}
+.map-editor-grid.page-workspace {
+  grid-template-rows: minmax(0, 1fr);
+}
+.mapping-grid.page-workspace {
+  grid-template-rows: auto minmax(0, 1fr) auto;
+}
+.map-editor-grid.page-workspace > .panel,
+.mapping-grid.page-workspace > .panel {
+  min-height: 0;
+}
+.map-editor-grid.page-workspace .map-canvas-panel,
+.mapping-grid.page-workspace .mapping-preview-panel {
+  min-height: 0;
+  overflow: hidden;
+}
+
 .map-canvas-panel,
 .mapping-preview-panel {
   min-height: 520px;
+}
+
+/* 地图总览 / 路线管理：单卡表格页，整卡占满高度，表格内部滚动不撑页 */
+.map-overview-page.page-full,
+.route-management-page.page-full {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 150px);
+  min-height: 480px;
+}
+.map-overview-page.page-full > .table-wrap,
+.route-management-page.page-full > .table-wrap {
+  flex: 1;
+  min-height: 0;
 }
 
 .map-layer-panel .segmented-filter {
@@ -5102,7 +5233,8 @@ button:disabled,
 }
 
 .mapping-control-panel,
-.mapping-log-panel {
+.mapping-log-panel,
+.mapping-preview-panel {
   grid-column: 1 / -1;
 }
 
@@ -5258,26 +5390,108 @@ button:disabled,
   margin-bottom: 12px;
 }
 
+/* 单卡表格页（末端工具 / 相机配置 / 识别任务 / 模型管理）：
+   占满可视高度、表格内部滚动，子页带二级标签时不撑出页面。 */
+.end-effector-page.page-full,
+.camera-config-page.page-full,
+.vision-task-page.page-full,
+.vision-model-page.page-full {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 150px);
+  min-height: 480px;
+}
+.end-effector-page.page-full > .table-wrap,
+.camera-config-page.page-full > .table-wrap,
+.vision-task-page.page-full > .table-wrap,
+.vision-model-page.page-full > .table-wrap {
+  flex: 1;
+  min-height: 0;
+}
+
+/* 设备与点位四个子页：占满可视高度、主体内部滚动，不撑高整页 */
+.device-overview-page.page-full,
+.point-management-page.page-full {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 150px);
+  min-height: 480px;
+}
+.device-overview-page.page-full .overview-section-grid,
+.point-management-page.page-full .point-group-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 4px;
+}
+.history-compare-page.page-full {
+  height: calc(100vh - 150px);
+  min-height: 480px;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+.device-detail-grid.page-grid {
+  height: calc(100vh - 150px);
+  min-height: 480px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  align-content: start;
+}
+@media (max-width: 1180px) {
+  .device-overview-page.page-full,
+  .point-management-page.page-full,
+  .history-compare-page.page-full,
+  .device-detail-grid.page-grid {
+    height: auto;
+    min-height: 0;
+    overflow: visible;
+  }
+}
+
+/* 日志审计：筛选区固定，日志表内部滚动，不撑高页面 */
+.logs-audit-page.page-full {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 128px);
+  min-height: 480px;
+}
+.logs-audit-page.page-full > .table-wrap {
+  flex: 1;
+  min-height: 0;
+  max-height: none !important;
+}
+@media (max-width: 1180px) {
+  .logs-audit-page.page-full {
+    height: auto;
+    min-height: 0;
+  }
+  .logs-audit-page.page-full > .table-wrap {
+    flex: none;
+    max-height: 60vh !important;
+  }
+}
+
 .vision-monitor-workbench {
   display: grid;
   grid-template-columns: minmax(240px, 0.75fr) minmax(460px, 1.45fr) minmax(300px, 0.9fr);
   grid-template-areas:
     "summary summary summary"
     "targets screen detail"
-    "records records detail";
-  grid-template-rows: auto minmax(0, auto) auto;
+    "records records records";
+  grid-template-rows: auto minmax(0, 1fr) auto;
   gap: 12px 14px;
-  align-items: start;
+  align-items: stretch;
+  height: calc(100vh - 150px);
+  min-height: 520px;
 }
 
 .vision-workbench-summary { grid-area: summary; }
 .vision-target-panel {
   grid-area: targets;
-  align-self: start;
   display: flex;
   flex-direction: column;
   min-height: 0;
-  max-height: calc(100vh - 200px);
 }
 
 .vision-target-panel > .section-title {
@@ -5298,10 +5512,44 @@ button:disabled,
   min-height: 0;
 }
 
-.vision-monitor-workbench > .vision-detail-panel { grid-area: detail; }
+.vision-monitor-workbench > .vision-detail-panel {
+  grid-area: detail;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 4px;
+}
 .vision-record-panel {
   grid-area: records;
   margin-top: 0;
+  min-width: 0;
+}
+/* 视觉总览底部记录区：横跨全宽、列表内部滚动，不挤压中部工作区 */
+.vision-monitor-workbench > .vision-record-panel {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.vision-monitor-workbench > .vision-record-panel .vision-record-list {
+  flex: 1;
+  min-height: 0;
+  max-height: 150px;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+/* 中部实时画面：双画面堆叠区内部滚动 */
+.vision-screen-panel {
+  display: flex;
+  flex-direction: column;
+}
+.vision-screen-panel .vision-screen-stack {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 2px;
 }
 
 .vision-record-panel > .section-title {
@@ -5691,9 +5939,11 @@ button:disabled,
   grid-template-columns: 280px minmax(420px, 1fr) 320px;
   grid-template-areas: "list preview detail";
   gap: 16px;
-  align-items: start;
+  align-items: stretch;
   width: 100%;
   min-width: 0;
+  height: calc(100vh - 150px);
+  min-height: 520px;
 }
 
 /* 识别结果页：左侧列表与右侧详情各自内部滚动 */
@@ -5712,11 +5962,13 @@ button:disabled,
 
 .vision-result-workspace .vision-result-list-panel,
 .vision-result-workspace .vision-detail-panel {
-  align-self: start;
   display: flex;
   flex-direction: column;
   min-height: 0;
-  max-height: calc(100vh - 220px);
+  overflow: hidden;
+}
+.vision-result-workspace .vision-result-preview-panel {
+  min-height: 0;
   overflow: hidden;
 }
 
@@ -5879,6 +6131,9 @@ button:disabled,
   .vision-monitor-workbench,
   .vision-result-workspace {
     grid-template-columns: 1fr;
+    grid-template-rows: none;
+    height: auto;
+    min-height: 0;
     grid-template-areas: none;
   }
 
@@ -5917,16 +6172,39 @@ button:disabled,
   margin-bottom: 0;
 }
 
+/* 任务管理：整页一屏，顶部总览 + 标签固定，激活的工作区在卡片内滚动 */
+.task-management-grid {
+  height: calc(100vh - 128px);
+  min-height: 560px;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  align-items: stretch;
+}
+
 .task-management-layout {
   display: grid;
   grid-column: 1 / -1;
   grid-template-columns: repeat(20, minmax(0, 1fr));
   gap: 14px;
   min-width: 0;
+  min-height: 0;
+  align-content: start;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 4px;
 }
 
 .task-management-layout > .panel {
   min-width: 0;
+}
+
+@media (max-width: 1180px) {
+  .task-management-grid {
+    height: auto;
+    min-height: 0;
+  }
+  .task-management-layout {
+    overflow: visible;
+  }
 }
 
 .task-overview-main-panel {
@@ -6655,11 +6933,15 @@ tr.row-flash {
 .arm-overview-workspace {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 340px;
+  grid-template-rows: auto minmax(0, 1fr) auto;
   grid-template-areas:
     "summary summary"
     "list exception"
     "records records";
   gap: 16px;
+  align-items: stretch;
+  height: calc(100vh - 150px);
+  min-height: 520px;
 }
 
 .arm-overview-summary {
@@ -6668,32 +6950,76 @@ tr.row-flash {
 
 .arm-overview-list {
   grid-area: list;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.arm-overview-list .table-wrap {
+  flex: 1;
+  min-height: 0;
 }
 
 .arm-overview-exception {
   grid-area: exception;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.arm-overview-exception .arm-exception-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 4px;
 }
 
 .arm-overview-records {
   grid-area: records;
+  min-width: 0;
+}
+.arm-overview-records .table-wrap {
+  max-height: 200px;
+  overflow: auto;
+}
+
+@media (max-width: 1180px) {
+  .arm-overview-workspace {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: none;
+    height: auto;
+    grid-template-areas:
+      "summary"
+      "list"
+      "exception"
+      "records";
+  }
+  .arm-overview-list,
+  .arm-overview-exception {
+    height: auto;
+  }
 }
 
 .arm-action-control {
   display: flex;
   flex-direction: column;
   gap: 16px;
+  height: calc(100vh - 150px);
+  min-height: 520px;
 }
 
-/* Unified fixed-height workbench so the three columns stretch to equal height. */
+/* Unified workbench so the three columns stretch to equal height and the
+   whole page (summary + workbench + records) stays within one screen. */
 .arm-action-workbench {
   display: grid;
   grid-template-columns: 260px minmax(0, 1fr) 320px;
   grid-template-areas: "list main side";
   gap: 16px;
   align-items: stretch;
-  height: calc(100vh - 330px);
-  min-height: 460px;
-  max-height: 620px;
+  flex: 1;
+  min-height: 0;
+}
+.arm-action-record-panel .table-wrap {
+  max-height: 188px;
+  overflow: auto;
 }
 
 /* All three columns fill the workbench height and scroll their body internally
@@ -6757,6 +7083,10 @@ tr.row-flash {
 }
 
 @media (max-width: 1180px) {
+  .arm-action-control {
+    height: auto;
+    min-height: 0;
+  }
   .arm-action-workbench {
     grid-template-columns: minmax(0, 1fr) 320px;
     grid-template-areas:
@@ -6766,6 +7096,7 @@ tr.row-flash {
     min-height: 0;
     max-height: none;
     align-items: start;
+    flex: none;
   }
 
   .arm-list-panel,
@@ -7226,12 +7557,13 @@ tr.row-flash {
 .arm-template-workspace {
   display: grid;
   grid-template-columns: minmax(240px, 300px) minmax(0, 1fr) minmax(280px, 360px);
+  grid-template-rows: auto minmax(0, 1fr) auto;
   grid-template-areas:
     "summary summary summary"
     "list detail side"
-    "records records side";
+    "records records records";
   gap: 16px;
-  align-items: start;
+  align-items: stretch;
 }
 
 .arm-teaching-summary,
@@ -7262,6 +7594,48 @@ tr.row-flash {
 .arm-template-records {
   grid-area: records;
   min-width: 0;
+}
+
+/* 中部三栏等高填充：标题固定、列表/步骤/操作主体内部滚动，不撑高整页 */
+.arm-teaching-list,
+.arm-template-list,
+.arm-teaching-detail,
+.arm-template-steps,
+.arm-teaching-side,
+.arm-template-side {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+/* 示教点「点位关联与操作」内容较长，整列内部滚动避免撑高整页 */
+.arm-teaching-side {
+  overflow-y: auto;
+  padding-right: 4px;
+  scrollbar-color: #cbd5e1 transparent;
+  scrollbar-width: thin;
+}
+.arm-teaching-list .arm-card-list,
+.arm-template-list .arm-card-list,
+.arm-template-steps .template-step-list {
+  flex: 1;
+  min-height: 0;
+  max-height: none;
+}
+/* 示教点详情：状态矩阵 + 姿态参数整体在卡片内滚动 */
+.arm-teaching-detail .arm-state-matrix {
+  flex: 0 0 auto;
+}
+.arm-teaching-detail .arm-action-chain {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+/* 底部记录区表格内部滚动，横跨全宽 */
+.arm-teaching-records .table-wrap,
+.arm-template-records .table-wrap {
+  max-height: 200px;
+  overflow: auto;
 }
 
 .arm-workbench-filter {
@@ -7460,16 +7834,15 @@ tr.row-flash {
   text-decoration: none;
 }
 
-/* Template list cards: fixed height, all text ellipsised so nothing overflows. */
+/* Template list cards: roomy min-height, all text ellipsised so nothing overflows. */
 .template-card {
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 6px;
   width: 100%;
   min-width: 0;
-  min-height: 86px;
-  max-height: 96px;
-  padding: 9px 11px;
+  min-height: 100px;
+  padding: 10px 11px;
   overflow: hidden;
   text-align: left;
   color: var(--text);
@@ -7518,6 +7891,7 @@ tr.row-flash {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  line-height: 1.4;
 }
 
 .template-card-name {
@@ -7590,6 +7964,8 @@ tr.row-flash {
   .arm-teaching-workspace,
   .arm-template-workspace {
     grid-template-columns: 1fr;
+    grid-template-rows: none;
+    height: auto;
     grid-template-areas:
       "summary"
       "list"
@@ -8027,8 +8403,9 @@ textarea:focus,
   display: flex;
   flex-direction: column;
   gap: 12px;
-  height: 100%;
-  overflow: auto;
+  height: calc(100vh - 120px);
+  min-height: 560px;
+  overflow: hidden;
   padding: 4px;
 }
 .status-bar {
@@ -8065,14 +8442,20 @@ textarea:focus,
 .overview-v2-body {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
-  align-items: start;
+  align-items: stretch;
   gap: 12px;
+  flex: 1;
+  min-height: 0;
 }
 .overview-v2-col {
   display: flex;
   flex-direction: column;
   gap: 12px;
   min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 2px;
 }
 .overview-card {
   display: flex;
@@ -8245,6 +8628,8 @@ textarea:focus,
 @media (max-width: 1180px) {
   .status-bar { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .overview-v2-body { grid-template-columns: minmax(0, 1fr); }
+  .overview-v2 { height: auto; min-height: 0; overflow: visible; }
+  .overview-v2-col { overflow-y: visible; min-height: 0; }
 }
 
 /* ===== 全局布局工具类 ===== */
@@ -8551,6 +8936,7 @@ td .status-badge,
   .map-editor-grid,
   .mapping-grid {
     grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: none;
     grid-template-areas: none;
   }
   .robot-monitor-grid .robot-status-panel,
@@ -8778,21 +9164,28 @@ td .status-badge,
   }
 }
 
-/* —— 动作模板页专属响应式：≥1181 强制三栏（覆盖 1440/1024 的两栏降级），
-   ≤1180 单列（步骤 → 详情与操作 → 列表 → 记录）。仅作用于动作模板页，不影响示教页。 —— */
+/* —— 示教 / 动作模板页：≥1181 强制等高三栏工作台（覆盖 1440/1024 的两栏降级），
+   底部记录区横跨全宽、整页一屏；≤1180 单列。 —— */
 @media (min-width: 1181px) {
+  .arm-teaching-workspace,
   .arm-template-workspace {
     grid-template-columns: minmax(240px, 300px) minmax(0, 1fr) minmax(280px, 340px);
+    grid-template-rows: auto minmax(0, 1fr) auto;
     grid-template-areas:
       "summary summary summary"
       "list detail side"
-      "records records side";
+      "records records records";
+    align-items: stretch;
+    height: calc(100vh - 150px);
+    min-height: 520px;
   }
 }
 
 @media (max-width: 1180px) {
   .arm-template-workspace {
     grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: none;
+    height: auto;
     grid-template-areas:
       "summary"
       "detail"
@@ -8808,5 +9201,140 @@ td .status-badge,
   .arm-template-side-body {
     overflow-y: visible;
     padding-right: 0;
+  }
+}
+
+/* ============================================================================
+   全局统一页面布局系统 (page workspace / workbench)
+   目标：1366×768 下主要信息与主要操作基本一屏；长内容卡片内部滚动；
+   多栏等高、底部记录区横跨全宽。页面级滚动仅作兜底。
+   ============================================================================ */
+
+/* 工作台外壳：占满主内容可视高度，内部用 grid 分配，自身不随内容撑高 */
+.page-workspace {
+  height: calc(100vh - var(--workspace-offset, 180px));
+  min-height: 560px;
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+  min-height: 0;
+}
+
+/* 工作区 + 底部记录区的纵向布局：上方占满剩余，底部记录区按内容 */
+.page-workspace-rows {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  gap: 16px;
+  height: 100%;
+  min-height: 0;
+}
+
+/* 三栏工作区：左列表 / 中主内容 / 右详情，等高 */
+.workbench-grid-3 {
+  display: grid;
+  grid-template-columns: var(--left-col, 280px) minmax(0, 1fr) var(--right-col, 320px);
+  gap: 16px;
+  align-items: stretch;
+  min-width: 0;
+  min-height: 0;
+}
+
+/* 两栏工作区：主内容 / 右详情，等高 */
+.workbench-grid-2 {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--right-col, 320px);
+  gap: 16px;
+  align-items: stretch;
+  min-width: 0;
+  min-height: 0;
+}
+
+/* 卡片矩阵：自适应列数 */
+.workbench-grid-auto {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+  align-items: stretch;
+  min-width: 0;
+  min-height: 0;
+}
+
+/* 工作台面板：撑满所在栏高度，纵向 flex，头部固定、主体滚动 */
+.workbench-panel {
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 面板内部可滚动主体：超出时内部纵向滚动，不撑高整页 */
+.workbench-body-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* 底部记录区：横跨整个工作区宽度，与上方左右边界一致 */
+.record-section {
+  width: 100%;
+  min-width: 0;
+  margin-top: 0;
+}
+
+.record-section .table-wrap {
+  max-height: 220px;
+  overflow: auto;
+}
+
+/* 表格滚动容器：表格超出时内部滚动，不撑破卡片 */
+.table-scroll-section {
+  min-width: 0;
+  overflow: auto;
+}
+
+/* 长文本统一省略，避免文字遮挡或撑破布局 */
+.text-clip {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 操作按钮网格：两列，按钮不换行、不被挤压 */
+.action-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.action-grid button {
+  min-width: 0;
+  white-space: nowrap;
+}
+
+/* 小屏兜底：放开高度约束，多栏降为单列，允许页面级滚动 */
+@media (max-width: 1180px) {
+  .page-workspace {
+    height: auto;
+    min-height: 0;
+  }
+
+  .page-workspace-rows {
+    height: auto;
+  }
+
+  .workbench-grid-3,
+  .workbench-grid-2 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .workbench-panel {
+    height: auto;
+  }
+
+  .record-section .table-wrap {
+    max-height: 260px;
   }
 }

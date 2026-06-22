@@ -440,7 +440,7 @@ export function RobotMonitorPage({ currentUser, navigation, onRobotCommandEvent,
   };
 
   return (
-    <div className="page-grid robot-monitor-grid">
+    <div className="robot-monitor-grid page-workspace">
       <section className="panel robot-status-panel">
         <SectionTitle icon={MonitorCog} title="机器人状态总览" action={<SegmentedFilter options={robots.map((robot) => robot.robotId)} value={selectedRobotId} onChange={setSelectedRobotId} />} />
         <SummaryStrip
@@ -503,17 +503,19 @@ export function RobotMonitorPage({ currentUser, navigation, onRobotCommandEvent,
         </div>
       </section>
 
-      <section className="panel robot-log-panel">
+      <section className="panel robot-log-panel workbench-panel">
         <SectionTitle icon={History} title="机器人运行日志" action={<button type="button" onClick={openLogs}>查看全部</button>} />
-        <SimpleLogTable rows={robotLogs} />
-        {robotCommandReceipts.length > 0 && (
-          <div className="robot-receipt-list">
-            <strong>最近指令回执</strong>
-            {robotCommandReceipts.map((row) => (
-              <div key={row.id}>{row.deviceId}｜{row.commandName}｜{row.params}｜{row.sendResult}｜{row.receiptStatus}</div>
-            ))}
-          </div>
-        )}
+        <div className="workbench-body-scroll">
+          <SimpleLogTable rows={robotLogs} />
+          {robotCommandReceipts.length > 0 && (
+            <div className="robot-receipt-list">
+              <strong>最近指令回执</strong>
+              {robotCommandReceipts.map((row) => (
+                <div key={row.id}>{row.deviceId}｜{row.commandName}｜{row.params}｜{row.sendResult}｜{row.receiptStatus}</div>
+              ))}
+            </div>
+          )}
+        </div>
       </section>
     </div>
   );

@@ -301,7 +301,7 @@ const {
 export function LogsPage({ filter, setFilter, typeFilter, setTypeFilter, rows = allLogs, currentUser }) {
   const filtered = filterLogs(rows, typeFilter, filter);
   return (
-    <section className="panel page-full">
+    <section className="panel page-full logs-audit-page">
       <SectionTitle
         icon={History}
         title="日志审计"

@@ -368,7 +368,7 @@ function MapEditorPage({ selectedMap }) {
   };
 
   return (
-    <div className="page-grid map-editor-grid">
+    <div className="map-editor-grid page-workspace">
       <section className="panel map-canvas-panel">
         <SectionTitle icon={Database} title="地图画布" action={selectedMap?.mapName ?? '当前地图'} />
         <RobotMapCanvas editable activeRouteId="R001" robot={robotStatus} />
@@ -443,7 +443,7 @@ function AutoMappingPage() {
   };
 
   return (
-    <div className="page-grid mapping-grid">
+    <div className="mapping-grid page-workspace">
       <section className="panel mapping-control-panel">
         <SectionTitle icon={MonitorCog} title="自动建图控制" action={<StatusText value={statusLabel} />} />
         <div className="settings-grid mapping-form-grid">
