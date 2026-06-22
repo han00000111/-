@@ -17,7 +17,6 @@ const {
   ChevronRight,
   ClipboardList,
   Cpu,
-  CurrentTaskCard,
   DEVICE_OVERVIEW_SORT_OPTIONS,
   DataTable,
   Database,
@@ -354,7 +353,7 @@ export function OverviewPage({
       />
 
       <div className="overview-v2-body">
-        <div className="overview-v2-col">
+        <div className="overview-v2-col overview-v2-left">
           <section className="panel overview-card exceptions-card">
             <SectionTitle icon={AlertTriangle} title="需要关注" action={<button type="button" className="link-btn" onClick={() => setPage('alarms')}>查看全部</button>} />
             <DataStateBlock compact>
@@ -370,7 +369,7 @@ export function OverviewPage({
           </section>
         </div>
 
-        <div className="overview-v2-col">
+        <div className="overview-v2-col overview-v2-right">
           <section className="panel overview-card focus-card">
             <SectionTitle icon={ClipboardList} title="当前任务" action={<button type="button" className="link-btn" onClick={() => setPage('tasks')}>任务管理</button>} />
             <DataStateBlock
@@ -378,10 +377,16 @@ export function OverviewPage({
               emptyTitle="当前暂无运行任务"
               compact
             >
-              <>
-                <CurrentTaskCard task={liveSelectedTask} onTaskAction={onTaskAction} currentUser={currentUser} onDetail={openTaskDetail} onLogs={openTaskLogs} />
+              <div className="overview-task-content">
+                <OverviewCurrentTask
+                  task={liveSelectedTask}
+                  onTaskAction={onTaskAction}
+                  currentUser={currentUser}
+                  onDetail={openTaskDetail}
+                  onLogs={openTaskLogs}
+                />
                 <TaskMiniQueue taskList={overviewTasks.length ? overviewTasks : taskList} selectedTaskId={selectedTaskId} setSelectedTaskId={setSelectedTaskId} setPage={setPage} />
-              </>
+              </div>
             </DataStateBlock>
           </section>
 
@@ -429,6 +434,7 @@ function OverviewStatusBar({ alarms: alarmRows, devices: deviceRows, setPage, ta
 }
 
 const ALARM_RANK = { 高危: 0, 中危: 1, 低危: 2 };
+const OVERVIEW_ATTENTION_LIMIT = 5;
 
 // 报警 name 可能重复（mock/runtime 生成同名报警），用稳定复合 key 保证唯一性，index 仅作最后兜底。
 function getAlarmKey(alarm, index) {
@@ -451,6 +457,11 @@ function ExceptionFeed({ alarmRows, onAlarmJump, setPage }) {
     [],
   );
   const hasAny = sortedAlarms.length > 0 || brokenInterlocks.length > 0;
+  const visibleAlarms = sortedAlarms.slice(0, OVERVIEW_ATTENTION_LIMIT);
+  const visibleInterlocks = brokenInterlocks.slice(
+    0,
+    Math.max(0, OVERVIEW_ATTENTION_LIMIT - visibleAlarms.length),
+  );
 
   if (!hasAny) {
     return <EmptyState title="当前暂无报警与互锁异常" compact />;
@@ -460,7 +471,7 @@ function ExceptionFeed({ alarmRows, onAlarmJump, setPage }) {
 
   return (
     <div className="exception-feed">
-      {sortedAlarms.map((alarm, index) => (
+      {visibleAlarms.map((alarm, index) => (
         <button type="button" key={getAlarmKey(alarm, index)} className={`exception-item ${toneOf(alarm.level)} ${alarm.status === '已恢复' ? 'resolved' : ''}`} onClick={() => onAlarmJump(alarm)}>
           <span className="exception-dot" />
           <span className="exception-main">
@@ -474,7 +485,7 @@ function ExceptionFeed({ alarmRows, onAlarmJump, setPage }) {
           </span>
         </button>
       ))}
-      {brokenInterlocks.map((it) => (
+      {visibleInterlocks.map((it) => (
         <button type="button" key={`il-${it.id ?? it.name}-${it.deviceId ?? it.device}`} className="exception-item warn" onClick={() => setPage('alarms')}>
           <span className="exception-dot" />
           <span className="exception-main">
@@ -493,30 +504,58 @@ function ExceptionFeed({ alarmRows, onAlarmJump, setPage }) {
 }
 
 function TaskMiniQueue({ taskList, selectedTaskId, setSelectedTaskId, setPage }) {
-  const list = (taskList ?? []).slice(0, 5);
+  const list = taskList ?? [];
   return (
     <div className="task-mini-queue">
       <div className="task-mini-head">
         <span>任务队列</span>
         <button type="button" className="link-btn" onClick={() => setPage('tasks')}>全部 {taskList?.length ?? 0} 个</button>
       </div>
-      {list.map((task) => {
-        const tone = task.status === '失败' ? 'bad' : task.alarmCount > 0 ? 'warn' : task.status === '运行中' ? 'ok' : 'muted';
-        return (
-          <button
-            type="button"
-            key={task.id}
-            className={`task-mini-item ${task.id === selectedTaskId ? 'active' : ''}`}
-            onClick={() => setSelectedTaskId(task.id)}
-          >
-            <span className="task-mini-id">{task.orderId ?? task.orderNo ?? task.id}</span>
-            <span className="task-mini-type">{task.type ?? task.taskType ?? '生产任务'}</span>
-            <span className="task-mini-device">{task.targetDevice ?? getTaskPrimaryDevice(task)}</span>
-            <StatusBadge status={task.status} tone={tone === 'muted' ? 'neutral' : tone} size="sm" className="task-mini-badge" />
-            <span className="task-mini-step">{task.step}</span>
-          </button>
-        );
-      })}
+      <div className="task-mini-list">
+        {list.map((task) => {
+          const tone = task.status === '失败' ? 'bad' : task.alarmCount > 0 ? 'warn' : task.status === '运行中' ? 'ok' : 'muted';
+          return (
+            <button
+              type="button"
+              key={task.id}
+              className={`task-mini-item ${task.id === selectedTaskId ? 'active' : ''}`}
+              onClick={() => setSelectedTaskId(task.id)}
+            >
+              <span className="task-mini-id">{task.orderId ?? task.orderNo ?? task.id}</span>
+              <span className="task-mini-type">{task.type ?? task.taskType ?? '生产任务'}</span>
+              <span className="task-mini-device">{task.targetDevice ?? getTaskPrimaryDevice(task)}</span>
+              <StatusBadge status={task.status} tone={tone === 'muted' ? 'neutral' : tone} size="sm" className="task-mini-badge" />
+              <span className="task-mini-step">{task.step}</span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function OverviewCurrentTask({ task, onTaskAction, currentUser, onDetail, onLogs }) {
+  return (
+    <div className="overview-current-task">
+      <div className="overview-current-task-summary">
+        <Info label="任务编号" value={task.id} />
+        <Info label="状态" value={task.status} />
+        <Info label="当前步骤" value={toChineseStep(task.currentStep)} />
+        <Info label="关联设备" value={task.devices} />
+        <Info label="当前指令" value={task.command} />
+        <Info label="下发状态" value="已下发" />
+        <Info label="回执状态" value="已确认" />
+        <Info label="开始时间" value={task.startedAt} />
+      </div>
+      <div className="overview-current-task-actions">
+        <TaskActions
+          task={task}
+          onTaskAction={onTaskAction}
+          currentUser={currentUser}
+          onDetail={onDetail}
+          onLogs={onLogs}
+        />
+      </div>
     </div>
   );
 }

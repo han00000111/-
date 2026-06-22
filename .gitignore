@@ -1,6 +1,7 @@
 node_modules/
 dist/
 dist-demo/
+.vite/
 *.log
 # 只忽略本地私密覆盖；共享的构建模式配置（.env.demo / .env.production）需要提交
 .env.local
