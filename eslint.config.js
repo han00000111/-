@@ -12,7 +12,7 @@ import prettier from 'eslint-config-prettier';
 export default [
   // 忽略目录与产物
   {
-    ignores: ['dist/**', 'node_modules/**', 'coverage/**', '**/*.min.js'],
+    ignores: ['dist/**', 'dist-demo/**', '.vite/**', 'node_modules/**', 'coverage/**', '**/*.min.js'],
   },
 
   // JS / JSX 源码

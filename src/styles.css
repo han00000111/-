@@ -1397,6 +1397,8 @@ button {
 
 .point-group-list {
   display: grid;
+  grid-auto-rows: max-content;
+  align-content: start;
   gap: 10px;
   max-height: calc(100vh - 320px);
   min-height: 0;
@@ -3201,7 +3203,7 @@ button:disabled,
   gap: 12px;
   height: calc(100vh - 128px);
   min-height: 560px;
-  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  grid-template-rows: auto auto minmax(300px, 1fr) auto;
 }
 /* 指令回执：队列填充并内部滚动，回执记录横跨全宽、内部滚动，整页一屏 */
 .command-workbench-main {
@@ -3226,7 +3228,17 @@ button:disabled,
   min-height: 0;
 }
 .command-record-panel .table-wrap {
-  max-height: 180px !important;
+  max-height: 132px !important;
+}
+/* 队列状态筛选条单行横向滚动，把高度让给指令表格 */
+.command-status-filter {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+}
+.command-status-filter button {
+  flex: 0 0 auto;
 }
 @media (max-width: 1180px) {
   .command-workbench-page {
@@ -3771,7 +3783,7 @@ button:disabled,
 
 .settings-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(180px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 12px;
 }
 
@@ -3797,7 +3809,7 @@ button:disabled,
 
 .runtime-grid {
   display: grid;
-  grid-template-columns: repeat(5, minmax(150px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(136px, 1fr));
   gap: 10px;
 }
 
@@ -5430,7 +5442,8 @@ button:disabled,
   min-height: 0;
 }
 
-/* 设备与点位四个子页：占满可视高度、主体内部滚动，不撑高整页 */
+/* 设备与点位四个子页：占满可视高度，主体区域内部滚动（设备总览的关注列表与
+   类型表格在一个可读滚动区内），不塌缩、不撑高整页。 */
 .device-overview-page.page-full,
 .point-management-page.page-full {
   display: flex;
@@ -5440,8 +5453,8 @@ button:disabled,
 }
 .device-overview-page.page-full .overview-section-grid,
 .point-management-page.page-full .point-group-list {
-  flex: 1;
-  min-height: 0;
+  flex: 1 1 auto;
+  min-height: 240px;
   overflow-y: auto;
   overflow-x: hidden;
   padding-right: 4px;
@@ -5452,12 +5465,17 @@ button:disabled,
   overflow-y: auto;
   overflow-x: hidden;
 }
+/* 设备详情：占满视口、整块在卡片内滚动；行用 max-content 防止被固定高度压扁
+   （否则底部「数值点位详情/附件」会被挤成一条）。 */
 .device-detail-grid.page-grid {
   height: calc(100vh - 150px);
   min-height: 480px;
   overflow-y: auto;
   overflow-x: hidden;
   align-content: start;
+}
+.device-detail-grid {
+  grid-template-rows: 260px 390px max-content max-content;
 }
 @media (max-width: 1180px) {
   .device-overview-page.page-full,
@@ -5503,8 +5521,8 @@ button:disabled,
   grid-template-rows: auto minmax(0, 1fr) auto;
   gap: 12px 14px;
   align-items: stretch;
-  height: calc(100vh - 150px);
-  min-height: 520px;
+  height: calc(100vh - 118px);
+  min-height: 560px;
 }
 
 .vision-workbench-summary { grid-area: summary; }
@@ -6961,8 +6979,8 @@ tr.row-flash {
     "records records";
   gap: 16px;
   align-items: stretch;
-  height: calc(100vh - 150px);
-  min-height: 520px;
+  height: calc(100vh - 118px);
+  min-height: 560px;
 }
 
 .arm-overview-summary {
@@ -7023,12 +7041,13 @@ tr.row-flash {
   display: flex;
   flex-direction: column;
   gap: 16px;
-  height: calc(100vh - 150px);
-  min-height: 520px;
+  height: calc(100vh - 118px);
+  min-height: 560px;
 }
 
-/* Unified workbench so the three columns stretch to equal height and the
-   whole page (summary + workbench + records) stays within one screen. */
+/* Unified workbench so the three columns stretch to equal height. A readable
+   floor keeps list / status+chain / operation areas from collapsing; if content
+   needs more, the page scrolls a little rather than crushing content. */
 .arm-action-workbench {
   display: grid;
   grid-template-columns: 260px minmax(0, 1fr) 320px;
@@ -7036,10 +7055,10 @@ tr.row-flash {
   gap: 16px;
   align-items: stretch;
   flex: 1;
-  min-height: 0;
+  min-height: 380px;
 }
 .arm-action-record-panel .table-wrap {
-  max-height: 188px;
+  max-height: 132px;
   overflow: auto;
 }
 
@@ -7085,7 +7104,7 @@ tr.row-flash {
 
 .arm-action-main-panel .arm-chain-list {
   flex: 1;
-  min-height: 0;
+  min-height: 120px;
   max-height: none;
 }
 
@@ -7201,6 +7220,14 @@ tr.row-flash {
   gap: 10px;
 }
 
+/* 列表项不被弹性容器压缩：保持各自内容高度，超出时容器内部滚动，
+   避免卡片被挤到文字相互遮挡（动作模板/示教/动作控制等列表通用）。 */
+.arm-card-list > *,
+.arm-chain-list > *,
+.arm-exception-list > * {
+  flex-shrink: 0;
+}
+
 .arm-card-list {
   max-height: 520px;
   overflow: auto;
@@ -7225,8 +7252,7 @@ tr.row-flash {
   display: flex;
   flex-direction: column;
   gap: 5px;
-  min-height: 78px;
-  max-height: 88px;
+  min-height: 88px;
   padding: 9px 10px;
   transition: border-color 0.16s ease, background 0.16s ease, box-shadow 0.16s ease;
 }
@@ -7655,8 +7681,14 @@ tr.row-flash {
 /* 底部记录区表格内部滚动，横跨全宽 */
 .arm-teaching-records .table-wrap,
 .arm-template-records .table-wrap {
-  max-height: 200px;
+  max-height: 104px;
   overflow: auto;
+}
+
+/* 动作控制专属：中部「状态组 + 动作链」与右侧操作体在固定高度内各自滚动，
+   动作链保持可读下限，避免被状态组挤没。 */
+.arm-action-main-panel .arm-state-groups {
+  flex: 0 0 auto;
 }
 
 .arm-workbench-filter {
@@ -8422,10 +8454,11 @@ textarea:focus,
 /* ===== 总览页 v2（卡片式重构）===== */
 .overview-v2 {
   display: grid;
-  grid-template-rows: auto minmax(556px, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
   gap: 16px;
-  min-height: calc(100vh - 120px);
-  overflow: visible;
+  height: calc(100vh - 108px);
+  min-height: 560px;
+  overflow: hidden;
   padding: 4px;
 }
 .status-bar {
@@ -8473,10 +8506,10 @@ textarea:focus,
   min-height: 0;
 }
 .overview-v2-left {
-  grid-template-rows: minmax(280px, 0.52fr) minmax(260px, 0.48fr);
+  grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
 }
 .overview-v2-right {
-  grid-template-rows: minmax(540px, 0.72fr) minmax(220px, 0.28fr);
+  grid-template-rows: minmax(0, 1.5fr) minmax(0, 1fr);
 }
 .overview-card {
   display: flex;
@@ -8734,7 +8767,9 @@ textarea:focus,
   .overview-v2-body { grid-template-columns: minmax(0, 1fr); }
   .overview-v2 {
     grid-template-rows: auto auto;
+    height: auto;
     min-height: 0;
+    overflow: visible;
   }
   .overview-v2-left,
   .overview-v2-right {
@@ -9296,9 +9331,31 @@ td .status-badge,
       "list detail side"
       "records records records";
     align-items: stretch;
-    height: calc(100vh - 150px);
-    min-height: 520px;
+    height: calc(100vh - 118px);
+    min-height: 560px;
   }
+}
+
+/* 信息收敛：机械臂工作台顶部统计条单行排布，把垂直空间让给中部内容 */
+.arm-template-summary .summary-strip,
+.arm-teaching-summary .summary-strip,
+.arm-overview-summary .summary-strip {
+  grid-template-columns: repeat(auto-fit, minmax(108px, 1fr));
+  margin-bottom: 0;
+}
+
+/* 列表列筛选条单行横向滚动，避免换行吃掉卡片列表高度（顶部统计条已可点选过滤） */
+.arm-template-list .segmented-filter,
+.arm-teaching-list .segmented-filter {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+  margin-bottom: 8px;
+}
+.arm-template-list .segmented-filter button,
+.arm-teaching-list .segmented-filter button {
+  flex: 0 0 auto;
 }
 
 @media (max-width: 1180px) {
