@@ -6678,35 +6678,100 @@ tr.row-flash {
   grid-area: records;
 }
 
-.arm-workbench {
+.arm-action-control {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.arm-action-workbench {
   display: grid;
-  grid-template-columns: 280px minmax(420px, 1fr) 360px;
-  grid-template-areas:
-    "summary summary summary"
-    "list state side"
-    "records records side";
+  grid-template-columns: 260px minmax(0, 1fr) 320px;
+  grid-template-areas: "list main side";
   gap: 16px;
   align-items: start;
 }
 
-.arm-workbench-summary {
-  grid-area: summary;
+.arm-list-panel,
+.arm-action-main-panel,
+.arm-action-side-panel {
+  min-width: 0;
+  min-height: 0;
 }
 
-.arm-workbench-list {
+.arm-list-panel {
   grid-area: list;
 }
 
-.arm-workbench-state {
-  grid-area: state;
+.arm-action-main-panel {
+  grid-area: main;
+  display: flex;
+  flex-direction: column;
 }
 
-.arm-workbench-side {
+.arm-action-side-panel {
   grid-area: side;
 }
 
-.arm-workbench-records {
+/* Left list and right operation panels keep a unified, capped height and
+   scroll their body internally so they never stretch the page. */
+.arm-list-panel,
+.arm-action-side-panel {
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 220px);
+}
+
+.arm-list-panel .arm-card-list {
+  flex: 1;
+  min-height: 0;
+  max-height: none;
+}
+
+.arm-action-side-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 4px;
+  scrollbar-color: #cbd5e1 transparent;
+  scrollbar-width: thin;
+}
+
+.arm-action-record-panel {
   grid-area: records;
+}
+
+@media (max-width: 1180px) {
+  .arm-action-workbench {
+    grid-template-columns: minmax(0, 1fr) 320px;
+    grid-template-areas:
+      "main main"
+      "list side";
+  }
+
+  .arm-list-panel,
+  .arm-action-side-panel {
+    max-height: none;
+  }
+
+  .arm-list-panel .arm-card-list {
+    max-height: 520px;
+  }
+
+  .arm-action-side-body {
+    overflow-y: visible;
+    padding-right: 0;
+  }
+}
+
+@media (max-width: 1024px) {
+  .arm-action-workbench {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "main"
+      "side"
+      "list";
+  }
 }
 
 .arm-control-summary-card {

@@ -620,58 +620,62 @@ function ArmActionControlPage({ actionRequest, arms, currentUser, navigation, re
   const visibleRecords = records.filter((row) => row.armId === selectedArm.armId);
   const latestReceipt = receipts.find((row) => row.targetArm === selectedArm.armId || row.deviceId === selectedArm.armId) ?? receipts[0];
   return (
-    <div className="arm-workbench">
-      <section className="panel arm-workbench-summary">
+    <div className="arm-action-control">
+      <section className="panel arm-action-summary">
         <ArmControlSummary arm={selectedArm} safeCount={safeCount} totalCount={safetyRows.length} />
       </section>
-      <section className="panel arm-workbench-list">
-        <SectionTitle icon={Cpu} title="机械臂列表" action={`${arms.length} 台`} />
-        <div className="arm-card-list">
-          {arms.map((arm) => <ArmListCard arm={arm} key={arm.armId} selected={arm.armId === selectedArm.armId} onSelect={() => setSelectedArmId(arm.armId)} />)}
-        </div>
-      </section>
-      <section className="panel arm-workbench-state">
-        <SectionTitle icon={TerminalSquare} title="当前机械臂状态" action={selectedArm.armId} />
-        <ArmCurrentStatusGroups arm={selectedArm} />
-        <div className="arm-action-chain">
-          <div className="arm-block-title">动作链</div>
-          <div className="arm-chain-list">
-            {chainRows.map((step) => <ArmActionStepRow key={`${step.armId}-${step.stepNo}`} step={step} />)}
+      <div className="arm-action-workbench">
+        <section className="panel arm-list-panel">
+          <SectionTitle icon={Cpu} title="机械臂列表" action={`${arms.length} 台`} />
+          <div className="arm-card-list">
+            {arms.map((arm) => <ArmListCard arm={arm} key={arm.armId} selected={arm.armId === selectedArm.armId} onSelect={() => setSelectedArmId(arm.armId)} />)}
           </div>
-        </div>
-      </section>
-      <section className="panel arm-workbench-side">
-        <SectionTitle icon={ShieldCheck} title="权限状态" />
-        <div className={`arm-permission-result ${permissionStatus.ok ? 'ok' : 'blocked'}`}>{permissionStatus.message}</div>
-        <div className="arm-block-title arm-safety-title">安全条件</div>
-        <div className={`arm-safety-result ${safeCount === safetyRows.length ? 'ok' : 'blocked'}`}>
-          {safeCount === safetyRows.length ? '当前满足执行条件' : `不可执行：${safetyRows.find((row) => row.status !== '满足')?.label ?? '安全条件'} 不满足`}
-        </div>
-        <div className="arm-safety-list">
-          {safetyRows.map((row) => (
-            <div className="arm-safety-row" key={row.label}>
-              <span>{row.label}</span>
-              <StatusText value={row.status} />
+        </section>
+        <section className="panel arm-action-main-panel">
+          <SectionTitle icon={TerminalSquare} title="当前机械臂状态" action={selectedArm.armId} />
+          <ArmCurrentStatusGroups arm={selectedArm} />
+          <div className="arm-action-chain">
+            <div className="arm-block-title">动作链</div>
+            <div className="arm-chain-list">
+              {chainRows.map((step) => <ArmActionStepRow key={`${step.armId}-${step.stepNo}`} step={step} />)}
             </div>
-          ))}
-        </div>
-        <ArmOperationPanel
-          blockedReason={blockedReason}
-          currentUser={currentUser}
-          loading={actionRequest.loading}
-          onAction={(action) => runArmAction(action, safetyRows)}
-        />
-        {notice && <div className="inline-feedback">{notice}</div>}
-        <ActionFeedback
-          compact
-          error={actionRequest.error}
-          loading={actionRequest.loading}
-          success={actionRequest.lastResult}
-          successText={actionRequest.lastResult?.message}
-        />
-        <ArmReceiptPanel receipt={latestReceipt} onOpen={() => navigation?.navigateToCommand?.(latestReceipt?.id)} />
-      </section>
-      <section className="panel arm-workbench-records">
+          </div>
+        </section>
+        <section className="panel arm-action-side-panel">
+          <SectionTitle icon={ShieldCheck} title="权限状态" />
+          <div className="arm-action-side-body">
+            <div className={`arm-permission-result ${permissionStatus.ok ? 'ok' : 'blocked'}`}>{permissionStatus.message}</div>
+            <div className="arm-block-title arm-safety-title">安全条件</div>
+            <div className={`arm-safety-result ${safeCount === safetyRows.length ? 'ok' : 'blocked'}`}>
+              {safeCount === safetyRows.length ? '当前满足执行条件' : `不可执行：${safetyRows.find((row) => row.status !== '满足')?.label ?? '安全条件'} 不满足`}
+            </div>
+            <div className="arm-safety-list">
+              {safetyRows.map((row) => (
+                <div className="arm-safety-row" key={row.label}>
+                  <span>{row.label}</span>
+                  <StatusText value={row.status} />
+                </div>
+              ))}
+            </div>
+            <ArmOperationPanel
+              blockedReason={blockedReason}
+              currentUser={currentUser}
+              loading={actionRequest.loading}
+              onAction={(action) => runArmAction(action, safetyRows)}
+            />
+            {notice && <div className="inline-feedback">{notice}</div>}
+            <ActionFeedback
+              compact
+              error={actionRequest.error}
+              loading={actionRequest.loading}
+              success={actionRequest.lastResult}
+              successText={actionRequest.lastResult?.message}
+            />
+            <ArmReceiptPanel receipt={latestReceipt} onOpen={() => navigation?.navigateToCommand?.(latestReceipt?.id)} />
+          </div>
+        </section>
+      </div>
+      <section className="panel arm-action-record-panel">
         <SectionTitle
           icon={History}
           title="当前机械臂动作记录"
@@ -1241,6 +1245,7 @@ function ArmOperationPanel({ blockedReason, currentUser, loading, onAction }) {
       ))}
       {blockedReason && <div className="action-disabled-reason">{blockedReason}</div>}
       {currentUser &&
+        !blockedReason &&
         !canOperate(ACTION_KEYS.ARM_EMERGENCY_STOP, permissionContext) && (
           <div className="action-disabled-reason">
             {getOperatePermissionReason(ACTION_KEYS.ARM_EMERGENCY_STOP, permissionContext)}
