@@ -176,7 +176,7 @@ button {
 
 .nav-item:hover,
 .nav-item.active {
-  border-color: #cfd6df;
+  border-color: #cdd9ea;
   background: #687381;
   color: #fff;
 }
@@ -200,7 +200,7 @@ button {
 
 .nav-subtabs button:hover,
 .nav-subtabs button.active {
-  border-color: #cfd6df;
+  border-color: #cdd9ea;
   background: #687381;
   color: #fff;
 }
@@ -252,9 +252,9 @@ button {
   align-items: center;
   gap: 6px;
   padding: 5px 8px;
-  border: 1px solid #d0d0d0;
+  border: 1px solid #cdd9ea;
   border-radius: 6px;
-  background: #eef1f4;
+  background: #eef4fc;
   font-size: 12px;
 }
 
@@ -287,9 +287,9 @@ button {
   gap: 6px;
   min-height: 32px;
   padding: 4px 8px 4px 5px;
-  border: 1px solid #d0d0d0;
+  border: 1px solid #cdd9ea;
   border-radius: 999px;
-  background: #eef1f4;
+  background: #eef4fc;
   color: #303a45;
   font-size: 12px;
 }
@@ -316,7 +316,7 @@ button {
 }
 
 .user-avatar.signed {
-  background: #cfd6df;
+  background: #cdd9ea;
   color: #1f2933;
 }
 
@@ -329,9 +329,9 @@ button {
   min-width: 220px;
   gap: 7px;
   padding: 10px;
-  border: 1px solid #cfd6df;
+  border: 1px solid #cdd9ea;
   border-radius: 8px;
-  background: #fbfcfd;
+  background: #ffffff;
   box-shadow: 0 12px 30px rgba(31, 41, 51, 0.16);
 }
 
@@ -349,7 +349,7 @@ button {
 
 .user-menu button {
   min-height: 30px;
-  border: 1px solid #cfd6df;
+  border: 1px solid #cdd9ea;
   border-radius: 6px;
   background: #fff;
   color: #1f2933;
@@ -373,7 +373,7 @@ button {
 .login-form select {
   min-height: 34px;
   padding: 6px 8px;
-  border: 1px solid #d7dde3;
+  border: 1px solid #dce5f2;
   border-radius: 6px;
   background: #fff;
   color: #182433;
@@ -385,9 +385,9 @@ button {
   align-items: center;
   gap: 9px;
   padding: 8px;
-  border: 1px solid #d7dde3;
+  border: 1px solid #dce5f2;
   border-radius: 6px;
-  background: #f2f4f6;
+  background: #eff5fc;
 }
 
 .account-card div {
@@ -483,9 +483,9 @@ button {
 
 .overview-status-summary {
   padding: 12px 14px;
-  border: 1px solid #d7dde3;
+  border: 1px solid #dce5f2;
   border-radius: 6px;
-  background: #eef1f4;
+  background: #eef4fc;
   color: #182433;
   font-size: 15px;
   font-weight: 700;
@@ -503,7 +503,7 @@ button {
   align-content: start;
   gap: 7px;
   padding: 8px;
-  border: 1px solid #d7dde3;
+  border: 1px solid #dce5f2;
   border-radius: 6px;
   background: #f7f9fa;
 }
@@ -535,7 +535,7 @@ button {
   width: 100%;
   min-height: 44px;
   padding: 5px 7px;
-  border: 1px solid #d7dde3;
+  border: 1px solid #dce5f2;
   border-radius: 5px;
   background: #fff;
   color: #1f2933;
@@ -545,7 +545,7 @@ button {
 
 .attention-device-row:hover,
 .attention-device-row.is-priority {
-  background: #eef1f4;
+  background: #eef4fc;
 }
 
 .attention-device-row.is-priority {
@@ -606,7 +606,7 @@ button {
   justify-self: start;
   min-height: 26px;
   padding: 3px 8px;
-  border: 1px solid #d7dde3;
+  border: 1px solid #dce5f2;
   border-radius: 5px;
   background: #fff;
   color: #1f2933;
@@ -615,7 +615,7 @@ button {
 }
 
 .attention-expand-button:hover {
-  background: #eef1f4;
+  background: #eef4fc;
 }
 
 .overview-detail-head {
@@ -652,7 +652,7 @@ button {
 .overview-sort-control select {
   height: 28px;
   padding: 0 26px 0 8px;
-  border: 1px solid #d7dde3;
+  border: 1px solid #dce5f2;
   border-radius: 5px;
   background: #fff;
   color: #1f2933;
@@ -686,7 +686,7 @@ button {
 .table-link-button {
   min-height: 24px;
   padding: 2px 7px;
-  border: 1px solid #d7dde3;
+  border: 1px solid #dce5f2;
   border-radius: 5px;
   background: #fff;
   color: #4b5563;
@@ -694,7 +694,7 @@ button {
 }
 
 .table-link-button:hover {
-  background: #eef1f4;
+  background: #eef4fc;
 }
 
 .device-detail-grid {
@@ -706,7 +706,7 @@ button {
 
 .device-detail-grid .panel {
   padding: 16px;
-  border-color: #e5e7eb;
+  border-color: #dce5f2;
   border-radius: 12px;
   background: #fff;
   box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04);
@@ -796,7 +796,7 @@ button {
 }
 
 .device-detail-grid .trend-chart {
-  border-color: #e5e7eb;
+  border-color: #dce5f2;
   border-radius: 12px;
   background: #fff;
 }
@@ -824,7 +824,7 @@ button {
   gap: 2px;
   min-height: 0;
   padding: 6px 9px;
-  border: 1px solid #e5e7eb;
+  border: 1px solid #dce5f2;
   border-radius: 10px;
   background: #f8fafc;
   font-size: 12px;
@@ -894,7 +894,7 @@ button {
   min-height: 52px;
   gap: 3px 7px;
   padding: 7px 8px;
-  border: 1px solid #e5e7eb;
+  border: 1px solid #dce5f2;
   border-radius: 10px;
   background: #f8fafc;
 }
@@ -917,7 +917,7 @@ button {
 
 .device-detail-grid .key-point-status {
   padding: 2px 7px;
-  border: 1px solid #d7dde3;
+  border: 1px solid #dce5f2;
   border-radius: 999px;
   background: #fff;
   font-size: 12px;
@@ -963,7 +963,7 @@ button {
 .point-workspace-table,
 .point-workspace-detail {
   padding: 16px;
-  border: 1px solid #e5e7eb;
+  border: 1px solid #dce5f2;
   border-radius: 12px;
   background: #fff;
   box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04);
@@ -1070,7 +1070,7 @@ button {
   gap: 3px;
   min-height: 58px;
   padding: 9px 10px;
-  border: 1px solid #e5e7eb;
+  border: 1px solid #dce5f2;
   border-radius: 10px;
   background: #f8fafc;
 }
@@ -1116,7 +1116,7 @@ button {
   gap: 8px;
   margin-bottom: 12px;
   padding: 9px;
-  border-color: #e5e7eb;
+  border-color: #dce5f2;
   border-radius: 10px;
   background: #f8fafc;
 }
@@ -1124,7 +1124,7 @@ button {
 .device-detail-grid .compact-device-row {
   min-height: 74px;
   padding: 10px;
-  border-color: #e5e7eb;
+  border-color: #dce5f2;
   border-radius: 10px;
   background: #fff;
 }
@@ -1172,7 +1172,7 @@ button {
 }
 
 .device-detail-grid .table-wrap {
-  border-color: #e5e7eb;
+  border-color: #dce5f2;
   border-radius: 10px;
 }
 
@@ -1205,7 +1205,7 @@ button {
 .device-detail-grid .detail-list {
   gap: 0;
   overflow: hidden;
-  border: 1px solid #e5e7eb;
+  border: 1px solid #dce5f2;
   border-radius: 10px;
   background: #fff;
 }
@@ -1307,7 +1307,7 @@ button {
   min-width: 280px;
   min-height: 32px;
   padding: 5px 8px;
-  border: 1px solid #cfd6df;
+  border: 1px solid #cdd9ea;
   border-radius: 5px;
   background: #fff;
   color: #4b5563;
@@ -1327,7 +1327,7 @@ button {
 .history-filter select {
   min-height: 32px;
   padding: 5px 7px;
-  border: 1px solid #cfd6df;
+  border: 1px solid #cdd9ea;
   border-radius: 5px;
   background: #fff;
   color: #1f2933;
@@ -1346,7 +1346,7 @@ button {
   min-width: 116px;
   min-height: 32px;
   padding: 5px 28px 5px 7px;
-  border: 1px solid #cfd6df;
+  border: 1px solid #cdd9ea;
   border-radius: 5px;
   background: #fff;
   color: #1f2933;
@@ -1360,9 +1360,9 @@ button {
   width: 26px;
   height: calc(100% - 2px);
   border: 0;
-  border-left: 1px solid #d7dde3;
+  border-left: 1px solid #dce5f2;
   border-radius: 0 4px 4px 0;
-  background: #f3f5f7;
+  background: #f1f6fd;
   color: #4b5563;
   font-size: 12px;
 }
@@ -1377,7 +1377,7 @@ button {
   max-height: 220px;
   overflow: auto;
   padding: 4px;
-  border: 1px solid #cfd6df;
+  border: 1px solid #cdd9ea;
   border-radius: 5px;
   background: #fff;
   box-shadow: 0 8px 18px rgba(31, 41, 51, 0.12);
@@ -1397,7 +1397,7 @@ button {
 
 .searchable-options button:hover,
 .searchable-options button.active {
-  background: #eef1f4;
+  background: #eef4fc;
 }
 
 .point-management-filter .searchable-filter-field:nth-of-type(2) input {
@@ -1430,7 +1430,7 @@ button {
   min-width: 0;
   min-height: 32px;
   padding: 5px 28px 5px 7px;
-  border: 1px solid #cfd6df;
+  border: 1px solid #cdd9ea;
   border-radius: 5px;
   background: #fff;
   color: #1f2933;
@@ -1462,7 +1462,7 @@ button {
 
 .point-device-card {
   overflow: hidden;
-  border: 1px solid #d7dde3;
+  border: 1px solid #dce5f2;
   border-radius: 6px;
   background: #fff;
 }
@@ -1481,7 +1481,7 @@ button {
   border: 0;
   border-bottom: 1px solid #e2e6ea;
   border-radius: 0;
-  background: #eef1f4;
+  background: #eef4fc;
   color: #182433;
   text-align: left;
 }
@@ -1553,7 +1553,7 @@ button {
 .table-actions button {
   min-height: 26px;
   padding: 3px 8px;
-  border: 1px solid #cfd6df;
+  border: 1px solid #cdd9ea;
   border-radius: 5px;
   background: #fff;
   color: #1f2933;
@@ -1564,12 +1564,12 @@ button {
   width: 42px;
   min-height: 24px;
   padding: 2px 7px;
-  border-color: #d7dde3;
+  border-color: #dce5f2;
   color: #4b5563;
 }
 
 .table-actions button:hover {
-  background: #eef1f4;
+  background: #eef4fc;
 }
 
 .point-issue-reason {
@@ -1585,7 +1585,7 @@ button {
   z-index: 80;
   min-width: 160px;
   padding: 9px 12px;
-  border: 1px solid #cfd6df;
+  border: 1px solid #cdd9ea;
   border-radius: 6px;
   background: #fff;
   box-shadow: 0 8px 20px rgba(31, 41, 51, 0.16);
@@ -1602,9 +1602,9 @@ button {
   gap: 6px;
   margin-bottom: 10px;
   padding: 10px 12px;
-  border: 1px solid #d7dde3;
+  border: 1px solid #dce5f2;
   border-radius: 8px;
-  background: #f3f5f7;
+  background: #f1f6fd;
   color: #182433;
   font-size: 13px;
 }
@@ -1637,7 +1637,7 @@ button {
 .history-trend-block {
   margin: 0;
   padding: 10px;
-  border: 1px solid #d7dde3;
+  border: 1px solid #dce5f2;
   border-radius: 6px;
   background: #f7f9fa;
 }
@@ -1655,7 +1655,7 @@ button {
   align-content: start;
   gap: 10px;
   padding: 10px;
-  border: 1px solid #d7dde3;
+  border: 1px solid #dce5f2;
   border-radius: 6px;
   background: #f7f9fa;
 }
@@ -1678,7 +1678,7 @@ button {
   gap: 3px;
   min-height: 58px;
   padding: 8px;
-  border: 1px solid #d7dde3;
+  border: 1px solid #dce5f2;
   border-radius: 5px;
   background: #fff;
 }
@@ -1703,7 +1703,7 @@ button {
   display: grid;
   gap: 5px;
   padding: 8px;
-  border: 1px solid #d7dde3;
+  border: 1px solid #dce5f2;
   border-radius: 5px;
   background: #fff;
 }
@@ -1713,7 +1713,7 @@ button {
   justify-content: space-between;
   gap: 10px;
   min-height: 24px;
-  border-bottom: 1px solid #eef1f4;
+  border-bottom: 1px solid #eef4fc;
 }
 
 .history-analysis-reference > div:last-child {
@@ -1729,7 +1729,7 @@ button {
   display: grid;
   gap: 4px;
   padding-top: 8px;
-  border-top: 1px solid #d7dde3;
+  border-top: 1px solid #dce5f2;
 }
 
 .inline-feedback {
@@ -1789,7 +1789,7 @@ button {
   gap: 8px;
   min-height: 34px;
   padding: 6px 8px;
-  border: 1px solid #d7dde3;
+  border: 1px solid #dce5f2;
   border-radius: 6px;
   background: #fff;
   font-size: 12px;
@@ -1822,9 +1822,9 @@ button {
   gap: 8px;
   min-width: 0;
   padding: 9px;
-  border: 1px solid #d7dde3;
+  border: 1px solid #dce5f2;
   border-radius: 6px;
-  background: #f3f5f7;
+  background: #f1f6fd;
 }
 
 .device-type-preview-card.selected {
@@ -1998,10 +1998,10 @@ button {
 .panel {
   min-width: 0;
   padding: 14px;
-  border: 1px solid #d7d7d7;
-  border-radius: 8px;
-  background: #fbfcfd;
-  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.03);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--panel);
+  box-shadow: var(--shadow);
 }
 
 .section-title {
@@ -2041,7 +2041,7 @@ button {
 .section-action-select {
   min-height: 26px;
   padding: 3px 6px;
-  border: 1px solid #cfd6df;
+  border: 1px solid #cdd9ea;
   border-radius: 5px;
   background: #fff;
   color: #334155;
@@ -2059,9 +2059,9 @@ button {
   padding: 5px 10px;
   white-space: nowrap;
   flex-shrink: 0;
-  border: 1px solid #cfd6df;
+  border: 1px solid #cdd9ea;
   border-radius: 5px;
-  background: #eef1f4;
+  background: #eef4fc;
   color: #334155;
 }
 
@@ -2086,7 +2086,7 @@ button {
   padding: 4px 9px;
   gap: 5px;
   white-space: nowrap;
-  border-color: #cfd6df;
+  border-color: #cdd9ea;
   background: #fff;
   font-size: 12px;
   font-weight: 700;
@@ -2120,7 +2120,7 @@ button {
   right: 28px;
   z-index: 45;
   padding: 8px 12px;
-  border: 1px solid #cfd6df;
+  border: 1px solid #cdd9ea;
   border-radius: 8px;
   background: #fff;
   color: #111827;
@@ -2188,9 +2188,9 @@ button {
   justify-content: space-between;
   gap: 8px;
   padding: 7px 9px;
-  border: 1px solid #d7dde3;
+  border: 1px solid #dce5f2;
   border-radius: 6px;
-  background: #eef1f4;
+  background: #eef4fc;
 }
 
 .summary-item span {
@@ -2266,7 +2266,7 @@ button {
   border-radius: var(--radius-sm, 6px);
   background: var(--panel, #fff);
   overscroll-behavior: contain;
-  scrollbar-color: #cbd5e1 transparent;
+  scrollbar-color: #c2d0e6 transparent;
   scrollbar-width: thin;
 }
 
@@ -2312,7 +2312,7 @@ tr:last-child td {
 
 tr.clickable:hover,
 tr.selected {
-  background: #dde3e8;
+  background: #e6eefa;
 }
 
 tr.row-flash {
@@ -2322,7 +2322,7 @@ tr.row-flash {
 @keyframes row-flash {
   0%,
   55% {
-    background: #cfd6df;
+    background: #cdd9ea;
   }
   100% {
     background: transparent;
@@ -2334,9 +2334,9 @@ tr.row-flash {
   align-items: center;
   min-height: 22px;
   padding: 2px 7px;
-  border: 1px solid #d0d0d0;
+  border: 1px solid #cdd9ea;
   border-radius: 5px;
-  background: #f2f4f6;
+  background: #eff5fc;
   font-size: 12px;
   font-weight: 700;
 }
@@ -2388,7 +2388,7 @@ tr.row-flash {
 .current-task {
   border: 1px solid #dcdcdc;
   border-radius: 8px;
-  background: #f3f5f7;
+  background: #f1f6fd;
   padding: 12px;
 }
 
@@ -2435,7 +2435,7 @@ tr.row-flash {
   gap: 6px;
   margin-bottom: 12px;
   padding-bottom: 10px;
-  border-bottom: 1px solid #d7dde3;
+  border-bottom: 1px solid #dce5f2;
 }
 
 .key-point-item {
@@ -2445,9 +2445,9 @@ tr.row-flash {
   gap: 7px;
   min-height: 34px;
   padding: 7px 8px;
-  border: 1px solid #d7dde3;
+  border: 1px solid #dce5f2;
   border-radius: 6px;
-  background: #f3f5f7;
+  background: #f1f6fd;
   font-size: 12px;
 }
 
@@ -2514,7 +2514,7 @@ tr.row-flash {
 .inline-action {
   min-height: 24px;
   padding: 2px 7px;
-  border: 1px solid #cfd6df;
+  border: 1px solid #cdd9ea;
   border-radius: 5px;
   background: #fff;
   color: #182433;
@@ -2524,7 +2524,7 @@ tr.row-flash {
 }
 
 .inline-action:hover {
-  background: #e2e7ec;
+  background: #e8eff9;
 }
 
 .action-area {
@@ -2607,7 +2607,7 @@ tr.row-flash {
   padding: 16px;
   border: 1px solid #aeb7c2;
   border-radius: 8px;
-  background: #fbfcfd;
+  background: #ffffff;
   box-shadow: 0 18px 48px rgba(31, 41, 51, 0.22);
 }
 
@@ -2644,7 +2644,7 @@ tr.row-flash {
 .confirm-modal-actions button {
   min-height: 32px;
   padding: 6px 12px;
-  border: 1px solid #cfd6df;
+  border: 1px solid #cdd9ea;
   border-radius: 6px;
   background: #fff;
   font-size: 13px;
@@ -2681,7 +2681,7 @@ button:disabled,
 .attachment-type-filter button {
   min-height: 26px;
   padding: 4px 8px;
-  border: 1px solid #cfd6df;
+  border: 1px solid #cdd9ea;
   border-radius: 5px;
   background: #fff;
   color: #1f2933;
@@ -2690,7 +2690,7 @@ button:disabled,
 
 .attachment-type-filter button:hover,
 .attachment-type-filter button.active {
-  background: #dde3e8;
+  background: #e6eefa;
 }
 
 .attachment-manager-toolbar {
@@ -2703,7 +2703,7 @@ button:disabled,
 .attachment-manager-toolbar > button {
   min-height: 28px;
   padding: 4px 9px;
-  border: 1px solid #cfd6df;
+  border: 1px solid #cdd9ea;
   border-radius: 5px;
   background: #fff;
   color: #1f2933;
@@ -2711,7 +2711,7 @@ button:disabled,
 }
 
 .attachment-manager-toolbar > button:hover {
-  background: #eef1f4;
+  background: #eef4fc;
 }
 
 .attachment-manage-table table {
@@ -2725,14 +2725,14 @@ button:disabled,
   gap: 8px;
   min-height: 34px;
   padding: 6px 8px;
-  border: 1px solid #d7dde3;
+  border: 1px solid #dce5f2;
   border-radius: 6px;
-  background: #fbfcfd;
+  background: #ffffff;
   text-align: left;
 }
 
 .attachment-row:hover {
-  background: #e2e7ec;
+  background: #e8eff9;
 }
 
 .attachment-row span,
@@ -2766,7 +2766,7 @@ button:disabled,
 .attachment-list.compact {
   margin-top: 8px;
   padding-top: 8px;
-  border-top: 1px solid #d7dde3;
+  border-top: 1px solid #dce5f2;
 }
 
 .attachment-list.compact .attachment-row {
@@ -2777,7 +2777,7 @@ button:disabled,
 
 .attachment-empty {
   padding: 12px;
-  border: 1px dashed #cfd6df;
+  border: 1px dashed #cdd9ea;
   border-radius: 6px;
   color: #5d6875;
   font-size: 13px;
@@ -2820,7 +2820,7 @@ button:disabled,
 .attachment-add-form select {
   min-width: 0;
   padding: 6px;
-  border: 1px solid #cfd6df;
+  border: 1px solid #cdd9ea;
   border-radius: 5px;
   background: #fff;
 }
@@ -2850,7 +2850,7 @@ button:disabled,
   min-height: 32px;
   min-width: 0;
   padding: 6px 8px;
-  border: 1px solid #cfd6df;
+  border: 1px solid #cdd9ea;
   border-radius: 5px;
   background: #fff;
   color: #1f2933;
@@ -2858,9 +2858,9 @@ button:disabled,
 
 .attachment-file-mock button {
   min-height: 32px;
-  border: 1px dashed #cfd6df;
+  border: 1px dashed #cdd9ea;
   border-radius: 5px;
-  background: #f3f5f7;
+  background: #f1f6fd;
   color: #334155;
 }
 
@@ -2876,9 +2876,9 @@ button:disabled,
 .alarm-action-result {
   margin-top: 10px;
   padding: 8px 10px;
-  border: 1px solid #d7dde3;
+  border: 1px solid #dce5f2;
   border-radius: 6px;
-  background: #f3f5f7;
+  background: #f1f6fd;
   color: #364152;
   font-size: 13px;
 }
@@ -2939,9 +2939,9 @@ button:disabled,
   grid-template-rows: auto auto;
   gap: 3px 8px;
   padding: 9px 10px;
-  border: 1px solid #d7dde3;
+  border: 1px solid #dce5f2;
   border-radius: 6px;
-  background: #fbfcfd;
+  background: #ffffff;
 }
 
 .alarm-priority-panel .alarm-line span {
@@ -3007,9 +3007,9 @@ button:disabled,
   justify-content: space-between;
   gap: 12px;
   padding: 10px 12px;
-  border: 1px solid #d7dde3;
+  border: 1px solid #dce5f2;
   border-radius: 6px;
-  background: #fbfcfd;
+  background: #ffffff;
   color: inherit;
   text-align: left;
 }
@@ -3023,8 +3023,8 @@ button:disabled,
 .alarm-priority-panel .alarm-line:active,
 .alarm-priority-panel .interlock-item:hover,
 .alarm-priority-panel .interlock-item:active {
-  border-color: #d7dde3;
-  background: #dde3e8;
+  border-color: #dce5f2;
+  background: #e6eefa;
   box-shadow: none;
 }
 
@@ -3078,7 +3078,7 @@ button:disabled,
   align-items: center;
   justify-content: space-between;
   padding: 6px 8px;
-  border: 1px solid #d7dde3;
+  border: 1px solid #dce5f2;
   border-radius: 6px;
   background: #f4f6f8;
   color: #5d6875;
@@ -3117,7 +3117,7 @@ button:disabled,
   grid-template-columns: minmax(0, 1fr) 180px;
   gap: 10px;
   padding: 10px;
-  border: 1px solid #d7dde3;
+  border: 1px solid #dce5f2;
   border-radius: 6px;
   background: #f7f8fa;
 }
@@ -3144,7 +3144,7 @@ button:disabled,
 .interlock-point-grid span,
 .interlock-detail-block {
   padding: 7px 8px;
-  border: 1px solid #d7dde3;
+  border: 1px solid #dce5f2;
   border-radius: 6px;
   background: #fff;
   color: #4b5563;
@@ -3181,7 +3181,7 @@ button:disabled,
   gap: 8px;
   align-items: center;
   padding: 6px 8px;
-  border: 1px solid #d7dde3;
+  border: 1px solid #dce5f2;
   border-radius: 6px;
   background: #f7f9fa;
   font-size: 12px;
@@ -3217,9 +3217,9 @@ button:disabled,
   align-items: center;
   margin-bottom: 8px;
   padding: 7px;
-  border: 1px solid #d7dde3;
+  border: 1px solid #dce5f2;
   border-radius: 6px;
-  background: #f3f5f7;
+  background: #f1f6fd;
 }
 
 .device-search-row input,
@@ -3227,7 +3227,7 @@ button:disabled,
 .command-filterbar select,
 .compact-filterbar select {
   min-width: 0;
-  border: 1px solid #cfd6df;
+  border: 1px solid #cdd9ea;
   border-radius: 5px;
   background: #fff;
   color: #1f2933;
@@ -3308,7 +3308,7 @@ button:disabled,
 
 .command-summary-strip .summary-item.active {
   border-color: #9aa4af;
-  background: #eef1f4;
+  background: #eef4fc;
   font-weight: 800;
 }
 
@@ -3332,9 +3332,9 @@ button:disabled,
 .command-record-panel {
   min-width: 0;
   padding: 12px;
-  border: 1px solid #d7dde3;
+  border: 1px solid #dce5f2;
   border-radius: 8px;
-  background: #fbfcfd;
+  background: #ffffff;
 }
 
 .command-panel-head {
@@ -3416,16 +3416,16 @@ button:disabled,
 .command-detail-grid .info-row {
   min-height: 32px;
   padding: 7px 9px;
-  border-bottom: 1px solid #eef1f4;
+  border-bottom: 1px solid #eef4fc;
 }
 
 .command-suggestion {
   display: grid;
   gap: 4px;
   padding: 9px 10px;
-  border: 1px solid #d7dde3;
+  border: 1px solid #dce5f2;
   border-radius: 8px;
-  background: #f3f5f7;
+  background: #f1f6fd;
   color: #4b5563;
   font-size: 12px;
 }
@@ -3456,15 +3456,15 @@ button:disabled,
   width: 100%;
   min-height: 54px;
   padding: 8px;
-  border: 1px solid #d7dde3;
+  border: 1px solid #dce5f2;
   border-radius: 5px;
-  background: #fbfcfd;
+  background: #ffffff;
   text-align: left;
 }
 
 .compact-device-row:hover,
 .compact-device-row.selected {
-  background: #e2e7ec;
+  background: #e8eff9;
 }
 
 .compact-device-row strong {
@@ -3528,13 +3528,13 @@ button:disabled,
   padding: 10px;
   border: 1px solid #dcdcdc;
   border-radius: 6px;
-  background: #fbfcfd;
+  background: #ffffff;
   text-align: left;
 }
 
 .device-row.selected,
 .device-row:hover {
-  background: #e2e7ec;
+  background: #e8eff9;
 }
 
 .device-row span,
@@ -3549,7 +3549,7 @@ button:disabled,
   width: 100%;
   border: 1px solid #e1e1e1;
   border-radius: 6px;
-  background: #f3f5f7;
+  background: #f1f6fd;
 }
 
 .trend-layout {
@@ -3575,7 +3575,7 @@ button:disabled,
   gap: 6px;
   min-height: 48px;
   padding: 6px;
-  border: 1px solid #d7dde3;
+  border: 1px solid #dce5f2;
   border-radius: 6px;
   background: #f7f9fa;
 }
@@ -3669,7 +3669,7 @@ button:disabled,
 }
 
 .trend-chart circle {
-  fill: #fbfcfd;
+  fill: #ffffff;
   stroke: #1f2933;
   stroke-width: 2;
 }
@@ -3748,7 +3748,7 @@ button:disabled,
 }
 
 .step-item.current {
-  background: #e2e7ec;
+  background: #e8eff9;
   border-color: #aeb7c2;
   box-shadow: inset 3px 0 0 #4b5563;
 }
@@ -3775,7 +3775,7 @@ button:disabled,
   min-width: 0;
   overflow: hidden;
   padding: 8px 10px;
-  border: 1px solid #d7dde3;
+  border: 1px solid #dce5f2;
   border-radius: 6px;
   background: #f7f9fa;
 }
@@ -3786,7 +3786,7 @@ button:disabled,
   padding-top: 0;
   padding-bottom: 8px;
   border-top: 0;
-  border-bottom: 1px solid #d7dde3;
+  border-bottom: 1px solid #dce5f2;
 }
 
 .filterbar {
@@ -3797,7 +3797,7 @@ button:disabled,
   padding: 8px 10px;
   border: 1px solid #dcdcdc;
   border-radius: 6px;
-  background: #f3f5f7;
+  background: #f1f6fd;
 }
 
 .filterbar input {
@@ -3862,7 +3862,7 @@ button:disabled,
 .runtime-item {
   min-height: 64px;
   padding: 10px;
-  border: 1px solid #d7dde3;
+  border: 1px solid #dce5f2;
   border-radius: 6px;
   background: #f1f3f5;
 }
@@ -3883,7 +3883,7 @@ button:disabled,
 .table-action {
   min-height: 28px;
   padding: 5px 10px;
-  border: 1px solid #cfd6df;
+  border: 1px solid #cdd9ea;
   border-radius: 6px;
   background: #fff;
   color: #182433;
@@ -3891,7 +3891,7 @@ button:disabled,
 }
 
 .table-action:hover {
-  background: #e2e7ec;
+  background: #e8eff9;
 }
 
 @media (max-width: 1180px) {
@@ -4122,7 +4122,7 @@ button:disabled,
   gap: 6px;
   min-height: 60px;
   padding: 10px 12px;
-  border: 1px solid #d7dde3;
+  border: 1px solid #dce5f2;
   border-radius: 8px;
   background: #f7f9fb;
 }
@@ -4160,7 +4160,7 @@ button:disabled,
   min-width: 0;
   min-height: 0;
   padding: 10px;
-  border: 1px solid #d7dde3;
+  border: 1px solid #dce5f2;
   border-radius: 8px;
   background: #fff;
   overflow: hidden;
@@ -4350,7 +4350,7 @@ button:disabled,
 .log-scope-note button {
   min-height: 28px;
   padding: 5px 10px;
-  border: 1px solid #cfd6df;
+  border: 1px solid #cdd9ea;
   border-radius: 6px;
   background: #fff;
   color: #182433;
@@ -4361,7 +4361,7 @@ button:disabled,
 .segmented-filter button:hover,
 .segmented-filter button.active,
 .log-scope-note button:hover {
-  background: #dde3e8;
+  background: #e6eefa;
 }
 
 .overview-grid .logs-panel,
@@ -4389,9 +4389,9 @@ button:disabled,
 
 .task-current-summary {
   padding: 8px 10px;
-  border: 1px solid #d7dde3;
+  border: 1px solid #dce5f2;
   border-radius: 6px;
-  background: #f3f5f7;
+  background: #f1f6fd;
   color: #4b5563;
   font-size: 13px;
 }
@@ -4441,7 +4441,7 @@ button:disabled,
   display: grid;
   gap: 4px;
   padding: 8px 10px;
-  border: 1px solid #d7dde3;
+  border: 1px solid #dce5f2;
   border-radius: 6px;
   background: #f4f6f8;
 }
@@ -4498,7 +4498,7 @@ button:disabled,
   gap: 6px;
   min-height: 96px;
   padding: 10px;
-  border: 1px solid #d7dde3;
+  border: 1px solid #dce5f2;
   border-radius: 6px;
   background: #f4f6f8;
 }
@@ -4516,7 +4516,7 @@ button:disabled,
 
 .workbench-record {
   padding: 7px 9px;
-  border: 1px solid #d7dde3;
+  border: 1px solid #dce5f2;
   border-radius: 6px;
   background: #fafafa;
   color: #4b5563;
@@ -4559,7 +4559,7 @@ button:disabled,
 .alarm-overview-stats {
   min-height: 34px;
   padding: 6px 9px;
-  border: 1px solid #d7dde3;
+  border: 1px solid #dce5f2;
   border-radius: 6px;
   background: #f4f6f8;
   color: #182433;
@@ -4568,7 +4568,7 @@ button:disabled,
 
 .alarm-emergency-line {
   padding: 8px 10px;
-  border: 1px solid #d7dde3;
+  border: 1px solid #dce5f2;
   border-radius: 6px;
   background: #f4f6f8;
   color: #182433;
@@ -4591,7 +4591,7 @@ button:disabled,
   width: 100%;
   gap: 6px;
   padding: 10px;
-  border: 1px solid #d7dde3;
+  border: 1px solid #dce5f2;
   border-radius: 6px;
   background: #fff;
   color: inherit;
@@ -4601,7 +4601,7 @@ button:disabled,
 
 .alarm-card:hover {
   border-color: #aeb7c2;
-  background: #f3f5f7;
+  background: #f1f6fd;
 }
 
 .alarm-card.selected {
@@ -4632,7 +4632,7 @@ button:disabled,
   display: grid;
   gap: 4px;
   padding: 8px;
-  border: 1px solid #d7dde3;
+  border: 1px solid #dce5f2;
   border-radius: 6px;
   background: #f7f8fa;
   font-size: 12px;
@@ -4653,7 +4653,7 @@ button:disabled,
   justify-content: space-between;
   gap: 10px;
   padding: 8px 10px;
-  border: 1px solid #d7dde3;
+  border: 1px solid #dce5f2;
   border-radius: 6px;
   background: #f4f6f8;
 }
@@ -4666,7 +4666,7 @@ button:disabled,
   min-height: 28px;
   min-width: 28px;
   padding: 4px;
-  border: 1px solid #d7dde3;
+  border: 1px solid #dce5f2;
   border-radius: 6px;
   background: #fff;
   cursor: pointer;
@@ -4679,7 +4679,7 @@ button:disabled,
 }
 
 .interlock-related-summary button:hover {
-  background: #eef1f4;
+  background: #eef4fc;
 }
 
 .button-row button:disabled {
@@ -4726,7 +4726,7 @@ button:disabled,
 .interlock-record-form select,
 .interlock-record-form textarea {
   width: 100%;
-  border: 1px solid #d7dde3;
+  border: 1px solid #dce5f2;
   border-radius: 6px;
   background: #fff;
   color: #182433;
@@ -5321,7 +5321,7 @@ button:disabled,
 .mapping-form-grid input {
   width: 100%;
   min-height: 30px;
-  border: 1px solid #cfd6df;
+  border: 1px solid #cdd9ea;
   border-radius: 6px;
   background: #fff;
   color: #111827;
@@ -5368,7 +5368,7 @@ button:disabled,
 .table-actions button {
   min-height: 26px;
   padding: 3px 8px;
-  border: 1px solid #cfd6df;
+  border: 1px solid #cdd9ea;
   border-radius: 5px;
   background: #fff;
   color: #334155;
@@ -5708,7 +5708,7 @@ button:disabled,
   justify-content: space-between;
   gap: 8px;
   padding: 8px 10px;
-  color: #cbd5e1;
+  color: #c2d0e6;
   font-size: 12px;
 }
 
@@ -5876,7 +5876,7 @@ button:disabled,
 .code-scene i {
   width: 26px;
   height: 26px;
-  border: 5px solid #cbd5e1;
+  border: 5px solid #c2d0e6;
 }
 
 .code-scene i:nth-child(1) { left: 52%; top: 30%; }
@@ -5889,8 +5889,8 @@ button:disabled,
   width: 34px;
   height: 34px;
   background:
-    linear-gradient(90deg, #cbd5e1 4px, transparent 4px) 0 0 / 10px 10px,
-    linear-gradient(#cbd5e1 4px, transparent 4px) 0 0 / 10px 10px;
+    linear-gradient(90deg, #c2d0e6 4px, transparent 4px) 0 0 / 10px 10px,
+    linear-gradient(#c2d0e6 4px, transparent 4px) 0 0 / 10px 10px;
 }
 
 .vision-offline-mask,
@@ -6171,7 +6171,7 @@ button:disabled,
   padding: 3px 8px;
   color: var(--accent);
   font-size: 12px;
-  font-weight: 650;
+  font-weight: 600;
   background: #e8f0fd;
   border: 1px solid #bdd1ff;
   border-radius: 8px;
@@ -6529,7 +6529,7 @@ textarea:disabled {
   color: var(--text);
   font-size: 16px;
   line-height: 1.3;
-  font-weight: 650;
+  font-weight: 600;
 }
 
 .brand-subtitle {
@@ -6960,7 +6960,7 @@ tr.row-flash {
   border: 1px solid var(--line);
   border-radius: 6px;
   font-size: 12px;
-  font-weight: 650;
+  font-weight: 600;
 }
 
 .status-text.ok {
@@ -7147,7 +7147,7 @@ tr.row-flash {
   min-height: 0;
   overflow-y: auto;
   padding-right: 4px;
-  scrollbar-color: #cbd5e1 transparent;
+  scrollbar-color: #c2d0e6 transparent;
   scrollbar-width: thin;
 }
 
@@ -7265,7 +7265,7 @@ tr.row-flash {
   max-height: 520px;
   overflow: auto;
   padding-right: 4px;
-  scrollbar-color: #cbd5e1 transparent;
+  scrollbar-color: #c2d0e6 transparent;
   scrollbar-width: thin;
 }
 
@@ -7455,7 +7455,7 @@ tr.row-flash {
   max-height: 230px;
   overflow: auto;
   padding-right: 4px;
-  scrollbar-color: #cbd5e1 transparent;
+  scrollbar-color: #c2d0e6 transparent;
   scrollbar-width: thin;
 }
 
@@ -7546,7 +7546,7 @@ tr.row-flash {
   min-width: 0;
   overflow: hidden;
   color: #40516a;
-  font-weight: 650;
+  font-weight: 600;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -7691,7 +7691,7 @@ tr.row-flash {
 .arm-teaching-side {
   overflow-y: auto;
   padding-right: 4px;
-  scrollbar-color: #cbd5e1 transparent;
+  scrollbar-color: #c2d0e6 transparent;
   scrollbar-width: thin;
 }
 .arm-teaching-list .arm-card-list,
@@ -7775,7 +7775,7 @@ tr.row-flash {
   gap: 10px;
   overflow: auto;
   padding-right: 4px;
-  scrollbar-color: #cbd5e1 transparent;
+  scrollbar-color: #c2d0e6 transparent;
   scrollbar-width: thin;
 }
 
@@ -7841,7 +7841,7 @@ tr.row-flash {
   padding: 2px 8px;
   color: var(--accent);
   font-size: 11px;
-  font-weight: 650;
+  font-weight: 600;
   background: var(--accent-soft);
   border-radius: 999px;
   white-space: nowrap;
@@ -7872,7 +7872,7 @@ tr.row-flash {
   overflow: hidden;
   color: var(--text);
   font-size: 12px;
-  font-weight: 650;
+  font-weight: 600;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -7901,7 +7901,7 @@ tr.row-flash {
   padding: 0;
   color: var(--accent);
   font-size: 12px;
-  font-weight: 650;
+  font-weight: 600;
   text-align: left;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -8025,7 +8025,7 @@ tr.row-flash {
   min-height: 0;
   overflow-y: auto;
   padding-right: 4px;
-  scrollbar-color: #cbd5e1 transparent;
+  scrollbar-color: #c2d0e6 transparent;
   scrollbar-width: thin;
 }
 
@@ -8034,7 +8034,7 @@ tr.row-flash {
   padding: 0;
   color: var(--accent);
   font-size: 12px;
-  font-weight: 650;
+  font-weight: 600;
   background: transparent;
   border: 0;
   cursor: pointer;
@@ -8142,7 +8142,7 @@ textarea:focus,
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
   font-size: 13px;
-  font-weight: 650;
+  font-weight: 600;
   box-shadow: none;
 }
 
@@ -8275,8 +8275,8 @@ textarea:focus,
 .mapping-stage,
 .preview3d-wrap {
   background:
-    linear-gradient(90deg, #eef2f7 1px, transparent 1px),
-    linear-gradient(#eef2f7 1px, transparent 1px),
+    linear-gradient(90deg, #eef4fc 1px, transparent 1px),
+    linear-gradient(#eef4fc 1px, transparent 1px),
     var(--map-bg);
   background-size: 24px 24px;
   border: 1px solid var(--line);
@@ -8860,7 +8860,7 @@ textarea:focus,
 .data-state {
   width: 100%;
   min-height: 120px;
-  border: 1px dashed var(--line, #e5e7eb);
+  border: 1px dashed var(--line, #dce5f2);
   border-radius: 12px;
   background: rgba(248, 250, 252, 0.72);
   display: grid;
@@ -8919,7 +8919,7 @@ textarea:focus,
 .skeleton-line {
   height: 12px;
   border-radius: 999px;
-  background: linear-gradient(90deg, #eef2f7, #f8fafc, #eef2f7);
+  background: linear-gradient(90deg, #eef4fc, #f8fafc, #eef4fc);
   background-size: 200% 100%;
   animation: skeleton-loading 1.2s ease-in-out infinite;
 }
@@ -10506,4 +10506,88 @@ body {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
   }
+}
+
+/* ==========================================================================
+   通用组件规范层（现代蓝白 B 端）— 仅统一表面/状态/交互态，不改布局结构
+   ========================================================================== */
+
+/* —— 表格：表头、hover、选中、粘性表头分隔、滚动条统一 —— */
+.table-wrap {
+  scrollbar-color: var(--line-strong) transparent;
+}
+.table-wrap th {
+  color: var(--text-secondary);
+  letter-spacing: 0.01em;
+}
+.table-wrap tr.clickable:hover,
+.table-wrap tr.selected {
+  background: var(--primary-soft);
+}
+.table-wrap.is-sticky-header thead th {
+  box-shadow: inset 0 -1px 0 var(--line);
+}
+
+/* —— 状态文字标签：按语义软底 + 深字，保证对比度，圆角统一 —— */
+.status-text {
+  border-color: var(--line);
+  background: var(--panel-2);
+  border-radius: var(--radius-sm);
+}
+.status-text.ok {
+  background: var(--success-soft);
+  border-color: #bfe6cf;
+}
+.status-text.warn {
+  background: var(--warning-soft);
+  border-color: #f3d59a;
+}
+.status-text.bad {
+  background: var(--danger-soft);
+  border-color: #f6c3b8;
+}
+
+/* —— 全局键盘焦点环：统一主色（输入框已有自身聚焦态，此处不重复） —— */
+:where(button, a, [role="button"], [tabindex]):focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 1px;
+}
+
+/* —— 细滚动条统一主题 —— */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-strong) transparent;
+}
+*::-webkit-scrollbar {
+  width: 9px;
+  height: 9px;
+}
+*::-webkit-scrollbar-thumb {
+  background: var(--line-strong);
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background-clip: padding-box;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: #aebfda;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* —— 排版收口：卡片标题、辅助文字、数字对齐统一 —— */
+.section-title h2,
+.section-title h3 {
+  font-size: var(--fs-card-title);
+  font-weight: 700;
+  line-height: 1.3;
+}
+.summary-item span,
+.status-card-label {
+  font-size: var(--fs-aux);
+}
+.status-card-value,
+.summary-item strong,
+.table-wrap td {
+  font-variant-numeric: tabular-nums;
 }
