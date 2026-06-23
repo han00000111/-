@@ -333,13 +333,12 @@ export function SettingsPage({ currentUser, onLoginRequest, onLogout }) {
         <SectionTitle icon={Settings} title="基础信息" />
         <div className="settings-grid">
           {settings.slice(0, 2).concat([
-            { label: '当前用户', value: currentUser?.username ?? '未登录', desc: '现场端登录用户' },
-            { label: '本地缓存周期', value: '7 天', desc: '断网缓存保留周期' },
+            { label: '当前用户', value: currentUser?.username ?? '未登录' },
+            { label: '本地缓存周期', value: '7 天' },
           ]).map((item) => (
             <div className="setting-item" key={item.label}>
               <span>{item.label}</span>
               <strong>{item.value}</strong>
-              <small>{item.desc}</small>
             </div>
           ))}
         </div>
