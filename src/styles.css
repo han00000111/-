@@ -10591,3 +10591,107 @@ body {
 .table-wrap td {
   font-variant-numeric: tabular-nums;
 }
+
+/* ==========================================================================
+   修复：总览「任务列表」与机械臂「动作链」出框
+   原因：卡片内有一块固定信息区（不收缩）已接近/超过卡片高度，叠加列表的
+   min-height 下限，再加上外层 overflow:visible，于是内容直接溢出卡片底部。
+   方案（自适应，不写死高度）：卡片 overflow:hidden 收口；固定信息区可收缩并
+   在被压缩时自身内部滚动；列表用比例 flex 占位，超出只在列表内部滚动。
+   ========================================================================== */
+
+/* —— 总览 · 当前任务卡片 —— */
+.focus-card {
+  overflow: hidden;
+}
+/* grid 确定性分配：信息区在卡片够高时按自身高度完整显示（此时只有列表滚动），
+   卡片偏矮时信息区自动收缩并内部滚动；任务列表始终保留 ≥25% 可视并内部滚动。 */
+.overview-task-content {
+  display: grid;
+  grid-template-rows: fit-content(56%) minmax(0, 1fr);
+  min-height: 0;
+  overflow: hidden;
+}
+.overview-current-task {
+  min-height: 0;
+  overflow: hidden;
+}
+.overview-current-task-summary {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+.overview-current-task-actions {
+  flex: 0 0 auto;
+}
+.task-mini-queue {
+  min-height: 0;
+  overflow: hidden;
+}
+.task-mini-item {
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+.task-mini-badge,
+.task-mini-step {
+  flex-shrink: 0;
+}
+
+/* —— 机械臂 · 动作控制 · 动作链 —— */
+/* 主面板纵向 flex：标题固定；状态信息区可收缩并在偏矮时内部滚动；
+   动作链以更大的内容基准参与分配，始终保留可视并内部滚动。 */
+.arm-action-main-panel {
+  overflow: hidden;
+  min-height: 0;
+}
+.arm-action-main-panel .arm-state-groups {
+  flex: 0 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+.arm-action-main-panel .arm-action-chain {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+.arm-action-main-panel .arm-chain-list {
+  min-height: 0;
+}
+.arm-chain-row {
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+.arm-chain-row strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.arm-chain-row > span:last-child,
+.arm-chain-row .status-text {
+  flex-shrink: 0;
+}
+
+/* <1180px 走整页文档流回落：解除上面的高度约束，避免 1fr / flex 收缩区在
+   无确定高度的容器里塌成 0，使列表自然展开、由整页滚动承载。 */
+@media (max-width: 1180px) {
+  .overview-task-content,
+  .task-mini-queue {
+    display: block;
+    overflow: visible;
+  }
+  .task-mini-list,
+  .overview-current-task-summary {
+    overflow: visible;
+    max-height: none;
+  }
+  .arm-action-main-panel,
+  .arm-action-main-panel .arm-state-groups,
+  .arm-action-main-panel .arm-chain-list {
+    overflow: visible;
+    max-height: none;
+  }
+}
